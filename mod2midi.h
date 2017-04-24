@@ -2,6 +2,8 @@
 #include <vector>
 #include <iostream>
 #include <math.h>
+#include <set>
+#include <assert.h>
 
 using namespace std;
 
@@ -9,7 +11,7 @@ extern MODULE *module;
 
 const int MAX_TEMPOEVENTS = 1000;
 const int MAX_TRACKNOTES = 15000;
-const int MAX_MIDITRACKS = 129;
+const int MAX_MIDITRACKS = 129; //128 (0x80) + global track. (Ft2 has a limit of 0x80 insturments, it should be enough for most mods even if other trackers allow more.
 const int MAX_PITCHES = 128;
 const int MAX_MODTRACKS = 64;
 
@@ -25,6 +27,10 @@ struct Marshal_Note
 	int start;
 	int stop;
 	int pitch;
+	bool operator<(const Marshal_Note &right) const
+	{
+		return start < right.start;
+	}
 };
 
 struct Marshal_Track
@@ -55,13 +61,6 @@ extern "C"
 	__declspec(dllexport) BOOL loadMod(char *path, Marshal_Module &mod, BOOL mixdown, BOOL modInsTrack);
 	__declspec(dllexport) char *getModMixdownFilename_intptr();
 }
-
-//-------------------------------------------------
-
-void freeMod();
-void getCellRepLen(BYTE replen, int &repeat, int &length);
-BOOL addNote(Marshal_Module &marMod, int pitch, int ins, int noteStart, int noteEnd);
-double getRowDur(double tempo, double speed);
 
 //------------------------------------
 //from mikmod_internal.h:
@@ -140,5 +139,47 @@ enum {
 
 	UNI_LAST
 };
-
+//----------------------------------
 extern UWORD unioperands[UNI_LAST];
+
+const int MAX_EFFECT_VALUES = 2;
+
+struct RunningCellInfo
+{
+	int ins;
+	int note;
+	int silentNote;
+	int noteStartT;
+	double noteStartS;
+	int volEnvStartT;
+	double volEnvStartS;
+	int sampleStartT;
+	double sampleStartS;
+	bool loopSample;
+	double sampleLength;
+	int volEnvEnd;
+	int startVol;
+	int vol;
+	int volVelocity;
+	int volVelScale;
+	//int noteStartOffset;
+	//int noteEndOffset;
+	int effValues[UNI_LAST][MAX_EFFECT_VALUES];
+};
+
+//struct NoteComp
+//{
+//	bool operator()(const Marshal_Note& _Left, const Marshal_Note& _Right) const
+//	{	// apply operator< to operands
+//		return (_Left.start < _Right.start);
+//	}
+//};
+
+typedef multiset<Marshal_Note> TrackNotes;
+typedef vector<TrackNotes> Notes;
+
+
+void freeMod();
+void getCellRepLen(BYTE replen, int &repeat, int &length);
+bool addNote(vector<RunningCellInfo> &row, Notes &notes, bool modInsTrack, int channel, int noteEnd);
+double getRowDur(double tempo, double speed);

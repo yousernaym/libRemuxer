@@ -17,18 +17,24 @@ void getCellRepLen(BYTE replen, int &repeat, int &length)
 	length = replen & 31;
 }
 
-BOOL addNote(Marshal_Module &marMod, int pitch, int ins, int noteStart, int noteEnd)
+bool addNote(vector<RunningCellInfo> &row, Notes &notes, bool modInsTrack, int channel, int noteEnd)
 {
-	Marshal_Note notesElem;
-	notesElem.pitch = pitch;
-	notesElem.start = noteStart;
-	notesElem.stop = noteEnd;
-	marMod.tracks[ins].notes[marMod.tracks[ins].numNotes++] = notesElem;
-	if (marMod.numTracks < ins + 1)
-		marMod.numTracks = ins + 1;
-	if (marMod.tracks[ins].numNotes >= MAX_TRACKNOTES)
-		return FALSE;
-	return TRUE;
+	Marshal_Note note;
+	note.pitch = row[channel].note;
+	note.start = row[channel].noteStartT; 
+	note.stop = noteEnd;
+	int track = modInsTrack ? row[channel].ins : channel + 1; //add 1 to channel because first track is reserved (for "global"?)
+	if (track >= notes.size())
+		notes.resize(track + 1);
+	notes[track].insert(note);
+	if (notes[track].size() >= MAX_TRACKNOTES)
+		return false;
+	//marMod.tracks[ins].notes[marMod.tracks[ins].numNotes++] = notesElem;
+	//if (marMod.numTracks < track + 1)
+		//marMod.numTracks = ins + 1;
+	//if (marMod.tracks[ins].numNotes >= MAX_TRACKNOTES)
+		//return FALSE;
+	return true;
 }
 
 double getRowDur(double tempo, double speed)

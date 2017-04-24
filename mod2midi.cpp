@@ -1,14 +1,13 @@
 #include "mod2midi.h"
 #include <sstream>
 #include <string>
-#include <assert.h>
-#include <stdio.h>
 
 //#define _CRT_SECURE_NO_WARNINGS
 #pragma warning(disable : 4996)
 
 MODULE *module = 0;
 Marshal_Module marshalModule;
+//Notes notes;
 char mixdownFilename[500];
 
 char *getModMixdownFilename_intptr()
@@ -38,8 +37,8 @@ BOOL initMikmod(char *_mixdownFilename)
 		ZeroMemory(&marshalModule.tracks[t], sizeof(Marshal_Track));
 		marshalModule.tracks[t].name = new char[100];
 		marshalModule.tracks[t].notes = new Marshal_Note[MAX_TRACKNOTES];
-		for (int n = 0; n < MAX_MIDITRACKS; n++)
-			ZeroMemory(&marshalModule.tracks[t].notes[n], sizeof(Marshal_Note));
+		//for (int n = 0; n < MAX_MIDITRACKS; n++)
+			//ZeroMemory(&marshalModule.tracks[t].notes[n], sizeof(Marshal_Note));
 	}
 	
 	return TRUE;
@@ -70,7 +69,6 @@ struct Loop
 };
 
 //const int MAX_EFFECTS_PER_CELL = 10;
-const int MAX_EFFECT_VALUES = 2;
 
 struct CellInfo
 {
@@ -84,29 +82,6 @@ struct CellInfo
 	int offset;
 	//int noteStartOffset;
 	//int noteEndOffset;
-};
-
-struct RunningCellInfo
-{
-	int ins;
-	int note;
-	int silentNote;
-	int noteStartT;
-	double noteStartS;
-	int volEnvStartT;
-	double volEnvStartS;
-	int sampleStartT;
-	double sampleStartS;
-	bool loopSample;
-	double sampleLength;
-	int volEnvEnd;
-	int startVol;
-	int vol;
-	int volVelocity;
-	int volVelScale;
-	//int noteStartOffset;
-	//int noteEndOffset;
-	int effValues[UNI_LAST][MAX_EFFECT_VALUES];
 };
 
 BOOL loadMod(char *path, Marshal_Module &marMod, BOOL mixdown, BOOL modInsTrack)
@@ -148,7 +123,8 @@ BOOL loadMod(char *path, Marshal_Module &marMod, BOOL mixdown, BOOL modInsTrack)
 		for (int i=0;i<MAX_MIDITRACKS;i++)
 			marMod.tracks[i].numNotes = 0;
 		//-----------------------------------
-		
+		Notes notes;
+		notes.reserve(MAX_MIDITRACKS);
 		
 		if (modInsTrack)	//Track per instrument/sample
 		{	
@@ -423,7 +399,7 @@ BOOL loadMod(char *path, Marshal_Module &marMod, BOOL mixdown, BOOL modInsTrack)
 							int noteEndT = timeT;
 							if (curCellNote == -1) //no new note starts at this row, so if there's an offset to note-end it should be used for the running note. Otherwise it should be used for the note that starts (and ends) at this row.
 								noteEndT += noteEndOffset;
-							if (!addNote(marMod, runningRowInfo[t].note, modInsTrack ? runningRowInfo[t].ins : t + 1, runningRowInfo[t].noteStartT, noteEndT))
+							if (!addNote(runningRowInfo, notes, modInsTrack, t, noteEndT))
 								goto error;
 						}
 						
@@ -497,11 +473,11 @@ BOOL loadMod(char *path, Marshal_Module &marMod, BOOL mixdown, BOOL modInsTrack)
 						
 					}
 					
-					//POSSIBLE FIX: It's possible for runningRowInfo[t].note to be non-zero. Should it be?
+					//POSSIBLE BUG: It's possible for runningRowInfo[t].note to be non-zero. Should it be?
 					if (curCellNote == -1 && runningRowInfo[t].note)
 					{  //note ends before next row
 						int noteEndT = noteEndOffset ? timeT + noteEndOffset : timeTPlus1;
-						if (!addNote(marMod, runningRowInfo[t].note, modInsTrack ? runningRowInfo[t].ins : t + 1, runningRowInfo[t].noteStartT, noteEndT))
+						if (!addNote(runningRowInfo, notes, modInsTrack, t, noteEndT))
 							goto error;
 						runningRowInfo[t].note = 0;
 						//curCellNote = 0;
@@ -536,10 +512,20 @@ BOOL loadMod(char *path, Marshal_Module &marMod, BOOL mixdown, BOOL modInsTrack)
 		{
 			if (runningRowInfo[t].note)
 			{
-				if (!addNote(marMod, runningRowInfo[t].note, modInsTrack ? runningRowInfo[t].ins : t + 1, runningRowInfo[t].noteStartT, timeT))
+				if (!addNote(runningRowInfo, notes, modInsTrack, t, timeT))
 					goto error;
 			}
 		}
+		//Copy notes to marshal struct
+		for (unsigned t = 0; t < notes.size(); t++)
+		{
+			marMod.numTracks = notes.size();
+			marMod.tracks[t].numNotes = notes[t].size();
+			int i = 0;
+			for (TrackNotes::iterator it = notes[t].begin(); it != notes[t].end(); it++)
+				marMod.tracks[t].notes[i++] = *it;
+		}
+	
 		error:
 		if (mixdown)
 		{
