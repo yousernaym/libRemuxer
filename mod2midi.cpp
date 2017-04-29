@@ -21,12 +21,13 @@ BOOL initMikmod(char *_mixdownFilename)
 	ZeroMemory(&marshalModule, sizeof(Marshal_Module));
 
 	MikMod_RegisterDriver(&drv_wav);
+	MikMod_RegisterAllLoaders();
 	//MikMod_RegisterDriver(&drv_win);
-	MikMod_RegisterLoader(&load_xm);
+	/*MikMod_RegisterLoader(&load_xm);
 	MikMod_RegisterLoader(&load_mod);
 	MikMod_RegisterLoader(&load_it);
 	MikMod_RegisterLoader(&load_s3m);
-	MikMod_RegisterLoader(&load_stm);
+	MikMod_RegisterLoader(&load_stm);*/
 	/* initialize the library */
 	md_mode |= DMODE_SOFT_MUSIC | DMODE_HQMIXER | DMODE_16BITS | DMODE_INTERP;
     
@@ -98,7 +99,7 @@ BOOL loadMod(char *path, Marshal_Module &marMod, BOOL mixdown, BOOL modInsTrack)
                 MikMod_strerror(MikMod_errno));
         return FALSE;
     }
-	module = Player_Load(path, 64, 0);
+	module = Player_Load(path, 128, 0);
  	if (module)
 	{
 		module->loop = false;
@@ -234,10 +235,10 @@ BOOL loadMod(char *path, Marshal_Module &marMod, BOOL mixdown, BOOL modInsTrack)
 							effValues[j] = runningRowInfo[t].effValues[curCellInfo.eff[i]][j];
 						}
 						
-						if (curCellInfo.eff[i] == UNI_PTEFFECTF)
-						{
+						if (curCellInfo.eff[i] == UNI_PTEFFECTF || curCellInfo.eff[i] == UNI_S3MEFFECTA || curCellInfo.eff[i] == UNI_S3MEFFECTT)
+						{ //Speed/tempo changes
 							int value = effValues[0];
-							if (value <= 0x1f)
+							if (value <= 0x1f || curCellInfo.eff[i] == UNI_S3MEFFECTA)
 								curSongSpeed = value;
 							else
 							{
