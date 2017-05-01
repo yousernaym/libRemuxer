@@ -229,8 +229,8 @@ BOOL loadMod(char *path, Marshal_Module &marMod, BOOL mixdown, BOOL modInsTrack)
 						int eff = curCellInfo.eff[i];
 						for (int j=0;j<MAX_EFFECT_VALUES;j++)
 						{
-							//If effect value is not zero or effect is a type that can have zero as value, update the running value
-							if (curCellInfo.effValues[eff][j] != 0 || eff != UNI_XMEFFECTA && eff != UNI_PTEFFECTA && eff != UNI_PTEFFECTE && eff != UNI_XMEFFECTEA && eff != UNI_XMEFFECTEB)
+							//If effect value is not zero or effect type has no memory of its value, update the running value (only volume effects are considered)
+							if (curCellInfo.effValues[eff][j] != 0 || eff != UNI_XMEFFECTA && eff != UNI_XMEFFECTEA && eff != UNI_XMEFFECTEB && eff != UNI_S3MEFFECTD)
 								runningRowInfo[t].effValues[curCellInfo.eff[i]][j] = curCellInfo.effValues[curCellInfo.eff[i]][j];
 							effValues[j] = runningRowInfo[t].effValues[curCellInfo.eff[i]][j];
 						}
@@ -305,14 +305,14 @@ BOOL loadMod(char *path, Marshal_Module &marMod, BOOL mixdown, BOOL modInsTrack)
 								}
 							}
 						}
-						if (curCellInfo.eff[i] == UNI_XMEFFECTA || curCellInfo.eff[i] == UNI_PTEFFECTA)
+						if (curCellInfo.eff[i] == UNI_XMEFFECTA || curCellInfo.eff[i] == UNI_PTEFFECTA || curCellInfo.eff[i] == UNI_S3MEFFECTD && (effValues[0] & 0xf) != 0xf && (effValues[0] & 0xf0) != 0xf0)
 						{
-							runningRowInfo[t].volVelScale = curSongSpeed;
+							runningRowInfo[t].volVelScale = curSongSpeed - 1;
 							int value = effValues[0];
-							if (value > 0 || curCellInfo.eff[i] <= UNI_PTEFFECTE)
-								runningRowInfo[t].volVelocity = value > 0xf ? (value>>4) : -value;
+							//if (value > 0 || curCellInfo.eff[i] <= UNI_PTEFFECTE)
+							runningRowInfo[t].volVelocity = value > 0xf ? (value>>4) : -value;
 						}
-						else if (curCellInfo.eff[i] == UNI_XMEFFECTEA || curCellInfo.eff[i] == UNI_XMEFFECTEB || curCellInfo.eff[i] == UNI_PTEFFECTE)
+						else if (curCellInfo.eff[i] == UNI_XMEFFECTEA || curCellInfo.eff[i] == UNI_XMEFFECTEB || curCellInfo.eff[i] == UNI_PTEFFECTE || curCellInfo.eff[i] == UNI_S3MEFFECTD)
 						{
 							runningRowInfo[t].volVelScale = 1;
 							int value = effValues[0];
@@ -323,7 +323,14 @@ BOOL loadMod(char *path, Marshal_Module &marMod, BOOL mixdown, BOOL modInsTrack)
 								else if ((value & 0xf0) == (0xb << 4))
 									runningRowInfo[t].volVelocity = -(value & 0xf);
 							}
-							else if (value > 0)
+							else if (curCellInfo.eff[i] == UNI_S3MEFFECTD)
+							{
+								if ((value & 0xf) == 0xf)
+									runningRowInfo[t].volVelocity = value >> 4;
+								else //value & 0xf0 == 0xf0
+									runningRowInfo[t].volVelocity = -value;
+							}
+							else //if (value > 0)
 							{
 								if (curCellInfo.eff[i] == UNI_XMEFFECTEA)
 									runningRowInfo[t].volVelocity = value;
@@ -474,7 +481,7 @@ BOOL loadMod(char *path, Marshal_Module &marMod, BOOL mixdown, BOOL modInsTrack)
 						
 					}
 					
-					//POSSIBLE BUG: It's possible for runningRowInfo[t].note to be non-zero. Should it be?
+					//POSSIBLE BUG: It's possible for runningRowInfo[t].note to be non-zero. Should it be possible?
 					if (curCellNote == -1 && runningRowInfo[t].note)
 					{  //note ends before next row
 						int noteEndT = noteEndOffset ? timeT + noteEndOffset : timeTPlus1;
@@ -483,8 +490,9 @@ BOOL loadMod(char *path, Marshal_Module &marMod, BOOL mixdown, BOOL modInsTrack)
 						runningRowInfo[t].note = 0;
 						//curCellNote = 0;
 					}
-					if (!runningRowInfo[t].note)
-						runningRowInfo[t].vol = 0;
+					//if (!runningRowInfo[t].note)
+						//runningRowInfo[t].vol = 0;
+					
 					//runningRowInfo[t].noteStartOffset = noteStartOffset;
 					//runningRowInfo[t].noteEndOffset = noteEndOffset;
 				}

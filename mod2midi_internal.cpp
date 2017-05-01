@@ -23,7 +23,7 @@ bool addNote(vector<RunningCellInfo> &row, Notes &notes, bool modInsTrack, int c
 	note.pitch = row[channel].note;
 	note.start = row[channel].noteStartT; 
 	note.stop = noteEnd;
-	int track = modInsTrack ? row[channel].ins : channel + 1; //add 1 to channel because first track is reserved (for "global"?)
+	unsigned  track = modInsTrack ? row[channel].ins : channel + 1; //add 1 to channel because first track is reserved (for "global"?)
 	if (track >= notes.size())
 		notes.resize(track + 1);
 	notes[track].insert(note);
@@ -47,7 +47,7 @@ double getRowDur(double tempo, double speed)
 //----------------------------------------
 //From munitrk.c:
 
-UWORD unioperands[UNI_LAST]={
+const UWORD unioperands[UNI_LAST] = {
 	0, /* not used */
 	1, /* UNI_NOTE */
 	1, /* UNI_INSTRUMENT */
