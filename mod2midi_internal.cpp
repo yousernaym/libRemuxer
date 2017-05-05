@@ -1,15 +1,15 @@
 #include "mod2midi.h"
 
-void freeMod()
-{
-	if (module)
-	{
-		if (Player_Active())
-			Player_Stop();
-		Player_Free(module);
-		module = 0;
-	}
-}
+//void freeMod()
+//{
+//	if (module)
+//	{
+//		if (Player_Active())
+//			Player_Stop();
+//		Player_Free(module);
+//		module = 0;
+//	}
+//}
 
 void getCellRepLen(BYTE replen, int &repeat, int &length)
 {
@@ -17,7 +17,7 @@ void getCellRepLen(BYTE replen, int &repeat, int &length)
 	length = replen & 31;
 }
 
-bool addNote(vector<RunningCellInfo> &row, Notes &notes, bool modInsTrack, int channel, int noteEnd)
+bool addNote(vector<RunningCellInfo> &row, vector<TrackNotes> &notes, bool modInsTrack, int channel, int noteEnd)
 {
 	Marshal_Note note;
 	note.pitch = row[channel].note;
@@ -36,6 +36,8 @@ bool addNote(vector<RunningCellInfo> &row, Notes &notes, bool modInsTrack, int c
 		//return FALSE;
 	return true;
 }
+
+//bool addNote(vector<RunningCellInfo> &row, vector<TrackNotes> &notes, bool modInsTrack, int channel, int noteEnd)
 
 double getRowDur(double tempo, double speed)
 {

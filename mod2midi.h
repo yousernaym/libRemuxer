@@ -1,3 +1,14 @@
+//New algorithm for reading mods and creating notes.
+//Algorithm divided in two parts:
+//1 - importMod
+	//Create a list of tempoEvents like before.
+	//Create one pattern for the whole song with a row for each tick.
+	//Each tick contains information about the currently playing note's pitch and start time.
+//2.createNoteList
+	//Go through the pattern created in step 1 and create a note list for midi export.
+//
+//importMod could be replaced with readSid or readWhatever.
+
 #include <mikmod.h>
 #include <mikmod_internals.h>
 #include <vector>
@@ -41,7 +52,7 @@ struct Marshal_Track
 	int numNotes;
 };
 
-struct Marshal_Module
+struct Marshal_Song
 {
 	Marshal_TempoEvent *tempoEvents;
 	int numTempoEvents;
@@ -57,9 +68,9 @@ struct Marshal_Module
 
 extern "C"
 {
-	__declspec(dllexport) BOOL initMikmod(char *_mixdownFilename);
-	__declspec(dllexport) void exitMikmod();
-	__declspec(dllexport) BOOL loadMod(char *path, Marshal_Module &mod, BOOL mixdown, BOOL modInsTrack);
+	__declspec(dllexport) BOOL initLib(char *_mixdownFilename);
+	__declspec(dllexport) void exitLib();
+	__declspec(dllexport) BOOL loadFile(char *path, Marshal_Song &mod, BOOL mixdown, BOOL insTrack);
 	__declspec(dllexport) char *getModMixdownFilename_intptr();
 }
 
@@ -149,38 +160,61 @@ struct RunningCellInfo
 {
 	int ins;
 	int note;
-	int silentNote;
+	//int silentNote;
 	int noteStartT;
 	double noteStartS;
-	int volEnvStartT;
+	//int volEnvStartT;
 	double volEnvStartS;
-	int sampleStartT;
+	//int sampleStartT;
 	double sampleStartS;
 	bool loopSample;
 	double sampleLength;
 	int volEnvEnd;
 	int startVol;
-	int vol;
-	int volVelocity;
-	int volVelScale;
+	//int vol;
+	bool samplePlaying;
+	bool volEnvEnded;
+	int repeatsLeft;
+	int offset;
+	//int volVelocity;
+	//int volVelScale;
 	//int noteStartOffset;
 	//int noteEndOffset;
 	int effValues[UNI_LAST][MAX_EFFECT_VALUES];
 };
 
-//struct NoteComp
-//{
-//	bool operator()(const Marshal_Note& _Left, const Marshal_Note& _Right) const
-//	{	// apply operator< to operands
-//		return (_Left.start < _Right.start);
-//	}
-//};
 
 typedef multiset<Marshal_Note> TrackNotes;
-typedef vector<TrackNotes> Notes;
+//typedef vector<TrackNotes> Notes;
 
+struct RunningTickInfo
+{
+	int noteStart = -1;
+	int notePitch;
+	int vol;
+	int ins;
+};
+
+struct Track
+{
+	vector<RunningTickInfo> ticks;
+	RunningTickInfo getPrevTick(int curTick)
+	{
+		return ticks[curTick > 0 ? --curTick : 0];
+	}
+};
+
+class Song
+{
+	vector<Track> tracks;
+	vector<RunningCellInfo> runningRowInfo;
+	vector<TrackNotes> notes;
+public:
+	BOOL importMod(char *path, Marshal_Song &marSong, BOOL mixdown, BOOL insTrack);
+	BOOL createNoteList(Marshal_Song &marSong, BOOL insTrack);
+};
 
 void freeMod();
 void getCellRepLen(BYTE replen, int &repeat, int &length);
-bool addNote(vector<RunningCellInfo> &row, Notes &notes, bool modInsTrack, int channel, int noteEnd);
+bool addNote(vector<RunningCellInfo> &row, vector<TrackNotes> &notes, bool modInsTrack, int channel, int noteEnd);
 double getRowDur(double tempo, double speed);
