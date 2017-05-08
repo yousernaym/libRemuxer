@@ -15,7 +15,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>MikmodWrapper</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
-    <ProjectName>ModImport</ProjectName>
+    <ProjectName>NoteExtractor</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -90,11 +90,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="mod2midi.cpp" />
-    <ClCompile Include="mod2midi_internal.cpp" />
+    <ClCompile Include="NoteExtractor.cpp" />
+    <ClCompile Include="NoteExtractor_internal.cpp" />
+    <ClCompile Include="ModReader.cpp" />
+    <ClCompile Include="Song.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="mod2midi.h" />
+    <ClInclude Include="NoteExtractor.h" />
+    <ClInclude Include="ModReader.h" />
+    <ClInclude Include="Song.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\..\c++\Libs\MUSIC\libmikmod-3.3.10\docs\mikmod.html" />

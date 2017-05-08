@@ -15,15 +15,27 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="mod2midi.cpp">
+    <ClCompile Include="ModReader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="mod2midi_internal.cpp">
+    <ClCompile Include="Song.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="NoteExtractor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="NoteExtractor_internal.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="mod2midi.h">
+    <ClInclude Include="ModReader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Song.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NoteExtractor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
