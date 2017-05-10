@@ -50,11 +50,20 @@ void exitLib()
 
 //const int MAX_EFFECTS_PER_CELL = 10;
 
-void loadFile(char *path, Marshal_Song &marSong, BOOL mixdown, BOOL insTrack)
+BOOL loadFile(char *path, Marshal_Song &marSong, BOOL mixdown, BOOL insTrack)
 {
 	marSong = marshalSong;
 	Song song(&marSong);
-	ModReader modReader(song, path, mixdown, insTrack);
+	try 
+	{
+		ModReader modReader(song, path, mixdown, insTrack);
+	}
+	catch (string s)
+	{
+		return FALSE;
+	}
+			
 	song.createNoteList(insTrack);
+	return TRUE;
 }
 

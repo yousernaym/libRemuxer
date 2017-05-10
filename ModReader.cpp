@@ -101,6 +101,8 @@ ModReader::ModReader(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 			int pattern = module->patterns[module->positions[p]];
 			//Loop through rows
 			ptnDelay = 0;
+			for (int t = 0; t < module->numchn; t++)
+				runningRowInfo[t].offset = runningRowInfo[t].repeatsLeft = 0;
 			for (int r = 0; r < module->pattrows[pattern]; r++)
 			{
 				newPtnDelayFx = false;
@@ -155,11 +157,8 @@ ModReader::ModReader(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 				break;
 				}*/
 			}
-			//static int counter=0;
-			//if (counter++ == 0)
-				//goto error;
 		}
-		//marSong->songLengthT = timeT;
+		marSong->songLengthT = timeT;
 
 
 		error:
@@ -333,7 +332,7 @@ void ModReader::readNextCell(BYTE *track, CellInfo &cellInfo, RunningCellInfo &r
 {
 	int cellRep, cellLen;
 	getCellRepLen(track[runningCellInfo.offset], cellRep, cellLen);
-	if (runningCellInfo.repeatsLeft == 0 && ptnDelay == 0)
+	if (runningCellInfo.repeatsLeft == 0)
 	{  //Current cell should not be repeated, read cell at new row
 		runningCellInfo.repeatsLeft = cellRep;
 		cellInfo = CellInfo();
@@ -351,7 +350,7 @@ void ModReader::readNextCell(BYTE *track, CellInfo &cellInfo, RunningCellInfo &r
 				for (int i = 0; i < unioperands[opCode]; i++)
 				{
 					if (opCode >= UNI_LAST || i >= MAX_EFFECT_VALUES)
-						throw "break";
+						throw (string)"break";
 					cellInfo.effValues[opCode][i] = track[rowDataOffset++];
 				}
 				cellInfo.numEffs++;
