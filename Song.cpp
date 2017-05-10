@@ -5,7 +5,7 @@ Song::Song(Marshal_Song *_marSong)
 	marSong = _marSong;
 }
 
-BOOL Song::createNoteList(BOOL insTrack)
+void Song::createNoteList(BOOL insTrack)
 {
 	notes.reserve(MAX_MIDITRACKS);
 
@@ -13,8 +13,9 @@ BOOL Song::createNoteList(BOOL insTrack)
 	{
 		for (unsigned j = 0; j < tracks[i].ticks.size(); j++)
 		{
-			RunningTickInfo curTick = tracks[i].ticks[j];
-			RunningTickInfo prevTick = tracks[i].getPrevTick(j);
+			RunningTickInfo &curTick = tracks[i].ticks[j];
+			RunningTickInfo &prevTick = *tracks[i].getPrevTick(j);
+			
 			//Add new note?
 			if (prevTick.notePitch >= 0 &&
 				prevTick.noteStart >= 0 &&
@@ -31,7 +32,7 @@ BOOL Song::createNoteList(BOOL insTrack)
 					notes.resize(track + 1);
 				notes[track].insert(note);
 				if (notes[track].size() >= MAX_TRACKNOTES)
-					return FALSE;
+					throw (string)"Too many notes in track";
 
 				if (marSong->maxPitch < note.pitch)
 					marSong->maxPitch = note.pitch;
@@ -50,5 +51,4 @@ BOOL Song::createNoteList(BOOL insTrack)
 		for (TrackNotes::iterator it = notes[t].begin(); it != notes[t].end(); it++)
 			marSong->tracks[t].notes[i++] = *it;
 	}
-	return TRUE;
 }

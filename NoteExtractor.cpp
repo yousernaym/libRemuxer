@@ -1,4 +1,3 @@
-//#include <sstream>
 #include <string>
 #include "NoteExtractor.h"
 #include "Song.h"
@@ -7,19 +6,18 @@
 //#pragma warning(disable : 4996)
 
 Marshal_Song marshalSong;
-//Notes notes;
-const int MAX_MIXDOWN_FILENAME = 500;
-char mixdownFilename[MAX_MIXDOWN_FILENAME];
+const int MAX_MIXDOWN_FILENAME_LENGTH = 500;
+char mixdownFilename[MAX_MIXDOWN_FILENAME_LENGTH];
 
 char *getModMixdownFilename_intptr()
 {
 	return mixdownFilename;
 }
 
-BOOL initLib(char *_mixdownFilename)
+void initLib(char *_mixdownFilename)
 {
-	ModReader::init();
-	strcpy_s(mixdownFilename, MAX_MIXDOWN_FILENAME, _mixdownFilename);
+	ModReader::sInit();
+	strcpy_s(mixdownFilename, MAX_MIXDOWN_FILENAME_LENGTH, _mixdownFilename);
 	ZeroMemory(&marshalSong, sizeof(Marshal_Song));
     
 	marshalSong.tempoEvents = new Marshal_TempoEvent[MAX_TEMPOEVENTS];
@@ -32,8 +30,6 @@ BOOL initLib(char *_mixdownFilename)
 		//for (int n = 0; n < MAX_MIDITRACKS; n++)
 			//ZeroMemory(&marshalModule.tracks[t].notes[n], sizeof(Marshal_Note));
 	}
-	
-	return TRUE;
 }
 
 #define safeDeleteArray(x) {if (x) delete[] x;}
@@ -54,15 +50,11 @@ void exitLib()
 
 //const int MAX_EFFECTS_PER_CELL = 10;
 
-BOOL loadFile(char *path, Marshal_Song &marSong, BOOL mixdown, BOOL insTrack)
+void loadFile(char *path, Marshal_Song &marSong, BOOL mixdown, BOOL insTrack)
 {
 	marSong = marshalSong;
 	Song song(&marSong);
-	if (!ModReader::loadFile(song, path, mixdown, insTrack))
-		return FALSE;
-	if (!song.createNoteList(insTrack))
-		return FALSE;
-	return TRUE;
+	ModReader modReader(song, path, mixdown, insTrack);
+	song.createNoteList(insTrack);
 }
-
 

@@ -56,9 +56,9 @@ struct Marshal_Song
 
 extern "C"
 {
-	__declspec(dllexport) BOOL initLib(char *_mixdownFilename);
+	__declspec(dllexport) void initLib(char *_mixdownFilename);
 	__declspec(dllexport) void exitLib();
-	__declspec(dllexport) BOOL loadFile(char *path, Marshal_Song &mod, BOOL mixdown, BOOL insTrack);
+	__declspec(dllexport) void loadFile(char *path, Marshal_Song &mod, BOOL mixdown, BOOL insTrack);
 	__declspec(dllexport) char *getModMixdownFilename_intptr();
 }
 

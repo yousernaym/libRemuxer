@@ -13,22 +13,26 @@ struct RunningTickInfo
 	int ins;
 };
 
-struct Track
-{
-	vector<RunningTickInfo> ticks;
-	RunningTickInfo getPrevTick(int curTick)
-	{
-		return ticks[curTick > 0 ? --curTick : 0];
-	}
-};
-
-
 class Song
 {
 	vector<TrackNotes> notes;
 public:
+	struct Track;
 	vector<Track> tracks;
 	Marshal_Song *marSong;
 	Song(Marshal_Song *_marSong);
-	BOOL createNoteList(BOOL insTrack);
+	void createNoteList(BOOL insTrack);
+};
+
+struct Song::Track
+{
+	vector<RunningTickInfo> ticks;
+	RunningTickInfo *getPrevTick(unsigned curTick)
+	{
+		return &ticks[curTick > 0 ? curTick - 1 : curTick];
+	}
+	RunningTickInfo *getNextTick(unsigned curTick)
+	{
+		return &ticks[curTick < ticks.size() - 1 ? curTick + 1 : curTick];
+	}
 };

@@ -4,62 +4,7 @@
 #include <string>
 #include <iostream>
 
-struct Loop
-{
-	int startP;
-	int startR;
-	int loops;
-	bool jump;
-};
-
-struct CellInfo
-{
-	int ins = 0;
-	int note = 0;
-	int eff[UNI_LAST];
-	int effValues[UNI_LAST][MAX_EFFECT_VALUES];
-	int numEffs = 0;
-	int noteStartOffset = 0;
-	int noteEndOffset = -1;
-	int retriggerOffset = -1;
-	int volSlideVel = 0;
-	int volSlideVelScale = 0;
-};
-
-
-struct RunningCellInfo
-{
-	int ins;
-	int note;
-	//int silentNote;
-	int noteStartT;
-	double noteStartS;
-	//int volEnvStartT;
-	double volEnvStartS;
-	//int sampleStartT;
-	double sampleStartS;
-	bool loopSample;
-	double sampleLength;
-	int volEnvEnd;
-	int startVol;
-	//int vol;
-	bool samplePlaying;
-	bool volEnvEnded;
-	int repeatsLeft;
-	int offset;
-	//int volVelocity;
-	//int volVelScale;
-	//int noteStartOffset;
-	//int noteEndOffset;
-	int effValues[UNI_LAST][MAX_EFFECT_VALUES];
-};
-
-int ModReader::curSongSpeed;
-int ModReader::ptnDelay;
-Song *ModReader::song;
-Marshal_Song *ModReader::marSong;
-
-void ModReader::init()
+void ModReader::sInit()
 {
 	MikMod_RegisterDriver(&drv_wav);
 	MikMod_RegisterAllLoaders();
@@ -73,23 +18,20 @@ void ModReader::init()
 	/* initialize the library */
 }
 
-BOOL ModReader::loadFile(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
+ModReader::ModReader(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 {
 	song = &_song;
 	marSong = song->marSong;
-	vector<RunningCellInfo> runningRowInfo;
-	MODULE *module = 0;
 	string cmdLine = "file=" + string(mixdownFilename);
 	md_device = 1;
 	if (MikMod_Init(cmdLine.c_str()))
 	{
-		//fprintf(stderr, "Could not initialize Mikmod, reason: %s\n",
-			//MikMod_strerror(MikMod_errno));
 		string err = (string)"Could not initialize Mikmod, reason: " + (string)MikMod_strerror(MikMod_errno);
 		OutputDebugStringA(err.c_str());
-		return FALSE;
+		throw err;
 	}
-	module = Player_Load(path, 128, 0);
+	module = Player_Load(path, 64, 0);
+	
 	if (module)
 	{
 		song->tracks.resize(module->numchn);
@@ -100,11 +42,9 @@ BOOL ModReader::loadFile(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 		}
 
 
-		module->loop = false;
-		//"Running status"-----------------
-		vector<RunningCellInfo> runningRowInfo;
+		curRowInfo.resize(module->numchn);
 		runningRowInfo.resize(module->numchn);
-		//----------------------------------
+		
 
 		//Marshall data--------------------------
 		marSong->minPitch = MAX_PITCHES;
@@ -141,77 +81,44 @@ BOOL ModReader::loadFile(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 		{
 			for (int i = 0; i < module->numchn; i++)
 			{
-				std::ostringstream s;
+				ostringstream s;
 				s << "Channel " << i;
 				strcpy_s(marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, s.str().c_str());
 			}
 		}
 
-		Loop loop;
 		ZeroMemory(&loop, sizeof(loop));
 
-		int timeT = 0;
-		double timeS = 0;
-		int ptnStart = 0;
+		//int timeT = 0;
+		//double timeS = 0;
+		//int ptnStart = 0;
 
 
 		//Loop through patterns
 		for (int p = 0; p < module->numpos; p++)
 		{
-			int ptnJump = -1;
+			ptnJump = -1;
 			int pattern = module->patterns[module->positions[p]];
-			vector<CellInfo> curRowInfo(MAX_MODTRACKS);
 			//Loop through rows
 			ptnDelay = 0;
 			for (int r = 0; r < module->pattrows[pattern]; r++)
 			{
-				bool newPtnDelayFx = false;
-				readRowFx();
-
+				newPtnDelayFx = false;
+				//Loop through channels/tracks
+				for (int t = 0; t < module->numchn; t++)
+				{
+					BYTE *track = module->tracks[pattern*module->numchn + t];
+					readNextCell(track, curRowInfo[t], runningRowInfo[t]);
+					readCellFx(song->tracks[t].ticks[timeT], curRowInfo[t], runningRowInfo[t], p, r);
+				}
+				
 				double tickDur = rowDur / curSongSpeed;
 				//Loop through channels/tracks
 				for (int t = 0; t < module->numchn; t++)
 				{
-
-					RunningTickInfo *curTick = &song->tracks[t].ticks[timeT];
-					//curTick->vol = song->tracks[t].getPrevTick(timeT);
-					BYTE *track = module->tracks[pattern*module->numchn + t];
-					bool volNewNote = false;
-					int cellRep, cellLen;
-					CellInfo curCellInfo;// = curRowInfo[t];
-					getCellRepLen(track[runningRowInfo[t].offset], cellRep, cellLen);
-					if (runningRowInfo[t].repeatsLeft == 0 && ptnDelay == 0)
-					{  //Current cell should not be repeated, read cell at new row
-						runningRowInfo[t].repeatsLeft = cellRep;
-					}
-
-					int rowDataOffset = 1 + runningRowInfo[t].offset;
-
-					//curCellInfo.note = curCellInfo.ins = curCellInfo.numEffs = 0;
-					while (rowDataOffset < cellLen + runningRowInfo[t].offset)
-					{
-						int opCode = track[rowDataOffset++];
-						if (opCode == UNI_NOTE)
-							curCellInfo.note = track[rowDataOffset++] + 1;
-						else if (opCode == UNI_INSTRUMENT)
-						{
-							curCellInfo.ins = track[rowDataOffset++] + 1;
-
-							//if (!runningRowInfo[t].note && runningRowInfo[t].silentNote && runningRowInfo[t].sampleEnded)
-
-							//if (marSong->numTracks < curCellInfo.ins + 1)
-							//marSong->numTracks = curCellInfo.ins + 1;
-						}
-						else
-						{
-							curCellInfo.eff[curCellInfo.numEffs] = opCode;
-							for (int i = 0; i < unioperands[opCode]; i++)
-								curCellInfo.effValues[opCode][i] = track[rowDataOffset++];
-							curCellInfo.numEffs++;
-						}
-					}
-
-					//
+					
+					//bool volNewNote = false;
+					
 					if (ptnJump == -1)
 					{
 						if (r < ptnStart)
@@ -219,282 +126,17 @@ BOOL ModReader::loadFile(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 						else
 							ptnStart = 0;
 					}
-
-					//int noteStartOffset = runningRowInfo[t].noteStartOffset, noteEndOffset = runningRowInfo[t].noteEndOffset;
-					//int noteStartOffset = 0, noteEndOffset = 0;
-					//if (noteEndOffset != 0)
-					//curCellInfo.note = -1;
-					//runningRowInfo[t].volVelocity = 0;
-
-					//check all effects----------------
-					for (int i = 0; i < curCellInfo.numEffs; i++)
-					{
-						int effValues[MAX_EFFECT_VALUES];
-						int eff = curCellInfo.eff[i];
-						for (int j = 0; j < MAX_EFFECT_VALUES; j++)
-						{
-							//If effect value is not zero or effect type is not a volume effect with memory of its value, update the running value
-							if (curCellInfo.effValues[eff][j] != 0 || eff != UNI_XMEFFECTA && eff != UNI_XMEFFECTEA && eff != UNI_XMEFFECTEB && eff != UNI_S3MEFFECTD)
-								runningRowInfo[t].effValues[curCellInfo.eff[i]][j] = curCellInfo.effValues[curCellInfo.eff[i]][j];
-							effValues[j] = runningRowInfo[t].effValues[curCellInfo.eff[i]][j];
-						}
-
-
-						if (curCellInfo.eff[i] == UNI_PTEFFECTF || curCellInfo.eff[i] == UNI_S3MEFFECTA || curCellInfo.eff[i] == UNI_S3MEFFECTT)
-						{ //Speed/tempo changes
-							int value = effValues[0];
-							if (value <= 0x1f || curCellInfo.eff[i] == UNI_S3MEFFECTA)
-								curSongSpeed = value;
-							else
-							{
-								marSong->tempoEvents[marSong->numTempoEvents].tempo = value;
-								marSong->tempoEvents[marSong->numTempoEvents].time = timeT;
-								if (++marSong->numTempoEvents >= MAX_TEMPOEVENTS)
-									return FALSE;
-							}
-							rowDur = getRowDur(marSong->tempoEvents[marSong->numTempoEvents - 1].tempo, curSongSpeed);
-						}
-						else if (curCellInfo.eff[i] == UNI_KEYOFF || curCellInfo.eff[i] == UNI_KEYFADE)
-							curCellInfo.note = -1;
-						else if (curCellInfo.eff[i] == UNI_PTEFFECTB)
-						{
-							ptnJump = effValues[0];
-							if (ptnJump <= p)
-								ptnJump = -1; //TODO: End song here?
-						}
-						else if (curCellInfo.eff[i] == UNI_PTEFFECTD)
-						{
-							ptnJump = p + 1;
-							ptnStart = effValues[0];
-						}
-						else if (curCellInfo.eff[i] == UNI_PTEFFECTC)
-							curTick->vol = effValues[0];
-						else if (curCellInfo.eff[i] == UNI_PTEFFECTE)
-						{
-							int subeff = (effValues[0] >> 4) & 0xf;
-							int value = effValues[0] & 0xf;
-							if (value < curSongSpeed)
-							{
-								if (subeff == 0x9)
-									curCellInfo.retriggerOffset = value;
-								if (subeff == 0xc)
-								{
-									curCellInfo.noteEndOffset = value;
-									//if (curCellInfo.note>0) //note will end next row
-									//noteEndOffset = -curSongSpeed + value;
-									//else if (!curCellInfo.note) //note will end this row
-									//runningRowInfo[t].noteEndOffset = value;
-
-								}
-								else if (subeff == 0xd)
-									curCellInfo.noteStartOffset = value;
-							}
-							if (ptnDelay == 0 && subeff == 0xe)
-							{
-								ptnDelay = value + 1;
-								newPtnDelayFx = true;
-							}
-							if (subeff == 0x6)
-							{
-								if (value == 0)
-								{
-									loop.startP = p;
-									loop.startR = r;
-								}
-								else
-								{
-									if (loop.loops == 0)
-										loop.loops = value;
-									else
-										loop.loops--;
-									if (loop.loops > 0)
-									{
-										ptnJump = loop.startP;
-										ptnStart = loop.startR;
-									}
-								}
-							}
-						}
-						if (curCellInfo.eff[i] == UNI_XMEFFECTA || curCellInfo.eff[i] == UNI_PTEFFECTA || curCellInfo.eff[i] == UNI_S3MEFFECTD && (effValues[0] & 0xf) != 0xf && (effValues[0] & 0xf0) != 0xf0)
-						{
-							curCellInfo.volSlideVelScale = curSongSpeed - 1;
-							int value = effValues[0];
-							//if (value > 0 || curCellInfo.eff[i] <= UNI_PTEFFECTE)
-							curCellInfo.volSlideVel = value > 0xf ? (value >> 4) : -value;
-						}
-						else if (curCellInfo.eff[i] == UNI_XMEFFECTEA || curCellInfo.eff[i] == UNI_XMEFFECTEB)
-						{
-							curCellInfo.volSlideVelScale = 1;
-							if (curCellInfo.eff[i] == UNI_XMEFFECTEA)
-								curCellInfo.volSlideVel = effValues[0];
-							else //UNI_XMEFFECTEB
-								curCellInfo.volSlideVel = -effValues[0];
-						}
-						else if (curCellInfo.eff[i] == UNI_PTEFFECTE || curCellInfo.eff[i] == UNI_S3MEFFECTD)
-						{
-							int value = effValues[0];
-							if (curCellInfo.eff[i] == UNI_PTEFFECTE)
-							{
-								int subEff = (value & 0xf0) >> 4;
-								if ((value & 0xf0) == (0xa << 4))
-								{
-									curCellInfo.volSlideVelScale = 1;
-									curCellInfo.volSlideVel = value & 0xf;
-								}
-								else if ((value & 0xf0) == (0xb << 4))
-								{
-									curCellInfo.volSlideVel = -(value & 0xf);
-									curCellInfo.volSlideVelScale = 1;
-								}
-							}
-							else if (curCellInfo.eff[i] == UNI_S3MEFFECTD)
-							{
-								curCellInfo.volSlideVelScale = 1;
-								if ((value & 0xf) == 0xf)
-									curCellInfo.volSlideVel = value >> 4;
-								else //value & 0xf0 == 0xf0
-									curCellInfo.volSlideVel = -value;
-							}
-							else //if (value > 0)
-							{
-
-							}
-						}
-					}
-					if (ptnDelay <= 1)
-					{
-						if (runningRowInfo[t].repeatsLeft == 0)
-							runningRowInfo[t].offset += cellLen;
-						else
-							runningRowInfo[t].repeatsLeft--;
-					}
-					//----------------------------------
-					if (ptnDelay == 0 || newPtnDelayFx)
-					{
-						int curCellNote = curCellInfo.note;
-
-						if (curCellNote)
-						{ //a new note/note-off was played
-							if (curCellInfo.ins && curCellNote > 0)
-							{  //ins + note was specified
-								int smpIndex = -1;
-								runningRowInfo[t].volEnvEnd = 0;
-								runningRowInfo[t].startVol = 64;
-								runningRowInfo[t].samplePlaying = true;
-								curTick->ins = curCellInfo.ins;
-								if (module->instruments)
-								{
-									INSTRUMENT instrument = module->instruments[curCellInfo.ins - 1];
-									smpIndex = instrument.samplenumber[curCellNote - 1];
-									if (smpIndex != UWORD(-1))
-									{
-										if (module->instruments[curCellInfo.ins - 1].volflg == 1  //volenv on but not sustain or loop
-											&& instrument.volenv[instrument.volpts - 1].val == 0)  //last env point = 0
-										{
-											runningRowInfo[t].volEnvEnd = instrument.volenv[instrument.volpts - 1].pos;
-										}
-										runningRowInfo[t].startVol = instrument.globvol;
-									}
-									else
-									{
-										curCellNote = -1;
-										runningRowInfo[t].samplePlaying = false;
-									}
-								}
-								else
-									smpIndex = curCellInfo.ins - 1;
-								if (smpIndex >= 0)
-								{
-									SAMPLE sample = module->samples[smpIndex];
-									if (sample.length == 0)
-									{
-										curCellNote = -1;
-										runningRowInfo[t].samplePlaying = false;
-									}
-									runningRowInfo[t].loopSample = (sample.flags & SF_LOOP) == SF_LOOP;
-									runningRowInfo[t].sampleLength = sample.length;
-								}
-							}
-
-							if (curCellNote > 0) //note but not necessarily ins. Sample loop and length props already known, but sample start is reset.
-							{
-								//runningRowInfo[t].silentNote = curCellNote;
-								//runningRowInfo[t].sampleStartT = timeT;
-								runningRowInfo[t].sampleStartS = timeS;
-								//runningRowInfo[t].noteStartT = timeT + curCellInfo.noteStartOffset;
-								//runningRowInfo[t].noteStartS = timeS;
-								if (curCellInfo.ins)
-									runningRowInfo[t].ins = curCellInfo.ins;
-							}
-
-						}
-						if (curCellInfo.ins)
-						{
-							curTick->vol = runningRowInfo[t].startVol;
-							//runningRowInfo[t].volEnvStartT = timeT;
-							runningRowInfo[t].volEnvStartS = timeS;
-							runningRowInfo[t].volEnvEnded = false;
-						}
-					}
-
-					//write volume and notes in current cell ticks
-					song->tracks[t].ticks.resize(song->tracks[t].ticks.size() + curSongSpeed);
-					for (int i = 0; i < curSongSpeed; i++)
-					{
-						//Volume sliding effects
-						if (i == 0 && curCellInfo.volSlideVelScale == 1 || i > 0 && curCellInfo.volSlideVelScale > 1)
-						{
-							curTick->vol += curCellInfo.volSlideVel;
-							if (curTick->vol < 0)
-								curTick->vol = 0;
-						}
-
-						//Check sample and envelope
-						double tickTimeS = timeS + tickDur * i;
-						double elapsedSampleS = tickTimeS - runningRowInfo[t].sampleStartS;
-						double elapsedVolEnvS = tickTimeS - runningRowInfo[t].volEnvStartS;
-						if (!runningRowInfo[t].loopSample)
-						{ //sample is not looping
-						  //check if sample has ended
-							double freqRatio = 1046.50 / (440 * pow(2.0, (curTick->notePitch - 59) / 12.0));
-							if (elapsedSampleS > runningRowInfo[t].sampleLength * freqRatio / 44100)
-							{
-								//curTick->notePitch = -1; //note off
-								curTick->noteStart = -1;
-								runningRowInfo[t].samplePlaying = false;
-							}
-						}
-						if (runningRowInfo[t].volEnvEnd > 0)
-						{ //vol env is active, not looping and ends with 0
-						  //check if volenv has ended
-							if (elapsedVolEnvS > runningRowInfo[t].volEnvEnd / 47.647)
-							{
-								curTick->noteStart = -1;
-								runningRowInfo[t].volEnvEnded = true;
-							}
-						}
-
-						//Mak beginning of new notes
-						if (ptnDelay == 0 || newPtnDelayFx)
-						{
-							if (curCellInfo.noteStartOffset == i && curCellInfo.ins && runningRowInfo[t].samplePlaying)
-								curTick->noteStart = timeT + i;
-							if ((curCellInfo.noteStartOffset == i || curCellInfo.retriggerOffset > 0 && i > 0 && (i % curCellInfo.retriggerOffset) == 0)
-								&& curCellInfo.note > 0 && !runningRowInfo[t].volEnvEnded && curTick->vol)
-							{
-								curTick->noteStart = timeT + i;
-								curTick->notePitch = curCellInfo.note;
-							}
-						}
-						if (curCellInfo.noteEndOffset == i)
-							curTick->noteStart = -1;
-
-						//Copy current tick to next tick
-						*(++curTick) = *(curTick - 1);
-					}
+			
+					song->tracks[t].ticks.resize(song->tracks[t].ticks.size() + curSongSpeed * (ptnDelay + 1));
+					RunningTickInfo *curTick = &song->tracks[t].ticks[timeT];
+					updateCell(*curTick, curRowInfo[t], runningRowInfo[t]);
+					for (int i = 0; i <= ptnDelay; i++)
+						updateCellTicks(song->tracks[t], curRowInfo[t], runningRowInfo[t]);
+					
 				}
-				if (ptnDelay > 0)
-					ptnDelay--;
+				
+				//if (ptnDelay > 0)
+					//ptnDelay--;
 				if (!ptnStart || ptnJump >= 0)
 				{
 					timeT += curSongSpeed; //*(ptnDelay + 1);
@@ -513,16 +155,20 @@ BOOL ModReader::loadFile(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 				break;
 				}*/
 			}
+			//static int counter=0;
+			//if (counter++ == 0)
+				//goto error;
 		}
-		marSong->songLengthT = timeT;
+		//marSong->songLengthT = timeT;
 
 
-		//	error:
+		error:
 		if (mixdown)
 		{
+			module->loop = false; //Don't allow backwards loops
 			Player_Start(module);
 			int i = 0;
-			while (Player_Active() && module->sngtime < timeS * 1024) //break if last pattern has a pattern-break
+			while (Player_Active() && (true || module->sngtime < timeS * 1024)) //break if last pattern has a pattern-break
 			{
 				//std::cerr << i++ << std::endl;
 				MikMod_Update();
@@ -537,17 +183,322 @@ BOOL ModReader::loadFile(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 	else
 	{
 		MikMod_Exit();
-		fprintf(stderr, "Could not load module, reason: %s\n",
-			MikMod_strerror(MikMod_errno));
-		return FALSE;
+		ostringstream err;
+		err << "Could not load module, reason: " << MikMod_strerror(MikMod_errno);
+		OutputDebugStringA(err.str().c_str());
+		throw err.str();
 	}
-
-	return TRUE;
 }
 
-void ModReader::readRowFx()
+ModReader::~ModReader()
 {
+}
 
+
+
+void ModReader::updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo)
+{
+	int note = cellInfo.note;
+	if (note)
+	{ //a new note/note-off was played
+		if (cellInfo.ins && note > 0)
+		{  //ins + note was specified
+			int smpIndex = -1;
+			runningCellInfo.volEnvEnd = 0;
+			runningCellInfo.startVol = 64;
+			runningCellInfo.samplePlaying = true;
+			firstTick.ins = cellInfo.ins;
+			if (module->instruments)
+			{
+				INSTRUMENT instrument = module->instruments[cellInfo.ins - 1];
+				smpIndex = instrument.samplenumber[note - 1];
+				if (smpIndex != UWORD(-1))
+				{
+					if (module->instruments[cellInfo.ins - 1].volflg == 1  //volenv on but not sustain or loop
+						&& instrument.volenv[instrument.volpts - 1].val == 0)  //last env point = 0
+					{
+						runningCellInfo.volEnvEnd = instrument.volenv[instrument.volpts - 1].pos;
+					}
+					runningCellInfo.startVol = instrument.globvol;
+				}
+				else
+				{
+					note = -1;
+					runningCellInfo.samplePlaying = false;
+				}
+			}
+			else
+				smpIndex = cellInfo.ins - 1;
+			if (smpIndex >= 0)
+			{
+				SAMPLE sample = module->samples[smpIndex];
+				if (sample.length == 0)
+				{
+					note = -1;
+					runningCellInfo.samplePlaying = false;
+				}
+				runningCellInfo.loopSample = (sample.flags & SF_LOOP) == SF_LOOP;
+				runningCellInfo.sampleLength = sample.length;
+			}
+		}
+
+		if (note > 0) //note but not necessarily ins. Sample loop and length props already known, but sample start is reset.
+		{
+			runningCellInfo.sampleStartS = timeS;
+			if (cellInfo.ins)
+				runningCellInfo.ins = cellInfo.ins;
+		}
+
+	}
+	if (cellInfo.ins)
+	{
+		firstTick.vol = runningCellInfo.startVol;
+		runningCellInfo.volEnvStartS = timeS;
+		runningCellInfo.volEnvEnded = false;
+	}
+}
+					
+
+void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo)
+{
+	//write volume and notes in current cell ticks
+	for (int i = 0; i < curSongSpeed; i++)
+	{
+		RunningTickInfo &curTick = track.ticks[timeT+i];
+		RunningTickInfo &prevTick = *track.getPrevTick(timeT+i);
+		//Volume sliding effects
+		if (i == 0 && cellInfo.volSlideVelScale == 1 || i > 0 && cellInfo.volSlideVelScale > 1)
+		{
+			curTick.vol += cellInfo.volSlideVel;
+			if (curTick.vol < 0)
+				curTick.vol = 0;
+		}
+
+		//Check sample and envelope
+		double tickTimeS = timeS + tickDur * i;
+		double elapsedSampleS = tickTimeS - runningCellInfo.sampleStartS;
+		double elapsedVolEnvS = tickTimeS - runningCellInfo.volEnvStartS;
+		if (!runningCellInfo.loopSample)
+		{ //sample is not looping
+		  //check if sample has ended
+			double freqRatio = 1046.50 / (440 * pow(2.0, (curTick.notePitch - 59) / 12.0));
+			if (elapsedSampleS > runningCellInfo.sampleLength * freqRatio / 44100)
+			{
+				//curTick.notePitch = -1; //note off
+				curTick.noteStart = -1;
+				runningCellInfo.samplePlaying = false;
+			}
+		}
+		if (runningCellInfo.volEnvEnd > 0)
+		{ //vol env is active, not looping and ends with 0
+		  //check if volenv has ended
+			if (elapsedVolEnvS > runningCellInfo.volEnvEnd / 47.647)
+			{
+				curTick.noteStart = -1;
+				runningCellInfo.volEnvEnded = true;
+			}
+		}
+
+		//Mark beginning of new notes
+		if (ptnDelay == 0 || newPtnDelayFx)
+		{
+			//if (cellInfo.noteStartOffset == i && cellInfo.ins && runningCellInfo.samplePlaying && )
+				//curTick.noteStart = timeT + i;
+			if ((cellInfo.noteStartOffset == i || cellInfo.retriggerOffset > 0 && i > 0 && (i % cellInfo.retriggerOffset) == 0)
+				&& cellInfo.note > 0 && !runningCellInfo.volEnvEnded && curTick.vol)
+			{
+				curTick.noteStart = timeT + i;
+				curTick.notePitch = cellInfo.note;
+			}
+		}
+		if (cellInfo.noteEndOffset == i)
+			curTick.noteStart = -1;
+
+		if (curTick.vol == 0)
+		{
+			curTick.noteStart = -1;
+		}
+		//Mark start of new note because volume went from 0 to >0
+		if (curTick.vol > 0 && prevTick.vol == 0)
+		{
+			//prevTick.noteStart = -1;
+			curTick.noteStart = timeT + i;
+		}
+		//Copy current tick to next tick
+		*track.getNextTick(timeT+i) = curTick;
+	}
+}
+
+void ModReader::readNextCell(BYTE *track, CellInfo &cellInfo, RunningCellInfo &runningCellInfo)
+{
+	int cellRep, cellLen;
+	getCellRepLen(track[runningCellInfo.offset], cellRep, cellLen);
+	if (runningCellInfo.repeatsLeft == 0 && ptnDelay == 0)
+	{  //Current cell should not be repeated, read cell at new row
+		runningCellInfo.repeatsLeft = cellRep;
+		cellInfo = CellInfo();
+		int rowDataOffset = 1 + runningCellInfo.offset;
+		while (rowDataOffset < cellLen + runningCellInfo.offset)
+		{
+			int opCode = track[rowDataOffset++];
+			if (opCode == UNI_NOTE)
+				cellInfo.note = track[rowDataOffset++] + 1;
+			else if (opCode == UNI_INSTRUMENT)
+				cellInfo.ins = track[rowDataOffset++] + 1;
+			else
+			{
+				cellInfo.eff[cellInfo.numEffs] = opCode;
+				for (int i = 0; i < unioperands[opCode]; i++)
+				{
+					if (opCode >= UNI_LAST || i >= MAX_EFFECT_VALUES)
+						throw "break";
+					cellInfo.effValues[opCode][i] = track[rowDataOffset++];
+				}
+				cellInfo.numEffs++;
+			}
+		}
+		runningCellInfo.offset += cellLen;
+	}
+	else
+		runningCellInfo.repeatsLeft--;
+}
+
+void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, RunningCellInfo &runningCellInfo, int songPos, int row)
+{
+	for (int i = 0; i < cellInfo.numEffs; i++)
+	{
+		int effValues[MAX_EFFECT_VALUES];
+		int eff = cellInfo.eff[i];
+		for (int j = 0; j < MAX_EFFECT_VALUES; j++)
+		{
+			//If effect value is not zero or effect type is not a volume effect with memory of its value, update the running value
+			if (cellInfo.effValues[eff][j] != 0 || eff != UNI_XMEFFECTA && eff != UNI_XMEFFECTEA && eff != UNI_XMEFFECTEB && eff != UNI_S3MEFFECTD)
+				runningCellInfo.effValues[cellInfo.eff[i]][j] = cellInfo.effValues[cellInfo.eff[i]][j];
+			effValues[j] = runningCellInfo.effValues[cellInfo.eff[i]][j];
+		}
+
+
+		if (cellInfo.eff[i] == UNI_PTEFFECTF || cellInfo.eff[i] == UNI_S3MEFFECTA || cellInfo.eff[i] == UNI_S3MEFFECTT)
+		{ //Speed/tempo changes
+			int value = effValues[0];
+			if (value <= 0x1f || cellInfo.eff[i] == UNI_S3MEFFECTA)
+				curSongSpeed = value;
+			else
+			{
+				marSong->tempoEvents[marSong->numTempoEvents].tempo = value;
+				marSong->tempoEvents[marSong->numTempoEvents].time = timeT;
+				if (++marSong->numTempoEvents >= MAX_TEMPOEVENTS)
+					throw (string)"Too many tempo events.";
+			}
+			rowDur = getRowDur(marSong->tempoEvents[marSong->numTempoEvents - 1].tempo, curSongSpeed);
+		}
+		else if (cellInfo.eff[i] == UNI_KEYOFF || cellInfo.eff[i] == UNI_KEYFADE)
+			cellInfo.note = -1;
+		else if (cellInfo.eff[i] == UNI_PTEFFECTB)
+		{
+			ptnJump = effValues[0];
+			if (ptnJump <= songPos)
+				ptnJump = -1;
+		}
+		else if (cellInfo.eff[i] == UNI_PTEFFECTD)
+		{
+			ptnJump = songPos + 1;
+			ptnStart = effValues[0];
+		}
+		else if (cellInfo.eff[i] == UNI_PTEFFECTC)
+			firstTick.vol = effValues[0];
+		else if (cellInfo.eff[i] == UNI_PTEFFECTE)
+		{
+			int subeff = (effValues[0] >> 4) & 0xf;
+			int value = effValues[0] & 0xf;
+			if (value < curSongSpeed)
+			{
+				if (subeff == 0x9)
+					cellInfo.retriggerOffset = value;
+				if (subeff == 0xc)
+					cellInfo.noteEndOffset = value;
+				else if (subeff == 0xd)
+					cellInfo.noteStartOffset = value;
+			}
+			if (ptnDelay == 0 && subeff == 0xe)
+			{
+				ptnDelay = value + 1;
+				newPtnDelayFx = true;
+			}
+			if (subeff == 0x6)
+			{
+				if (value == 0)
+				{
+					loop.startP = songPos;
+					loop.startR = row;
+				}
+				else
+				{
+					if (loop.loops == 0)
+						loop.loops = value;
+					else
+						loop.loops--;
+					if (loop.loops > 0)
+					{
+						ptnJump = loop.startP;
+						ptnStart = loop.startR;
+					}
+				}
+			}
+		}
+		if (cellInfo.eff[i] == UNI_XMEFFECTA || cellInfo.eff[i] == UNI_PTEFFECTA || cellInfo.eff[i] == UNI_S3MEFFECTD && (effValues[0] & 0xf) != 0xf && (effValues[0] & 0xf0) != 0xf0)
+		{
+			cellInfo.volSlideVelScale = curSongSpeed - 1;
+			int value = effValues[0];
+			//if (value > 0 || cellInfo.eff[i] <= UNI_PTEFFECTE)
+			cellInfo.volSlideVel = value > 0xf ? (value >> 4) : -value;
+		}
+		else if (cellInfo.eff[i] == UNI_XMEFFECTEA || cellInfo.eff[i] == UNI_XMEFFECTEB)
+		{
+			cellInfo.volSlideVelScale = 1;
+			if (cellInfo.eff[i] == UNI_XMEFFECTEA)
+				cellInfo.volSlideVel = effValues[0];
+			else //UNI_XMEFFECTEB
+				cellInfo.volSlideVel = -effValues[0];
+		}
+		else if (cellInfo.eff[i] == UNI_PTEFFECTE || cellInfo.eff[i] == UNI_S3MEFFECTD)
+		{
+			int value = effValues[0];
+			if (cellInfo.eff[i] == UNI_PTEFFECTE)
+			{
+				int subEff = (value & 0xf0) >> 4;
+				if ((value & 0xf0) == (0xa << 4))
+				{
+					cellInfo.volSlideVelScale = 1;
+					cellInfo.volSlideVel = value & 0xf;
+				}
+				else if ((value & 0xf0) == (0xb << 4))
+				{
+					cellInfo.volSlideVel = -(value & 0xf);
+					cellInfo.volSlideVelScale = 1;
+				}
+			}
+			else if (cellInfo.eff[i] == UNI_S3MEFFECTD)
+			{
+				cellInfo.volSlideVelScale = 1;
+				if ((value & 0xf) == 0xf)
+					cellInfo.volSlideVel = value >> 4;
+				else //value & 0xf0 == 0xf0
+					cellInfo.volSlideVel = -value;
+			}
+			else //if (value > 0)
+			{
+
+			}
+		}
+	}
+	/*if (ptnDelay <= 1)
+	{
+		if (runningCellInfo.repeatsLeft == 0)
+			runningCellInfo.offset += cellLen;
+		else
+			runningCellInfo.repeatsLeft--;
+	}*/
 }
 
 void ModReader::getCellRepLen(BYTE replen, int &repeat, int &length)
@@ -653,11 +604,4 @@ const UWORD unioperands[UNI_LAST] = {
 	2, /* UNI_OKTARP */
 };
 
-//ModReader::ModReader()
-//{
-//}
-//
-//
-//ModReader::~ModReader()
-//{
-//}
+
