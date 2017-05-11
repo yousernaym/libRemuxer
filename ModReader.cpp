@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <assert.h>
 
 void ModReader::sInit()
 {
@@ -28,7 +29,7 @@ ModReader::ModReader(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 	{
 		string err = (string)"Could not initialize Mikmod, reason: " + (string)MikMod_strerror(MikMod_errno);
 		OutputDebugStringA(err.c_str());
-		throw err;
+		assert(false);
 	}
 	module = Player_Load(path, 64, 0);
 	
@@ -100,12 +101,11 @@ ModReader::ModReader(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 			ptnJump = -1;
 			int pattern = module->patterns[module->positions[p]];
 			//Loop through rows
-			ptnDelay = 0;
 			for (int t = 0; t < module->numchn; t++)
 				runningRowInfo[t].offset = runningRowInfo[t].repeatsLeft = 0;
 			for (int r = 0; r < module->pattrows[pattern]; r++)
 			{
-				newPtnDelayFx = false;
+				ptnDelay = 0;
 				//Loop through channels/tracks
 				for (int t = 0; t < module->numchn; t++)
 				{
@@ -132,17 +132,14 @@ ModReader::ModReader(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 					song->tracks[t].ticks.resize(song->tracks[t].ticks.size() + curSongSpeed * (ptnDelay + 1));
 					RunningTickInfo *curTick = &song->tracks[t].ticks[timeT];
 					updateCell(*curTick, curRowInfo[t], runningRowInfo[t]);
-					for (int i = 0; i <= ptnDelay; i++)
-						updateCellTicks(song->tracks[t], curRowInfo[t], runningRowInfo[t]);
+					updateCellTicks(song->tracks[t], curRowInfo[t], runningRowInfo[t]);
 					
 				}
 				
-				//if (ptnDelay > 0)
-					//ptnDelay--;
 				if (!ptnStart || ptnJump >= 0)
 				{
-					timeT += curSongSpeed; //*(ptnDelay + 1);
-					timeS += rowDur; //*(ptnDelay + 1);
+					timeT += curSongSpeed *(ptnDelay + 1);
+					timeS += rowDur * (ptnDelay + 1);
 				}
 				if (ptnJump >= 0)
 				{
@@ -160,8 +157,7 @@ ModReader::ModReader(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 		}
 		marSong->songLengthT = timeT;
 
-
-		error:
+		//error:
 		if (mixdown)
 		{
 			module->loop = false; //Don't allow backwards loops
@@ -260,13 +256,13 @@ void ModReader::updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo,
 
 void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo)
 {
-	//write volume and notes in current cell ticks
-	for (int i = 0; i < curSongSpeed; i++)
+	//write volume and notes in current cell's ticks
+	for (int t = 0; t < curSongSpeed*(ptnDelay+1); t++)
 	{
-		RunningTickInfo &curTick = track.ticks[timeT+i];
-		RunningTickInfo &prevTick = *track.getPrevTick(timeT+i);
+		RunningTickInfo &curTick = track.ticks[timeT+t];
+		RunningTickInfo &prevTick = *track.getPrevTick(timeT+t);
 		//Volume sliding effects
-		if (i == 0 && cellInfo.volSlideVelScale == 1 || i > 0 && cellInfo.volSlideVelScale > 1)
+		if (t == 0 && cellInfo.volSlideVelScale == 1 || t > 0 && cellInfo.volSlideVelScale > 1)
 		{
 			curTick.vol += cellInfo.volSlideVel;
 			if (curTick.vol < 0)
@@ -274,7 +270,7 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 		}
 
 		//Check sample and envelope
-		double tickTimeS = timeS + tickDur * i;
+		double tickTimeS = timeS + tickDur * t;
 		double elapsedSampleS = tickTimeS - runningCellInfo.sampleStartS;
 		double elapsedVolEnvS = tickTimeS - runningCellInfo.volEnvStartS;
 		if (!runningCellInfo.loopSample)
@@ -297,34 +293,26 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 				runningCellInfo.volEnvEnded = true;
 			}
 		}
-
-		//Mark beginning of new notes
-		if (ptnDelay == 0 || newPtnDelayFx)
+		int cellTick = t % curSongSpeed;
+					
+		if ((cellInfo.noteStartOffset == t || //Note starts at current tick (first tick of cell or start is offset using edx command)
+			cellInfo.retriggerOffset > 0 && t % cellInfo.retriggerOffset == 0 ||  //Retrigger effect (e9x)
+			cellInfo.noteStartOffset > 0 && t % curSongSpeed != 0 && t % cellInfo.noteStartOffset == 0)  //If pattern delay is used, note can be replayed on repeats if edx is used.
+			&& cellInfo.note > 0 && !runningCellInfo.volEnvEnded && curTick.vol)
 		{
-			//if (cellInfo.noteStartOffset == i && cellInfo.ins && runningCellInfo.samplePlaying && )
-				//curTick.noteStart = timeT + i;
-			if ((cellInfo.noteStartOffset == i || cellInfo.retriggerOffset > 0 && i > 0 && (i % cellInfo.retriggerOffset) == 0)
-				&& cellInfo.note > 0 && !runningCellInfo.volEnvEnded && curTick.vol)
-			{
-				curTick.noteStart = timeT + i;
-				curTick.notePitch = cellInfo.note;
-			}
+			curTick.noteStart = timeT + t;
+			curTick.notePitch = cellInfo.note;
 		}
-		if (cellInfo.noteEndOffset == i)
+		if (cellInfo.noteEndOffset == t)
 			curTick.noteStart = -1;
-
+			
 		if (curTick.vol == 0)
-		{
 			curTick.noteStart = -1;
-		}
 		//Mark start of new note because volume went from 0 to >0
 		if (curTick.vol > 0 && prevTick.vol == 0)
-		{
-			//prevTick.noteStart = -1;
-			curTick.noteStart = timeT + i;
-		}
+			curTick.noteStart = timeT + t;
 		//Copy current tick to next tick
-		*track.getNextTick(timeT+i) = curTick;
+		*track.getNextTick(timeT+t) = curTick;
 	}
 }
 
@@ -349,8 +337,7 @@ void ModReader::readNextCell(BYTE *track, CellInfo &cellInfo, RunningCellInfo &r
 				cellInfo.eff[cellInfo.numEffs] = opCode;
 				for (int i = 0; i < unioperands[opCode]; i++)
 				{
-					if (opCode >= UNI_LAST || i >= MAX_EFFECT_VALUES)
-						throw (string)"break";
+					assert(opCode < UNI_LAST && i < MAX_EFFECT_VALUES);
 					cellInfo.effValues[opCode][i] = track[rowDataOffset++];
 				}
 				cellInfo.numEffs++;
@@ -419,11 +406,8 @@ void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 				else if (subeff == 0xd)
 					cellInfo.noteStartOffset = value;
 			}
-			if (ptnDelay == 0 && subeff == 0xe)
-			{
-				ptnDelay = value + 1;
-				newPtnDelayFx = true;
-			}
+			if (subeff == 0xe)
+				ptnDelay = value;
 			if (subeff == 0x6)
 			{
 				if (value == 0)
@@ -491,13 +475,6 @@ void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 			}
 		}
 	}
-	/*if (ptnDelay <= 1)
-	{
-		if (runningCellInfo.repeatsLeft == 0)
-			runningCellInfo.offset += cellLen;
-		else
-			runningCellInfo.repeatsLeft--;
-	}*/
 }
 
 void ModReader::getCellRepLen(BYTE replen, int &repeat, int &length)

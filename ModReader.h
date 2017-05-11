@@ -144,7 +144,6 @@ class ModReader
 	MODULE *module = 0;
 	int curSongSpeed;
 	int ptnDelay;
-	bool newPtnDelayFx;
 	int timeT = 0;
 	double timeS = 0;
 	double rowDur = 0;
