@@ -111,24 +111,20 @@ ModReader::ModReader(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 				{
 					BYTE *track = module->tracks[pattern*module->numchn + t];
 					readNextCell(track, curRowInfo[t], runningRowInfo[t]);
-					readCellFx(song->tracks[t].ticks[timeT], curRowInfo[t], runningRowInfo[t], p, r);
+					if (ptnJump >= 0 || r >= ptnStart)
+						readCellFx(song->tracks[t].ticks[timeT], curRowInfo[t], runningRowInfo[t], p, r);
 				}
-				
-				double tickDur = rowDur / curSongSpeed;
+				if (ptnJump == -1)
+				{
+					if (r < ptnStart)
+						continue;
+					else
+						ptnStart = 0;
+				}
+				tickDur = rowDur / curSongSpeed;
 				//Loop through channels/tracks
 				for (int t = 0; t < module->numchn; t++)
 				{
-					
-					//bool volNewNote = false;
-					
-					if (ptnJump == -1)
-					{
-						if (r < ptnStart)
-							continue;
-						else
-							ptnStart = 0;
-					}
-			
 					song->tracks[t].ticks.resize(song->tracks[t].ticks.size() + curSongSpeed * (ptnDelay + 1));
 					RunningTickInfo *curTick = &song->tracks[t].ticks[timeT];
 					updateCell(*curTick, curRowInfo[t], runningRowInfo[t]);
@@ -136,11 +132,11 @@ ModReader::ModReader(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 					
 				}
 				
-				if (!ptnStart || ptnJump >= 0)
-				{
+				/*if (!ptnStart || ptnJump >= 0)
+				{*/
 					timeT += curSongSpeed *(ptnDelay + 1);
 					timeS += rowDur * (ptnDelay + 1);
-				}
+				//}
 				if (ptnJump >= 0)
 				{
 					p = ptnJump - 1;
@@ -388,7 +384,8 @@ void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 		}
 		else if (cellInfo.eff[i] == UNI_PTEFFECTD)
 		{
-			ptnJump = songPos + 1;
+			if (ptnJump == -1)
+				ptnJump = songPos + 1;
 			ptnStart = effValues[0];
 		}
 		else if (cellInfo.eff[i] == UNI_PTEFFECTC)
