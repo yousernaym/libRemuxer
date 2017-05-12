@@ -88,7 +88,7 @@ ModReader::ModReader(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 			}
 		}
 
-		ZeroMemory(&loop, sizeof(loop));
+		//ZeroMemory(&loop, sizeof(loop));
 
 		//int timeT = 0;
 		//double timeS = 0;
@@ -409,19 +409,18 @@ void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 			{
 				if (value == 0)
 				{
-					loop.startP = songPos;
-					loop.startR = row;
+					runningCellInfo.loop.startR = row;
 				}
 				else
 				{
-					if (loop.loops == 0)
-						loop.loops = value;
+					if (runningCellInfo.loop.loops == 0)
+						runningCellInfo.loop.loops = value;
 					else
-						loop.loops--;
-					if (loop.loops > 0)
+						runningCellInfo.loop.loops--;
+					if (runningCellInfo.loop.loops > 0)
 					{
-						ptnJump = loop.startP;
-						ptnStart = loop.startR;
+						ptnJump = songPos;
+						ptnStart = runningCellInfo.loop.startR;
 					}
 				}
 			}

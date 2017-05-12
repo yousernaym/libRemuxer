@@ -88,10 +88,8 @@ const int MAX_EFFECT_VALUES = 2;
 
 struct Loop
 {
-	int startP;
-	int startR;
-	int loops;
-	bool jump;
+	int startR = 0;
+	int loops = 0;
 };
 
 
@@ -114,27 +112,20 @@ struct RunningCellInfo
 {
 	int ins;
 	int note;
-	//int silentNote;
 	int noteStartT;
 	double noteStartS;
-	//int volEnvStartT;
 	double volEnvStartS;
-	//int sampleStartT;
 	double sampleStartS;
 	bool loopSample;
 	double sampleLength;
 	int volEnvEnd;
 	int startVol;
-	//int vol;
 	bool samplePlaying;
 	bool volEnvEnded;
 	int repeatsLeft;
 	int offset;
-	//int volVelocity;
-	//int volVelScale;
-	//int noteStartOffset;
-	//int noteEndOffset;
 	int effValues[UNI_LAST][MAX_EFFECT_VALUES];
+	Loop loop;
 };
 
 class ModReader
@@ -150,7 +141,7 @@ class ModReader
 	double tickDur = 0;
 	int ptnJump = -1;
 	int ptnStart = 0;
-	Loop loop;
+	//Loop loop;
 	Song *song;
 	Marshal_Song *marSong;
 public:
