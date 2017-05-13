@@ -91,7 +91,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="NoteExtractor.cpp" />
-    <ClCompile Include="NoteExtractor_internal.cpp" />
     <ClCompile Include="ModReader.cpp" />
     <ClCompile Include="Song.cpp" />
   </ItemGroup>

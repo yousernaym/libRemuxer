@@ -54,7 +54,7 @@ ModReader::ModReader(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 		curSongSpeed = module->initspeed;
 
 		//int curSongBpm = module->inittempo;
-		double rowDur = getRowDur(module->inittempo, module->initspeed);
+		rowDur = getRowDur(module->inittempo, module->initspeed);
 
 		marSong->tempoEvents[0].tempo = module->inittempo;
 		marSong->tempoEvents[0].time = 0;
@@ -70,12 +70,22 @@ ModReader::ModReader(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 			if (module->instruments)
 			{
 				for (int i = 0; i < module->numins; i++)
-					strcpy_s(marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, module->instruments[i].insname);
+				{
+					if (module->instruments[i].insname != NULL)
+						strcpy_s(marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, module->instruments[i].insname);
+					else
+						marSong->tracks[i + 1].name[0] = NULL;
+				}
 			}
 			else
 			{
 				for (int i = 0; i < module->numsmp; i++)
-					strcpy_s(marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, module->samples[i].samplename);
+				{
+					if (module->samples[i].samplename != NULL)
+						strcpy_s(marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, module->samples[i].samplename);
+					else
+						marSong->tracks[i + 1].name[0] = NULL;
+				}
 			}
 		}
 		else	//One track per mod channel
@@ -158,10 +168,8 @@ ModReader::ModReader(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 		{
 			module->loop = false; //Don't allow backwards loops
 			Player_Start(module);
-			int i = 0;
-			while (Player_Active() && (true || module->sngtime < timeS * 1024)) //break if last pattern has a pattern-break
+			while (Player_Active() && module->sngtime < timeS * 1024) //break if last pattern has a pattern-break
 			{
-				//std::cerr << i++ << std::endl;
 				MikMod_Update();
 			}
 			Player_Stop();
@@ -190,58 +198,53 @@ ModReader::~ModReader()
 void ModReader::updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo)
 {
 	int note = cellInfo.note;
-	if (note)
-	{ //a new note/note-off was played
-		if (cellInfo.ins && note > 0)
+	if (note > 0)
+	{ //a new note was played
+		runningCellInfo.samplePlaying = true;
+		int smpIndex = -1;
+		int ins;
+		if (cellInfo.ins)
 		{  //ins + note was specified
-			int smpIndex = -1;
 			runningCellInfo.volEnvEnd = 0;
 			runningCellInfo.startVol = 64;
-			runningCellInfo.samplePlaying = true;
-			firstTick.ins = cellInfo.ins;
-			if (module->instruments)
+			ins = cellInfo.ins;
+		}
+		else
+			ins = runningCellInfo.ins;
+		firstTick.ins = ins;
+		if (module->instruments)
+		{
+			INSTRUMENT instrument = module->instruments[ins - 1];
+			smpIndex = instrument.samplenumber[note - 1];
+			if (smpIndex != UWORD(-1))
 			{
-				INSTRUMENT instrument = module->instruments[cellInfo.ins - 1];
-				smpIndex = instrument.samplenumber[note - 1];
-				if (smpIndex != UWORD(-1))
+				if (module->instruments[ins - 1].volflg == 1  //volenv on but not sustain or loop
+					&& instrument.volenv[instrument.volpts - 1].val == 0)  //last env point = 0
 				{
-					if (module->instruments[cellInfo.ins - 1].volflg == 1  //volenv on but not sustain or loop
-						&& instrument.volenv[instrument.volpts - 1].val == 0)  //last env point = 0
-					{
-						runningCellInfo.volEnvEnd = instrument.volenv[instrument.volpts - 1].pos;
-					}
-					runningCellInfo.startVol = instrument.globvol;
+					runningCellInfo.volEnvEnd = instrument.volenv[instrument.volpts - 1].pos;
 				}
-				else
-				{
-					note = -1;
-					runningCellInfo.samplePlaying = false;
-				}
+				runningCellInfo.startVol = instrument.globvol;
 			}
 			else
-				smpIndex = cellInfo.ins - 1;
-			if (smpIndex >= 0)
-			{
-				SAMPLE sample = module->samples[smpIndex];
-				if (sample.length == 0)
-				{
-					note = -1;
-					runningCellInfo.samplePlaying = false;
-				}
-				runningCellInfo.loopSample = (sample.flags & SF_LOOP) == SF_LOOP;
-				runningCellInfo.sampleLength = sample.length;
-			}
+				runningCellInfo.samplePlaying = false;
 		}
-
-		if (note > 0) //note but not necessarily ins. Sample loop and length props already known, but sample start is reset.
+		else
+			smpIndex = ins - 1;
+		if (smpIndex >= 0)
 		{
-			runningCellInfo.sampleStartS = timeS;
-			if (cellInfo.ins)
-				runningCellInfo.ins = cellInfo.ins;
-		}
+			SAMPLE sample = module->samples[smpIndex];
+			runningCellInfo.loopSample = (sample.flags & SF_LOOP) == SF_LOOP;
 
+			runningCellInfo.sampleLength = sample.length < cellInfo.sampleOffset ? 0 : sample.length - cellInfo.sampleOffset;
+			if (runningCellInfo.sampleLength == 0 || runningCellInfo.loopSample && sample.loopend > 0 && sample.loopend <= cellInfo.sampleOffset)
+				runningCellInfo.samplePlaying = false;
+		}
+		
+		runningCellInfo.sampleStartS = timeS;
+		if (cellInfo.ins)
+			runningCellInfo.ins = cellInfo.ins;
 	}
-	if (cellInfo.ins)
+	if (cellInfo.ins) //Ins but not nessecarily note was specified, so running ins info should be used. Just reset volume and envelope start.
 	{
 		firstTick.vol = runningCellInfo.startVol;
 		runningCellInfo.volEnvStartS = timeS;
@@ -269,13 +272,13 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 		double tickTimeS = timeS + tickDur * t;
 		double elapsedSampleS = tickTimeS - runningCellInfo.sampleStartS;
 		double elapsedVolEnvS = tickTimeS - runningCellInfo.volEnvStartS;
-		if (!runningCellInfo.loopSample)
+		if (!runningCellInfo.loopSample && runningCellInfo.ins > 0)
 		{ //sample is not looping
 		  //check if sample has ended
-			double freqRatio = 1046.50 / (440 * pow(2.0, (curTick.notePitch - 59) / 12.0));
-			if (elapsedSampleS > runningCellInfo.sampleLength * freqRatio / 44100)
+			int note = module->instruments != NULL ? module->instruments[runningCellInfo.ins - 1].samplenote[curTick.notePitch] : curTick.notePitch;
+			double freqRatio = 1 / pow(semitone, note - 48);
+			if (elapsedSampleS > runningCellInfo.sampleLength * freqRatio / 8363)
 			{
-				//curTick.notePitch = -1; //note off
 				curTick.noteStart = -1;
 				runningCellInfo.samplePlaying = false;
 			}
@@ -294,7 +297,7 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 		if ((cellInfo.noteStartOffset == t || //Note starts at current tick (first tick of cell or start is offset using edx command)
 			cellInfo.retriggerOffset > 0 && t % cellInfo.retriggerOffset == 0 ||  //Retrigger effect (e9x)
 			cellInfo.noteStartOffset > 0 && t % curSongSpeed != 0 && t % cellInfo.noteStartOffset == 0)  //If pattern delay is used, note can be replayed on repeats if edx is used.
-			&& cellInfo.note > 0 && !runningCellInfo.volEnvEnded && curTick.vol)
+			&& cellInfo.note > 0 && !runningCellInfo.volEnvEnded && curTick.vol && runningCellInfo.samplePlaying)
 		{
 			curTick.noteStart = timeT + t;
 			curTick.notePitch = cellInfo.note;
@@ -353,8 +356,8 @@ void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 		int eff = cellInfo.eff[i];
 		for (int j = 0; j < MAX_EFFECT_VALUES; j++)
 		{
-			//If effect value is not zero or effect type is not a volume effect with memory of its value, update the running value
-			if (cellInfo.effValues[eff][j] != 0 || eff != UNI_XMEFFECTA && eff != UNI_XMEFFECTEA && eff != UNI_XMEFFECTEB && eff != UNI_S3MEFFECTD)
+			//If effect value is not zero or effect type does note have memory of its last value, update the running value
+			if (cellInfo.effValues[eff][j] != 0 || eff != UNI_XMEFFECTA && eff != UNI_XMEFFECTEA && eff != UNI_XMEFFECTEB && eff != UNI_S3MEFFECTD && eff != UNI_PTEFFECT9)
 				runningCellInfo.effValues[cellInfo.eff[i]][j] = cellInfo.effValues[cellInfo.eff[i]][j];
 			effValues[j] = runningCellInfo.effValues[cellInfo.eff[i]][j];
 		}
@@ -375,7 +378,15 @@ void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 			rowDur = getRowDur(marSong->tempoEvents[marSong->numTempoEvents - 1].tempo, curSongSpeed);
 		}
 		else if (cellInfo.eff[i] == UNI_KEYOFF || cellInfo.eff[i] == UNI_KEYFADE)
-			cellInfo.note = -1;
+		{
+			if (runningCellInfo.volEnvEnd == 0) //Volume envelope disabled, just set volume to 0
+				firstTick.vol = 0;
+			//TODO: if volume envelope is active, a note off should let it pass beyond sustain point.
+		}
+		else if (cellInfo.eff[i] == UNI_PTEFFECT9)
+		{
+			cellInfo.sampleOffset = effValues[0] * 256;
+		}
 		else if (cellInfo.eff[i] == UNI_PTEFFECTB)
 		{
 			ptnJump = effValues[0];

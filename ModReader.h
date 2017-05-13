@@ -105,6 +105,7 @@ struct CellInfo
 	int retriggerOffset = -1;
 	int volSlideVel = 0;
 	int volSlideVelScale = 0;
+	unsigned sampleOffset = 0;
 };
 
 
@@ -130,6 +131,8 @@ struct RunningCellInfo
 
 class ModReader
 {
+	const int sampleRate = 44100;
+	const double semitone = 1.0594630943593; //12th root of 2
 	vector<RunningCellInfo> runningRowInfo;
 	vector<CellInfo> curRowInfo;
 	MODULE *module = 0;
