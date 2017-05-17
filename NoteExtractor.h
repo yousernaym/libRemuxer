@@ -5,7 +5,6 @@
 
 using namespace std;
 
-
 extern char mixdownFilename[500];
 
 const int MAX_TEMPOEVENTS = 1000;
@@ -40,6 +39,8 @@ struct Marshal_Track
 	int numNotes;
 };
 
+enum class Marshal_SongType {Mod, Sid};
+
 struct Marshal_Song
 {
 	Marshal_TempoEvent *tempoEvents;
@@ -48,9 +49,9 @@ struct Marshal_Song
 	int songLengthT;
 	int minPitch;
 	int maxPitch;
-	
 	Marshal_Track *tracks;
 	int numTracks;
+	Marshal_SongType songType;
 };
 #pragma pack(pop)
 

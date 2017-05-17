@@ -90,13 +90,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="cpu.cpp" />
     <ClCompile Include="NoteExtractor.cpp" />
     <ClCompile Include="ModReader.cpp" />
+    <ClCompile Include="siddump.cpp" />
+    <ClCompile Include="SidReader.cpp" />
     <ClCompile Include="Song.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="cpu.h" />
     <ClInclude Include="NoteExtractor.h" />
     <ClInclude Include="ModReader.h" />
+    <ClInclude Include="SidReader.h" />
     <ClInclude Include="Song.h" />
   </ItemGroup>
   <ItemGroup>

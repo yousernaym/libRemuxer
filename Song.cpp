@@ -8,7 +8,7 @@ Song::Song(Marshal_Song *_marSong)
 void Song::createNoteList(BOOL insTrack)
 {
 	notes.reserve(MAX_MIDITRACKS);
-
+	marSong->songLengthT = tracks[1].ticks.size();
 	for (unsigned i = 0; i < tracks.size(); i++)
 	{
 		for (unsigned j = 0; j < tracks[i].ticks.size(); j++)
@@ -19,9 +19,10 @@ void Song::createNoteList(BOOL insTrack)
 			//Add new note?
 			if (prevTick.notePitch >= 0 &&
 				prevTick.noteStart >= 0 &&
+				prevTick.vol > 0 &&
 				(curTick.noteStart != prevTick.noteStart ||
-					prevTick.vol > 0 && (curTick.vol == 0 ||
-						j == tracks[i].ticks.size() - 1)))
+					curTick.vol == 0 ||
+						j == tracks[i].ticks.size() - 1))
 			{
 				Marshal_Note note;
 				note.pitch = prevTick.notePitch;

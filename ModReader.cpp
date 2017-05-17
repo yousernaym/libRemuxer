@@ -93,7 +93,7 @@ ModReader::ModReader(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 			for (int i = 0; i < module->numchn; i++)
 			{
 				ostringstream s;
-				s << "Channel " << i;
+				s << "Channel " << i + 1;
 				strcpy_s(marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, s.str().c_str());
 			}
 		}

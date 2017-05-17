@@ -2,6 +2,7 @@
 #include "NoteExtractor.h"
 #include "Song.h"
 #include "ModReader.h"
+#include "sidreader.h"
 
 //#pragma warning(disable : 4996)
 
@@ -57,10 +58,19 @@ BOOL loadFile(char *path, Marshal_Song &marSong, BOOL mixdown, BOOL insTrack)
 	try 
 	{
 		ModReader modReader(song, path, mixdown, insTrack);
+		song.marSong->songType = Marshal_SongType::Mod;
 	}
 	catch (string s)
 	{
-		return FALSE;
+		try
+		{
+			SidReader sidReader(song, path, mixdown); 
+			song.marSong->songType = Marshal_SongType::Sid;
+		}
+		catch (...)
+		{
+			return FALSE;
+		}
 	}
 			
 	song.createNoteList(insTrack);
