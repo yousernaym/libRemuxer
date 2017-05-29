@@ -267,6 +267,8 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 			if (curTick.vol < 0)
 				curTick.vol = 0;
 		}
+		if (curTick.vol > 0 && prevTick.vol == 0 && prevTick.ins > 0)
+			curTick.noteStart = timeT + t;
 
 		//Check sample and envelope
 		double tickTimeS = timeS + tickDur * t;
@@ -308,8 +310,6 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 		if (curTick.vol == 0)
 			curTick.noteStart = -1;
 		//Mark start of new note because volume went from 0 to >0
-		if (curTick.vol > 0 && prevTick.vol == 0)
-			curTick.noteStart = timeT + t;
 		//Copy current tick to next tick
 		*track.getNextTick(timeT+t) = curTick;
 	}

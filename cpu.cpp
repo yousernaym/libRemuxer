@@ -1167,12 +1167,12 @@ int runcpu(void)
 
     case 0x02:
     printf("Error: CPU halt at %04X\n", pc-1);
-    exit(1);
+	throw "";
     break;
           
     default:
     printf("Error: Unknown opcode $%02X at $%04X\n", op, pc-1);
-    exit(1);
+	throw "";
     break;
   }
   return 1;

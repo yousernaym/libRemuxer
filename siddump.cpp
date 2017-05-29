@@ -312,6 +312,7 @@ int main(Song &song, int argc, char **argv)
   while (frames < firstframe + seconds*50)
   {
     int c;
+	int timeT = frames - firstframe;
 
     // Run the playroutine
     instr = 0;
@@ -394,7 +395,14 @@ int main(Song &song, int argc, char **argv)
             // Print new note
 			if (chn[c].note != prevchn[c].note)
             {
-              if (prevchn[c].note == -1)
+				if (chn[c].note)
+				{
+					song.tracks[c].ticks[timeT].notePitch = chn[c].note;
+					song.tracks[c].ticks[timeT].noteStart = timeT;
+				}
+				song.tracks[c].ticks[timeT].vol = 50;
+				
+				if (prevchn[c].note == -1)
                {
                  if (lowres) newnote = 1;
                  sprintf(&output[strlen(output)], " %s %02X  ", notename[chn[c].note], chn[c].note | 0x80);
@@ -463,23 +471,7 @@ int main(Song &song, int argc, char **argv)
         sprintf(&output[strlen(output)], "| %4d %02X %02X ", cycles, rasterlines, rasterlinesbad);
       }
       
-	  for (c = 0; c < 3; c++)
-	  {
-		  int timeT = frames - firstframe;
-		  if (chn[c].note)
-		  {
-			  song.tracks[c].ticks[timeT].notePitch = chn[c].note;
-			  //if (prevchn[c].note != chn[c].note)
-			  if (song.tracks[c].getPrevTick(timeT)->notePitch != chn[c].note)
-				  song.tracks[c].ticks[timeT].noteStart = timeT;
-			  else
-				  song.tracks[c].ticks[timeT].noteStart = song.tracks[c].getPrevTick(timeT)->noteStart;
-			  song.tracks[c].ticks[timeT].ins = c + 1;
-		  }
-		  song.tracks[c].ticks[timeT].vol = 50;
-		  //if prevchn[c].note == -1)
-			//song.tracks[c].ticks.getPrev(timeT).noteStart = -1;
-	  }
+	  
 	  
 	  // End of frame display, print info so far and copy SID registers to old registers
       sprintf(&output[strlen(output)], "|\n");
@@ -517,7 +509,8 @@ int main(Song &song, int argc, char **argv)
         }
       }
     }
-
+	for (c = 0; c < 3; c++)
+		*song.tracks[c].getNextTick(timeT) = song.tracks[c].ticks[timeT];
     // Advance to next frame
     frames++;
   }
