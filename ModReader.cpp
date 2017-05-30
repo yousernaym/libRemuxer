@@ -41,15 +41,10 @@ ModReader::ModReader(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
 			song->tracks[i].ticks.reserve(30000);
 			song->tracks[i].ticks.resize(1);
 		}
-
-
 		curRowInfo.resize(module->numchn);
 		runningRowInfo.resize(module->numchn);
 		
-
 		//Marshall data--------------------------
-		marSong->minPitch = MAX_PITCHES;
-		marSong->maxPitch = 0;
 		//marSong->ticksPerMeasure = module->sngspd * 16; //assuming 4 rows per beat
 		curSongSpeed = module->initspeed;
 

@@ -3,6 +3,8 @@
 Song::Song(Marshal_Song *_marSong)
 {
 	marSong = _marSong;
+	marSong->minPitch = MAX_PITCHES;
+	marSong->maxPitch = 0;
 }
 
 void Song::createNoteList(BOOL insTrack)
