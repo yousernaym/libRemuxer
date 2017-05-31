@@ -3,14 +3,14 @@
 Song::Song(Marshal_Song *_marSong)
 {
 	marSong = _marSong;
-	marSong->minPitch = MAX_PITCHES;
-	marSong->maxPitch = 0;
 }
 
 void Song::createNoteList(BOOL insTrack)
 {
+	marSong->minPitch = MAX_PITCHES;
+	marSong->maxPitch = 0;
 	notes.reserve(MAX_MIDITRACKS);
-	marSong->songLengthT = tracks[1].ticks.size();
+	marSong->songLengthT = (int)tracks[1].ticks.size();
 	for (unsigned i = 0; i < tracks.size(); i++)
 	{
 		for (unsigned j = 0; j < tracks[i].ticks.size(); j++)
@@ -48,8 +48,8 @@ void Song::createNoteList(BOOL insTrack)
 	//Copy notes to marshal struct
 	for (unsigned t = 0; t < notes.size(); t++)
 	{
-		marSong->numTracks = notes.size();
-		marSong->tracks[t].numNotes = notes[t].size();
+		marSong->numTracks = (int)notes.size();
+		marSong->tracks[t].numNotes = (int)notes[t].size();
 		int i = 0;
 		for (TrackNotes::iterator it = notes[t].begin(); it != notes[t].end(); it++)
 			marSong->tracks[t].notes[i++] = *it;
