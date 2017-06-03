@@ -70,8 +70,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;$(IncludePath)</IncludePath>
-    <LibraryPath>d:\kodning\c++\Libs\Music\libmikmod-3.3.10\win32\VS2005\$(Platform);$(LibraryPath)</LibraryPath>
+    <IncludePath>d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;$(IncludePath)</IncludePath>
+    <LibraryPath>d:\kodning\c++\Libs\boost\stage\lib;d:\kodning\c++\Libs\Music\libmikmod-3.3.10\win32\VS2005\$(Platform);$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
     <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
@@ -79,19 +79,19 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;$(IncludePath)</IncludePath>
-    <LibraryPath>d:\kodning\c++\Libs\Music\libmikmod-3.3.10\win32\VS2005\$(Platform);$(LibraryPath)</LibraryPath>
+    <IncludePath>d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;$(IncludePath)</IncludePath>
+    <LibraryPath>d:\kodning\c++\Libs\boost\stage\lib;d:\kodning\c++\Libs\Music\libmikmod-3.3.10\win32\VS2005\$(Platform);$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;d:\kodning\c++\mallar\gameEngine\Gfx Engine\Shaders;d:\kodning\c++\mallar\gameEngine\Gfx Engine\3d;d:\kodning\c++\mallar\gameEngine\Gfx Engine\2d;d:\kodning\c++\mallar\gameEngine\Gfx Engine\;d:\kodning\c++\mallar\gameEngine;d:\kodning\c++\mallar\General lib\;d:\kodning\c++\Libs\zlib;d:\kodning\c++\Libs\DirectX\Include;d:\kodning\c++\Libs\boost;$(IncludePath)</IncludePath>
-    <LibraryPath>d:\kodning\c++\Libs\Music\libmikmod-3.3.10\win32\VS2005\$(Platform);$(LibraryPath)</LibraryPath>
+    <IncludePath>d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;d:\kodning\c++\mallar\gameEngine\Gfx Engine\Shaders;d:\kodning\c++\mallar\gameEngine\Gfx Engine\3d;d:\kodning\c++\mallar\gameEngine\Gfx Engine\2d;d:\kodning\c++\mallar\gameEngine\Gfx Engine\;d:\kodning\c++\mallar\gameEngine;d:\kodning\c++\mallar\General lib\;d:\kodning\c++\Libs\zlib;d:\kodning\c++\Libs\DirectX\Include;d:\kodning\c++\Libs\boost;$(IncludePath)</IncludePath>
+    <LibraryPath>d:\kodning\c++\Libs\boost\stage\lib;d:\kodning\c++\Libs\Music\libmikmod-3.3.10\win32\VS2005\$(Platform);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;d:\kodning\c++\mallar\gameEngine\Gfx Engine\Shaders;d:\kodning\c++\mallar\gameEngine\Gfx Engine\3d;d:\kodning\c++\mallar\gameEngine\Gfx Engine\2d;d:\kodning\c++\mallar\gameEngine\Gfx Engine\;d:\kodning\c++\mallar\gameEngine;d:\kodning\c++\mallar\General lib\;d:\kodning\c++\Libs\zlib;d:\kodning\c++\Libs\DirectX\Include;d:\kodning\c++\Libs\boost;$(IncludePath)</IncludePath>
-    <LibraryPath>d:\kodning\c++\Libs\Music\libmikmod-3.3.10\win32\VS2005\$(Platform);$(LibraryPath)</LibraryPath>
+    <IncludePath>d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;d:\kodning\c++\mallar\gameEngine\Gfx Engine\Shaders;d:\kodning\c++\mallar\gameEngine\Gfx Engine\3d;d:\kodning\c++\mallar\gameEngine\Gfx Engine\2d;d:\kodning\c++\mallar\gameEngine\Gfx Engine\;d:\kodning\c++\mallar\gameEngine;d:\kodning\c++\mallar\General lib\;d:\kodning\c++\Libs\zlib;d:\kodning\c++\Libs\DirectX\Include;d:\kodning\c++\Libs\boost;$(IncludePath)</IncludePath>
+    <LibraryPath>d:\kodning\c++\Libs\boost\stage\lib;d:\kodning\c++\Libs\Music\libmikmod-3.3.10\win32\VS2005\$(Platform);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -142,6 +142,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -161,6 +163,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

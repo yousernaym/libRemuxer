@@ -3,22 +3,24 @@
 #include "Song.h"
 #include "ModReader.h"
 #include "sidreader.h"
+//#define BOOST_FILESYSTEM_NO_DEPRECATED
+//#include <boost/filesystem.hpp>
 
 //#pragma warning(disable : 4996)
 
 Marshal_Song marshalSong;
-const int MAX_MIXDOWN_FILENAME_LENGTH = 500;
-char mixdownFilename[MAX_MIXDOWN_FILENAME_LENGTH];
+char mixdownPath[MAX_MIXDOWN_PATH_LENGTH];
 
-char *getModMixdownFilename_intptr()
+
+char *getMixdownPath()
 {
-	return mixdownFilename;
+	return mixdownPath;
 }
 
-void initLib(char *_mixdownFilename)
+void initLib()
 {
 	ModReader::sInit();
-	strcpy_s(mixdownFilename, MAX_MIXDOWN_FILENAME_LENGTH, _mixdownFilename);
+	//strcpy_s<MAX_MIXDOWN_PATH_LENGTH>(mixdownPath, _mixdownPath);
 	ZeroMemory(&marshalSong, sizeof(Marshal_Song));
     
 	marshalSong.tempoEvents = new Marshal_TempoEvent[MAX_TEMPOEVENTS];
@@ -46,26 +48,43 @@ void exitLib()
 		}
 		safeDeleteArray(marshalSong.tracks);
 	}
-	remove(mixdownFilename);
+	//remove(mixdownPath);
 }
 
 //const int MAX_EFFECTS_PER_CELL = 10;
 
-BOOL loadFile(char *path, Marshal_Song &marSong, BOOL mixdown, BOOL insTrack, double songLengthS)
+BOOL loadFile(const char *path, Marshal_Song &marSong, const char *_mixdownPath, BOOL insTrack, double songLengthS)
 {
 	marSong = marshalSong;
 	Song song(&marSong);
+	if (_mixdownPath != NULL)
+		strcpy_s(mixdownPath, _mixdownPath);
+	else
+		mixdownPath[0] = NULL;
 
+	//Determine mixdown path in caller instead
+#pragma region Determine_mixdown_path
+	/*string expandedPath(_mixdownPath);
+	string nameMacro = "%notefilename";
+	size_t macroIndex = expandedPath.find(nameMacro);
+	if (macroIndex != string::npos)
+	{
+		string noteFilename = boost::filesystem::path(path).filename().string();
+		expandedPath.replace(macroIndex, nameMacro.size(), noteFilename);
+		strcpy_s(mixdownPath, expandedPath.c_str());
+	}	*/
+#pragma endregion
+	
 	try 
 	{
-		ModReader modReader(song, path, mixdown, insTrack);
+		ModReader modReader(song, path, mixdownPath, insTrack);
 		song.marSong->songType = Marshal_SongType::Mod;
 	}
 	catch (string s)
 	{
 		try
 		{
-			SidReader sidReader(song, path, mixdown, songLengthS); 
+			SidReader sidReader(song, path, songLengthS); 
 			song.marSong->songType = Marshal_SongType::Sid;
 		}
 		catch (...)
@@ -77,4 +96,6 @@ BOOL loadFile(char *path, Marshal_Song &marSong, BOOL mixdown, BOOL insTrack, do
 	song.createNoteList(insTrack);
 	return TRUE;
 }
+
+
 

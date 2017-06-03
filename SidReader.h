@@ -4,7 +4,7 @@
 class SidReader
 {
 public:
-	SidReader(Song &song, char *path, BOOL mixdown, double songLengthS);
+	SidReader(Song &song, const char *path, double songLengthS);
 	~SidReader();
 };
 

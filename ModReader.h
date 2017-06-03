@@ -148,7 +148,7 @@ class ModReader
 	Song *song;
 	Marshal_Song *marSong;
 public:
-	ModReader(Song &_song, char *path, BOOL mixdown, BOOL insTrack);
+	ModReader(Song &_song, const string &modPath, const string &mixdown, BOOL insTrack);
 	~ModReader();
 	static void sInit();
 	void getCellRepLen(BYTE replen, int &repeat, int &length);

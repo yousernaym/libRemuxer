@@ -73,7 +73,7 @@ unsigned char freqtblhi[] = {
   0x45,0x49,0x4e,0x52,0x57,0x5c,0x62,0x68,0x6e,0x75,0x7c,0x83,
   0x8b,0x93,0x9c,0xa5,0xaf,0xb9,0xc4,0xd0,0xdd,0xea,0xf8,0xff};
 
-int main(Song &song, int argc, char **argv, double songLengthS)
+int main(Song &song, int argc, const char **argv, double songLengthS)
 {
 	
 	int subtune = 0;
@@ -100,7 +100,7 @@ int main(Song &song, int argc, char **argv, double songLengthS)
 	unsigned playaddress;
 	unsigned dataoffset;
 	FILE *in;
-	char *sidname = 0;
+	const char *sidname = 0;
 	int c;
 
 	// Scan arguments

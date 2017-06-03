@@ -1,11 +1,11 @@
 #include "SidReader.h"
 namespace sid 
 {
-	int main(Song &song, int argc, char **argv, double songLengthS);
+	int main(Song &song, int argc, const char **argv, double songLengthS);
 };
 
 
-SidReader::SidReader(Song &song, char *path, BOOL mixdown, double songLengthS)
+SidReader::SidReader(Song &song, const char *path, double songLengthS)
 {
 	sid::main(song, 1, &path, songLengthS);
 }

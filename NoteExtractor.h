@@ -5,7 +5,8 @@
 
 using namespace std;
 
-extern char mixdownFilename[500];
+const int MAX_MIXDOWN_PATH_LENGTH = 500;
+extern char mixdownPath[MAX_MIXDOWN_PATH_LENGTH];
 
 const int MAX_TEMPOEVENTS = 1000;
 const int MAX_TRACKNOTES = 15000;
@@ -57,10 +58,10 @@ struct Marshal_Song
 
 extern "C"
 {
-	__declspec(dllexport) void initLib(char *_mixdownFilename);
+	__declspec(dllexport) void initLib();
 	__declspec(dllexport) void exitLib();
-	__declspec(dllexport) BOOL loadFile(char *path, Marshal_Song &mod, BOOL mixdown, BOOL insTrack, double songLengthS);
-	__declspec(dllexport) char *getModMixdownFilename_intptr();
+	__declspec(dllexport) BOOL loadFile(const char *path, Marshal_Song &mod, const char *mixdownPath, BOOL insTrack, double songLengthS);
+	__declspec(dllexport) char *getMixdownPath();
 }
 
 

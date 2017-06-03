@@ -8,6 +8,7 @@
 void ModReader::sInit()
 {
 	MikMod_RegisterDriver(&drv_wav);
+	MikMod_RegisterDriver(&drv_nos);
 	MikMod_RegisterAllLoaders();
 	md_mode |= DMODE_SOFT_MUSIC | DMODE_HQMIXER | DMODE_16BITS | DMODE_INTERP;
 	//MikMod_RegisterDriver(&drv_win);
@@ -19,19 +20,28 @@ void ModReader::sInit()
 	/* initialize the library */
 }
 
-ModReader::ModReader(Song &_song, char *path, BOOL mixdown, BOOL insTrack)
+ModReader::ModReader(Song &_song, const string &modPath, const string &mixdownPath, BOOL insTrack)
 {
 	song = &_song;
 	marSong = song->marSong;
-	string cmdLine = "file=" + string(mixdownFilename);
-	md_device = 1;
+
+	string cmdLine;
+	BOOL mixdown = mixdownPath.size() > 0;
+	
+	md_device = 2; //nosound driver
+	if (mixdown)
+	{
+		md_device = 1; //wav writer
+		cmdLine = "file=" + string(mixdownPath);
+	}
+		
 	if (MikMod_Init(cmdLine.c_str()))
 	{
 		string err = (string)"Could not initialize Mikmod, reason: " + (string)MikMod_strerror(MikMod_errno);
 		OutputDebugStringA(err.c_str());
 		assert(false);
 	}
-	module = Player_Load(path, 64, 0);
+	module = Player_Load(modPath.c_str(), 64, 0);
 	
 	if (module)
 	{
