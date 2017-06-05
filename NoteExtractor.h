@@ -46,7 +46,7 @@ struct Marshal_Song
 {
 	Marshal_TempoEvent *tempoEvents;
 	int numTempoEvents;
-	int timeDiv; 
+	int ticksPerBeat; 
 	int songLengthT;
 	int minPitch;
 	int maxPitch;

@@ -7,8 +7,8 @@ Song::Song(Marshal_Song *_marSong)
 
 void Song::createNoteList(BOOL insTrack)
 {
-	double resolutionScale = 120 / marSong->timeDiv;
-	marSong->timeDiv = 120;
+	double resolutionScale = 120 / marSong->ticksPerBeat;
+	marSong->ticksPerBeat = 120;
 	marSong->minPitch = MAX_PITCHES;
 	marSong->maxPitch = 0;
 	notes.reserve(MAX_MIDITRACKS);

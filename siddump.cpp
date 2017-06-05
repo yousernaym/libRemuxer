@@ -170,8 +170,8 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 	//sidname = argv[0];
   
 	//Init song
-	song.marSong->timeDiv = 24;
-	song.marSong->tempoEvents[0].tempo = fps * 60 / song.marSong->timeDiv;
+	song.marSong->ticksPerBeat = 24;
+	song.marSong->tempoEvents[0].tempo = fps * 60 / song.marSong->ticksPerBeat;
 	song.marSong->tempoEvents[0].time = 0;
 	song.marSong->numTempoEvents = 1;
 	song.tracks.resize(3);
