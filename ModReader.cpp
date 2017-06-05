@@ -192,6 +192,7 @@ ModReader::ModReader(Song &_song, const string &modPath, const string &mixdownPa
 		OutputDebugStringA(err.str().c_str());
 		throw err.str();
 	}
+	marSong->timeDiv = 24;
 }
 
 ModReader::~ModReader()

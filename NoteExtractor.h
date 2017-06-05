@@ -46,7 +46,7 @@ struct Marshal_Song
 {
 	Marshal_TempoEvent *tempoEvents;
 	int numTempoEvents;
-	//int ticksPerMeasure; //"timeDiv" from midi song class
+	int timeDiv; 
 	int songLengthT;
 	int minPitch;
 	int maxPitch;

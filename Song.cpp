@@ -7,6 +7,8 @@ Song::Song(Marshal_Song *_marSong)
 
 void Song::createNoteList(BOOL insTrack)
 {
+	double resolutionScale = 120 / marSong->timeDiv;
+	marSong->timeDiv = 120;
 	marSong->minPitch = MAX_PITCHES;
 	marSong->maxPitch = 0;
 	notes.reserve(MAX_MIDITRACKS);
@@ -28,8 +30,8 @@ void Song::createNoteList(BOOL insTrack)
 			{
 				Marshal_Note note;
 				note.pitch = prevTick.notePitch;
-				note.start = prevTick.noteStart;
-				note.stop = j;
+				note.start = int(prevTick.noteStart * resolutionScale);
+				note.stop = int(j * resolutionScale);
 				unsigned track = insTrack ? prevTick.ins : i + 1; //add 1 to channel because first track is reserved for "global" (modules can't have ins indices <1
 				if (track >= notes.size())
 					notes.resize(track + 1);

@@ -75,7 +75,9 @@ unsigned char freqtblhi[] = {
 
 int main(Song &song, int argc, const char **argv, double songLengthS)
 {
-	
+	if (songLengthS == 0)
+		songLengthS = 500;
+	int fps = 50;
 	int subtune = 0;
 	int seconds = 60;
 	int instr = 0;
@@ -168,13 +170,14 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 	//sidname = argv[0];
   
 	//Init song
-	song.marSong->tempoEvents[0].tempo = 125;
+	song.marSong->timeDiv = 24;
+	song.marSong->tempoEvents[0].tempo = fps * 60 / song.marSong->timeDiv;
 	song.marSong->tempoEvents[0].time = 0;
 	song.marSong->numTempoEvents = 1;
 	song.tracks.resize(3);
 	for (c = 0; c < 3; c++)
 	{
-		song.tracks[c].ticks.resize(int(songLengthS * 50) + 1);
+		song.tracks[c].ticks.resize(int(songLengthS * fps) + 1);
 		sprintf_s(song.marSong->tracks[c+1].name, MAX_TRACKNAME_LENGTH, "Channel %i", c+1);
 	}
 	// Usage display
@@ -292,7 +295,7 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 	memset(&prevchn, 0, sizeof prevchn);
 	memset(&prevchn2, 0, sizeof prevchn2);
 	memset(&prevfilt, 0, sizeof prevfilt);
-	printf("Calling playroutine for %d frames, starting from frame %d\n", seconds*50, firstframe);
+	printf("Calling playroutine for %d frames, starting from frame %d\n", seconds*fps, firstframe);
 	printf("Middle C frequency is $%04X\n\n", freqtbllo[48] | (freqtblhi[48] << 8));
 	printf("| Frame | Freq Note/Abs WF ADSR Pul | Freq Note/Abs WF ADSR Pul | Freq Note/Abs WF ADSR Pul | FCut RC Typ V |");
 	if (profiling)
@@ -309,7 +312,7 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
   
   	  
 	// Data collection & display loop
-	while (frames < firstframe + int(songLengthS*50))
+	while (frames < firstframe + int(songLengthS*fps))
 	{
 	int c;
 	int timeT = frames - firstframe;
@@ -352,7 +355,7 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 		if (!timeseconds)
 		sprintf(&output[strlen(output)], "| %5d | ", time);
 		else
-		sprintf(&output[strlen(output)], "|%01d:%02d.%02d| ", time/3000, (time/50)%60, time%50);
+		sprintf(&output[strlen(output)], "|%01d:%02d.%02d| ", time/3000, (time/fps)%60, time%fps);
 
 		// Loop for each channel
 		for (c = 0; c < 3; c++)
