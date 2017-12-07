@@ -7,7 +7,7 @@ Song::Song(Marshal_Song *_marSong)
 
 void Song::createNoteList(BOOL insTrack)
 {
-	int resolutionScale = 10;
+	int resolutionScale = 480 / marSong->ticksPerBeat;
 	marSong->ticksPerBeat = marSong->ticksPerBeat * resolutionScale;;
 	marSong->minPitch = MAX_PITCHES;
 	marSong->maxPitch = 0;
@@ -56,7 +56,7 @@ void Song::createNoteList(BOOL insTrack)
 		for (TrackNotes::iterator it = notes[t].begin(); it != notes[t].end(); it++)
 			marSong->tracks[t].notes[i++] = *it;
 	}
-	for (unsigned i = 0; i < marSong->numTempoEvents; i++)
+	for (int i = 0; i < marSong->numTempoEvents; i++)
 	{
 		marSong->tempoEvents[i].time *= resolutionScale;
 	}
