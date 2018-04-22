@@ -258,7 +258,7 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 	{
 		fclose(in);
 		throw (string)"Error: SID data continues past end of C64 memory.\n";
-	//return 1;
+		//return 1;
 	}
 	fread(&mem[loadaddress], loadsize, 1, in);
 	fclose(in);
@@ -271,22 +271,21 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 	instr = 0;
 	while (runcpu())
 	{
-	instr++;
-	if (instr > MAX_INSTR)
-	{
-		printf("Warning: CPU executed a high number of instructions in init, breaking\n");
-		break;
-	}
+		instr++;
+		if (instr > MAX_INSTR)
+		{
+			printf("Warning: CPU executed a high number of instructions in init, breaking\n");
+			break;
+		}
 	}
 
 	if (playaddress == 0)
 	{
-	printf("Warning: SID has play address 0, reading from interrupt vector instead\n");
-	if ((mem[0x01] & 0x07) == 0x5)
-		playaddress = mem[0xfffe] | (mem[0xffff] << 8);
-	else
-		playaddress = mem[0x314] | (mem[0x315] << 8);
-	printf("New play address is $%04X\n", playaddress);
+		printf("Warning: SID has play address 0, reading from interrupt vector instead\n");
+		if ((mem[0x01] & 0x07) == 0x5)
+			playaddress = mem[0xfffe] | (mem[0xffff] << 8);
+		else
+			playaddress = mem[0x314] | (mem[0x315] << 8);
 	}
 
 	// Clear channelstructures in preparation & print first time info
@@ -296,21 +295,7 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 	memset(&prevchn2, 0, sizeof prevchn2);
 	memset(&prevfilt, 0, sizeof prevfilt);
 	printf("Calling playroutine for %d frames, starting from frame %d\n", seconds*fps, firstframe);
-	printf("Middle C frequency is $%04X\n\n", freqtbllo[48] | (freqtblhi[48] << 8));
-	printf("| Frame | Freq Note/Abs WF ADSR Pul | Freq Note/Abs WF ADSR Pul | Freq Note/Abs WF ADSR Pul | FCut RC Typ V |");
-	if (profiling)
-	{ // CPU cycles, Raster lines, Raster lines with badlines on every 8th line, first line included
-	printf(" Cycl RL RB |");
-	}
-	printf("\n");
-	printf("+-------+---------------------------+---------------------------+---------------------------+---------------+");
-	if (profiling)
-	{
-	printf("------------+");
-	}
-	printf("\n");
-  
-  	  
+		
 	// Data collection & display loop
 	while (frames < firstframe + int(songLengthS*fps))
 	{
@@ -325,8 +310,8 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 		instr++;
 		if (instr > MAX_INSTR)
 		{
-		printf("Error: CPU executed abnormally high amount of instructions in playroutine, exiting\n");
-		return 1;
+			printf("Error: CPU executed abnormally high amount of instructions in playroutine, exiting\n");
+			throw "";
 		}
 		// Test for jump into Kernal interrupt handler exit
 		if ((mem[0x01] & 0x07) != 0x5 && (pc == 0xea31 || pc == 0xea81))
