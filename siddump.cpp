@@ -12,11 +12,13 @@
 #define MAX_INSTR 0x100000
 namespace sid
 {
-	const DWORD PSID_ID = 0x44495350;
-	const DWORD RSID_ID = 0x44495352;
-	const double NTSC_REFRESH = 60.0015924234;
+	const DWORD PSID_ID = 0x50534944;
+	const DWORD RSID_ID = 0x52534944;
+	//const double NTSC_REFRESH = 60.0015924234;
+	const double NTSC_REFRESH = 60.1;
 	const double PAL_REFRESH = 50.32;
-	const double CIA_REFRESH = 59.8260978565;
+	//const double CIA_REFRESH = 59.8260978565;
+	const double CIA_REFRESH = 62;
 
 	typedef struct
 	{
@@ -98,7 +100,6 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 	SidHeader sidHeader;
 	if (songLengthS == 0)
 		songLengthS = 500;
-	double fps = PAL_REFRESH;
 	int subtune = 0;
 	int seconds = 60;
 	int instr = 0;
@@ -187,18 +188,6 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 	}
 	//sidname = argv[0];
   
-	//Init song
-	song.marSong->ticksPerBeat = 24;
-	song.marSong->tempoEvents[0].tempo = fps * 60 / song.marSong->ticksPerBeat;
-	//song.marSong->tempoEvents[0].tempo = 125.3113553;
-	song.marSong->tempoEvents[0].time = 0;
-	song.marSong->numTempoEvents = 1;
-	song.tracks.resize(3);
-	for (c = 0; c < 3; c++)
-	{
-		song.tracks[c].ticks.resize(int(songLengthS * fps) + 1);
-		sprintf_s(song.marSong->tracks[c+1].name, MAX_TRACKNAME_LENGTH, "Channel %i", c+1);
-	}
 	// Usage display
 	if ((argc < 1) || (usage))
 	{
@@ -260,7 +249,7 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 
 	// Read interesting parts of the SID header
 	//fseek(in, 0, SEEK_SET);
-	fread_s(&sidHeader.magicID, sizeof(DWORD), sizeof(DWORD), 1, in);
+	sidHeader.magicID = readDWord(in);
 	sidHeader.version = readword(in);
 	sidHeader.dataoffset = readword(in);
 	sidHeader.loadaddress = readword(in);
@@ -268,27 +257,44 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 	sidHeader.playaddress = readword(in);
 	sidHeader.songs = readword(in);
 	sidHeader.startSong = max(readword(in), 1);
+	if (subtune == 0)
+		subtune = sidHeader.startSong;
+
 	sidHeader.speed = readDWord(in);
 	bool playSidSpecific = false;
 	double screenRefresh = PAL_REFRESH;
 	
 	if (sidHeader.version > 1)
 	{
-		sidHeader.flags = readDWord(in);
-		playSidSpecific = (sidHeader.flags & 1) && sidHeader.magicID == PSID_ID;
-		if (sidHeader.flags & 2) //PAL
+		fseek(in, 0x76, SEEK_SET);
+		sidHeader.flags = readword(in);
+		playSidSpecific = (sidHeader.flags & 2) && sidHeader.magicID == PSID_ID;
+		if (sidHeader.flags & 4) //PAL
 			screenRefresh = PAL_REFRESH;
-		else if (sidHeader.flags & 4) //NTSC
+		else if (sidHeader.flags & 8) //NTSC
 			screenRefresh = NTSC_REFRESH;
 	}
+	//int startSongSpeedIndex = sidHeader.startSong;
 	bool useCIA = (sidHeader.speed & sidHeader.startSong) >> (sidHeader.startSong - 1);
-	fps = useCIA ? CIA_REFRESH : screenRefresh;
+	double fps = useCIA ? CIA_REFRESH : screenRefresh;
 
+	//Init song
+
+	song.marSong->ticksPerBeat = 24;
+	song.marSong->tempoEvents[0].tempo = fps * 60 / song.marSong->ticksPerBeat;
+	//song.marSong->tempoEvents[0].tempo = 125.3113553;
+	song.marSong->tempoEvents[0].time = 0;
+	song.marSong->numTempoEvents = 1;
+	song.tracks.resize(3);
+	for (c = 0; c < 3; c++)
+	{
+		song.tracks[c].ticks.resize(int(songLengthS * fps) + 1);
+		sprintf_s(song.marSong->tracks[c + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", c + 1);
+	}
+	
 	fseek(in, sidHeader.dataoffset, SEEK_SET);
 	if (sidHeader.loadaddress == 0)
 		sidHeader.loadaddress = readbyte(in) | (readbyte(in) << 8);
-
-
 	// Load the C64 data
 	loadpos = ftell(in);
 	fseek(in, 0, SEEK_END);
@@ -309,7 +315,7 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 	printf("Load address: $%04X Init address: $%04X Play address: $%04X\n", sidHeader.loadaddress, sidHeader.initaddress, sidHeader.playaddress);
 	printf("Calling initroutine with subtune %d\n", subtune);
 	mem[0x01] = 0x37;
-	initcpu(sidHeader.initaddress, subtune, 0, 0);
+	initcpu(sidHeader.initaddress, subtune - 1, 0, 0);
 	instr = 0;
 	while (runcpu())
 	{
@@ -565,7 +571,7 @@ unsigned short readword(FILE *f)
 
 DWORD readDWord(FILE *f)
 {
-	return (readword(f) >> 16) | readword(f);
+	return (readword(f) << 16) | readword(f);
 }
 
 

@@ -80,7 +80,7 @@ BOOL loadFile(const char *path, Marshal_Song &marSong, const char *_mixdownPath,
 		ModReader modReader(song, path, mixdownPath, insTrack);
 		song.marSong->songType = Marshal_SongType::Mod;
 	}
-	catch (string s)
+	catch (...)
 	{
 		try
 		{
