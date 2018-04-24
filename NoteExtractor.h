@@ -9,7 +9,7 @@ const int MAX_MIXDOWN_PATH_LENGTH = 500;
 extern char mixdownPath[MAX_MIXDOWN_PATH_LENGTH];
 
 const int MAX_TEMPOEVENTS = 10000;
-const int MAX_TRACKNOTES = 15000;
+const int MAX_TRACKNOTES = 150000;
 const int MAX_MIDITRACKS = 129; //128 (0x80) + global track. (Ft2 has a limit of 0x80 insturments, it should be enough for most mods even if other trackers allow more.
 const int MAX_PITCHES = 128;
 const int MAX_MODTRACKS = 64;

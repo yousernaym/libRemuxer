@@ -9,28 +9,34 @@
 
 //#define CRT_SECURE_CPP_OVERLOAD_STANDARD_NAME
 #pragma warning( disable : 4996)
+#define MAX_INSTR 0x100000
 namespace sid
 {
-#define MAX_INSTR 0x100000
+	const DWORD PSID_ID = 0x44495350;
+	const DWORD RSID_ID = 0x44495352;
+	const double NTSC_REFRESH = 60.0015924234;
+	const double PAL_REFRESH = 50.32;
+	const double CIA_REFRESH = 59.8260978565;
+
+	typedef struct
+	{
+		unsigned short freq;
+		unsigned short pulse;
+		unsigned short adsr;
+		unsigned char wave;
+		int note;
+	} CHANNEL;
 
 typedef struct
 {
-  unsigned short freq;
-  unsigned short pulse;
-  unsigned short adsr;
-  unsigned char wave;
-  int note;
-} CHANNEL;
-
-typedef struct
-{
-  unsigned short cutoff;
-  unsigned char ctrl;
-  unsigned char type;
+	unsigned short cutoff;
+	unsigned char ctrl;
+	unsigned char type;
 } FILTER;
 
 unsigned char readbyte(FILE *f);
 unsigned short readword(FILE *f);
+DWORD readDWord(FILE *f);
 
 CHANNEL chn[3];
 CHANNEL prevchn[3];
@@ -73,11 +79,26 @@ unsigned char freqtblhi[] = {
   0x45,0x49,0x4e,0x52,0x57,0x5c,0x62,0x68,0x6e,0x75,0x7c,0x83,
   0x8b,0x93,0x9c,0xa5,0xaf,0xb9,0xc4,0xd0,0xdd,0xea,0xf8,0xff};
 
+struct SidHeader
+{
+	DWORD magicID;
+	unsigned version;
+	unsigned dataoffset;
+	unsigned loadaddress;
+	unsigned initaddress;
+	unsigned playaddress;
+	unsigned songs;
+	unsigned startSong;
+	unsigned speed;
+	unsigned flags;
+};
+
 int main(Song &song, int argc, const char **argv, double songLengthS)
 {
+	SidHeader sidHeader;
 	if (songLengthS == 0)
 		songLengthS = 500;
-	int fps = 50;
+	double fps = PAL_REFRESH;
 	int subtune = 0;
 	int seconds = 60;
 	int instr = 0;
@@ -97,10 +118,7 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 	unsigned loadend;
 	unsigned loadpos;
 	unsigned loadsize;
-	unsigned loadaddress;
-	unsigned initaddress;
-	unsigned playaddress;
-	unsigned dataoffset;
+	
 	FILE *in;
 	const char *sidname = 0;
 	int c;
@@ -172,6 +190,7 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 	//Init song
 	song.marSong->ticksPerBeat = 24;
 	song.marSong->tempoEvents[0].tempo = fps * 60 / song.marSong->ticksPerBeat;
+	//song.marSong->tempoEvents[0].tempo = 125.3113553;
 	song.marSong->tempoEvents[0].time = 0;
 	song.marSong->numTempoEvents = 1;
 	song.tracks.resize(3);
@@ -213,12 +232,13 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 	{
 		for (c = 0; c < 96; c++)
 		{
-		double note = c - basenote;
-		double freq = (double)basefreq * pow(2.0, note/12.0);
-		int f = (int)freq;
-		if (freq > 0xffff) freq = 0xffff;
-		freqtbllo[c] = f & 0xff;
-		freqtblhi[c] = f >> 8;
+			double note = c - basenote;
+			double freq = (double)basefreq * pow(2.0, note/12.0);
+			int f = (int)freq;
+			if (freq > 0xffff)
+				freq = 0xffff;
+			freqtbllo[c] = f & 0xff;
+			freqtblhi[c] = f >> 8;
 		}
 	}
 	}
@@ -229,24 +249,45 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 	// Open SID file
 	if (!sidname)
 	{
-	throw (string)"Error: no SID file specified.";
+		throw (string)"Error: no SID file specified.";
 	}
 
 	in = fopen(sidname, "rb");
 	if (!in)
 	{
-	throw (string)"Error: couldn't open SID file.";
+		throw (string)"Error: couldn't open SID file.";
 	}
 
 	// Read interesting parts of the SID header
-	fseek(in, 6, SEEK_SET);
-	dataoffset = readword(in);
-	loadaddress = readword(in);
-	initaddress = readword(in);
-	playaddress = readword(in);
-	fseek(in, dataoffset, SEEK_SET);
-	if (loadaddress == 0)
-	loadaddress = readbyte(in) | (readbyte(in) << 8);
+	//fseek(in, 0, SEEK_SET);
+	fread_s(&sidHeader.magicID, sizeof(DWORD), sizeof(DWORD), 1, in);
+	sidHeader.version = readword(in);
+	sidHeader.dataoffset = readword(in);
+	sidHeader.loadaddress = readword(in);
+	sidHeader.initaddress = readword(in);
+	sidHeader.playaddress = readword(in);
+	sidHeader.songs = readword(in);
+	sidHeader.startSong = max(readword(in), 1);
+	sidHeader.speed = readDWord(in);
+	bool playSidSpecific = false;
+	double screenRefresh = PAL_REFRESH;
+	
+	if (sidHeader.version > 1)
+	{
+		sidHeader.flags = readDWord(in);
+		playSidSpecific = (sidHeader.flags & 1) && sidHeader.magicID == PSID_ID;
+		if (sidHeader.flags & 2) //PAL
+			screenRefresh = PAL_REFRESH;
+		else if (sidHeader.flags & 4) //NTSC
+			screenRefresh = NTSC_REFRESH;
+	}
+	bool useCIA = (sidHeader.speed & sidHeader.startSong) >> (sidHeader.startSong - 1);
+	fps = useCIA ? CIA_REFRESH : screenRefresh;
+
+	fseek(in, sidHeader.dataoffset, SEEK_SET);
+	if (sidHeader.loadaddress == 0)
+		sidHeader.loadaddress = readbyte(in) | (readbyte(in) << 8);
+
 
 	// Load the C64 data
 	loadpos = ftell(in);
@@ -254,20 +295,21 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 	loadend = ftell(in);
 	fseek(in, loadpos, SEEK_SET);
 	loadsize = loadend - loadpos;
-	if (loadsize + loadaddress >= 0x10000)
+	if (loadsize + sidHeader.loadaddress >= 0x10000)
 	{
 		fclose(in);
-		throw (string)"Error: SID data continues past end of C64 memory.\n";
+		printf("Error: SID data continues past end of C64 memory.\n");
+		throw (string)"";
 		//return 1;
 	}
-	fread(&mem[loadaddress], loadsize, 1, in);
+	fread(&mem[sidHeader.loadaddress], loadsize, 1, in);
 	fclose(in);
 
 	// Print info & run initroutine
-	printf("Load address: $%04X Init address: $%04X Play address: $%04X\n", loadaddress, initaddress, playaddress);
+	printf("Load address: $%04X Init address: $%04X Play address: $%04X\n", sidHeader.loadaddress, sidHeader.initaddress, sidHeader.playaddress);
 	printf("Calling initroutine with subtune %d\n", subtune);
 	mem[0x01] = 0x37;
-	initcpu(initaddress, subtune, 0, 0);
+	initcpu(sidHeader.initaddress, subtune, 0, 0);
 	instr = 0;
 	while (runcpu())
 	{
@@ -279,13 +321,13 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 		}
 	}
 
-	if (playaddress == 0)
+	if (sidHeader.playaddress == 0)
 	{
 		printf("Warning: SID has play address 0, reading from interrupt vector instead\n");
 		if ((mem[0x01] & 0x07) == 0x5)
-			playaddress = mem[0xfffe] | (mem[0xffff] << 8);
+			sidHeader.playaddress = mem[0xfffe] | (mem[0xffff] << 8);
 		else
-			playaddress = mem[0x314] | (mem[0x315] << 8);
+			sidHeader.playaddress = mem[0x314] | (mem[0x315] << 8);
 	}
 
 	// Clear channelstructures in preparation & print first time info
@@ -294,7 +336,7 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 	memset(&prevchn, 0, sizeof prevchn);
 	memset(&prevchn2, 0, sizeof prevchn2);
 	memset(&prevfilt, 0, sizeof prevfilt);
-	printf("Calling playroutine for %d frames, starting from frame %d\n", seconds*fps, firstframe);
+	printf("Calling playroutine for %d frames, starting from frame %d\n", (int)(seconds*fps), firstframe);
 		
 	// Data collection & display loop
 	while (frames < firstframe + int(songLengthS*fps))
@@ -304,7 +346,7 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 
 	// Run the playroutine
 	instr = 0;
-	initcpu(playaddress, 0, 0, 0);
+	initcpu(sidHeader.playaddress, 0, 0, 0);
 	while (runcpu())
 	{
 		instr++;
@@ -337,10 +379,10 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 		int time = frames - firstframe;
 		output[0] = 0;      
 
-		if (!timeseconds)
-		sprintf(&output[strlen(output)], "| %5d | ", time);
-		else
-		sprintf(&output[strlen(output)], "|%01d:%02d.%02d| ", time/3000, (time/fps)%60, time%fps);
+		//if (!timeseconds)
+			//sprintf(&output[strlen(output)], "| %5d | ", time);
+		//else
+			//sprintf(&output[strlen(output)], "|%01d:%02d.%02d| ", time/3000, (time/fps)%60, time%fps);
 
 		// Loop for each channel
 		for (c = 0; c < 3; c++)
@@ -519,6 +561,11 @@ unsigned short readword(FILE *f)
 
   fread(&res, 2, 1, f);
   return (res[0] << 8) | res[1];
+}
+
+DWORD readDWord(FILE *f)
+{
+	return (readword(f) >> 16) | readword(f);
 }
 
 
