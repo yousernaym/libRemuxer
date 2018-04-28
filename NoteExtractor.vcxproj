@@ -73,7 +73,7 @@
     <IncludePath>d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;$(IncludePath)</IncludePath>
     <LibraryPath>d:\kodning\c++\Libs\boost\stage\lib;$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
-    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -87,6 +87,7 @@
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;d:\kodning\c++\mallar\gameEngine\Gfx Engine\Shaders;d:\kodning\c++\mallar\gameEngine\Gfx Engine\3d;d:\kodning\c++\mallar\gameEngine\Gfx Engine\2d;d:\kodning\c++\mallar\gameEngine\Gfx Engine\;d:\kodning\c++\mallar\gameEngine;d:\kodning\c++\mallar\General lib\;d:\kodning\c++\Libs\zlib;d:\kodning\c++\Libs\DirectX\Include;d:\kodning\c++\Libs\boost;$(IncludePath)</IncludePath>
     <LibraryPath>d:\kodning\c++\Libs\boost\stage\lib;$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -106,7 +107,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>libmikmodD.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
