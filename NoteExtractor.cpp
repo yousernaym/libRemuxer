@@ -53,7 +53,7 @@ void exitLib()
 
 //const int MAX_EFFECTS_PER_CELL = 10;
 
-BOOL loadFile(const char *path, Marshal_Song &marSong, const char *_mixdownPath, BOOL insTrack, double songLengthS)
+BOOL loadFile(const char *path, Marshal_Song &marSong, const char *_mixdownPath, BOOL insTrack, double songLengthS, int subSong)
 {
 	marSong = marshalSong;
 	Song song(&marSong);
@@ -84,7 +84,7 @@ BOOL loadFile(const char *path, Marshal_Song &marSong, const char *_mixdownPath,
 	{
 		try
 		{
-			SidReader sidReader(song, path, songLengthS); 
+			SidReader sidReader(song, path, songLengthS, subSong); 
 			song.marSong->songType = Marshal_SongType::Sid;
 		}
 		catch (...)

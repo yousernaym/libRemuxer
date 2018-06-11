@@ -60,7 +60,7 @@ extern "C"
 {
 	__declspec(dllexport) void initLib();
 	__declspec(dllexport) void exitLib();
-	__declspec(dllexport) BOOL loadFile(const char *path, Marshal_Song &mod, const char *mixdownPath, BOOL insTrack, double songLengthS);
+	__declspec(dllexport) BOOL loadFile(const char *path, Marshal_Song &mod, const char *mixdownPath, BOOL insTrack, double songLengthS, int subSong);
 	__declspec(dllexport) char *getMixdownPath();
 }
 

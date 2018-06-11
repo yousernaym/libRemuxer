@@ -1,8 +1,8 @@
 #include "SidReader.h"
 
-SidReader::SidReader(Song &song, const char *path, double songLengthS)
+SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSong)
 {
-	sid::main(song, 1, &path, songLengthS);
+	sid::main(song, 1, &path, songLengthS, subSong);
 }
 
 

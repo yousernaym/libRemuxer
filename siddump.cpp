@@ -97,13 +97,11 @@ struct SidHeader
 	unsigned flags;
 };
 
-int main(Song &song, int argc, const char **argv, double songLengthS)
+int main(Song &song, int argc, const char **argv, double songLengthS, int subSong)
 {
 	SidHeader sidHeader;
 	if (songLengthS == 0)
 		songLengthS = 500;
-	int subtune = 0;
-	int seconds = 60;
 	int instr = 0;
 	int frames = 0;
 	int spacing = 0;
@@ -115,7 +113,6 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 	int lowres = 0;
 	int rows = 0;
 	int oldnotefactor = 1;
-	int timeseconds = 0;
 	int usage = 0;
 	int profiling = 0;
 	unsigned loadend;
@@ -135,10 +132,6 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 			{
 				case '?':
 				usage = 1;
-				break;
-
-				case 'A':
-				sscanf(&argv[c][2], "%u", &subtune);
 				break;
 
 				case 'C':
@@ -170,14 +163,6 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 				sscanf(&argv[c][2], "%u", &pattspacing);
 				break;
 
-				case 'S':
-				timeseconds = 1;
-				break;
-
-				case 'T':
-				sscanf(&argv[c][2], "%u", &seconds);
-				break;
-        
 				case 'Z':
 				profiling = 1;
 				break;
@@ -254,8 +239,8 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 		sidHeader.playaddress = readword(in);
 		sidHeader.songs = readword(in);
 		sidHeader.startSong = max(readword(in), 1);
-		if (subtune == 0)
-			subtune = sidHeader.startSong;
+		if (subSong == 0)
+			subSong = sidHeader.startSong;
 
 		sidHeader.speed = readDWord(in);
 		bool playSidSpecific = false;
@@ -271,6 +256,8 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 			else if (sidHeader.flags & 8) //NTSC
 				screenRefresh = NTSC_REFRESH;
 		}
+		screenRefresh /= 1.0045; //Adjust from xmplay to sidplayfp playback speed
+
 		//int startSongSpeedIndex = sidHeader.startSong;
 		bool useCIA = (sidHeader.speed & sidHeader.startSong) >> (sidHeader.startSong - 1);
 		double fps = useCIA ? CIA_REFRESH : screenRefresh;
@@ -307,11 +294,9 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 		fread(&mem[sidHeader.loadaddress], loadsize, 1, in);
 		fclose(in);
 
-		// Print info & run initroutine
-		printf("Load address: $%04X Init address: $%04X Play address: $%04X\n", sidHeader.loadaddress, sidHeader.initaddress, sidHeader.playaddress);
-		printf("Calling initroutine with subtune %d\n", subtune);
+		// Tun initroutine
 		mem[0x01] = 0x37;
-		initcpu(sidHeader.initaddress, subtune - 1, 0, 0);
+		initcpu(sidHeader.initaddress, subSong - 1, 0, 0);
 		instr = 0;
 		while (runcpu())
 		{
@@ -338,8 +323,7 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 		memset(&prevchn, 0, sizeof prevchn);
 		memset(&prevchn2, 0, sizeof prevchn2);
 		memset(&prevfilt, 0, sizeof prevfilt);
-		printf("Calling playroutine for %d frames, starting from frame %d\n", (int)(seconds*fps), firstframe);
-		
+				
 		// Data collection & display loop
 		while (frames < firstframe + int(songLengthS*fps))
 		{
@@ -377,11 +361,6 @@ int main(Song &song, int argc, const char **argv, double songLengthS)
 				char output[512];
 				int time = frames - firstframe;
 				output[0] = 0;      
-
-				//if (!timeseconds)
-					//sprintf(&output[strlen(output)], "| %5d | ", time);
-				//else
-					//sprintf(&output[strlen(output)], "|%01d:%02d.%02d| ", time/3000, (time/fps)%60, time%fps);
 
 				// Loop for each channel
 				for (c = 0; c < 3; c++)
