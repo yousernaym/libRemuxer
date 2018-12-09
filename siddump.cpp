@@ -238,7 +238,9 @@ int main(Song &song, int argc, const char **argv, double songLengthS, int subSon
 		sidHeader.initaddress = readword(in);
 		sidHeader.playaddress = readword(in);
 		sidHeader.songs = readword(in);
-		sidHeader.startSong = max(readword(in), 1);
+		sidHeader.startSong = readword(in);
+		if(sidHeader.startSong < 1)
+			sidHeader.startSong = 1;
 		if (subSong == 0)
 			subSong = sidHeader.startSong;
 
@@ -259,12 +261,15 @@ int main(Song &song, int argc, const char **argv, double songLengthS, int subSon
 		screenRefresh /= 1.0045; //Adjust from xmplay to sidplayfp playback speed
 
 		//int startSongSpeedIndex = sidHeader.startSong;
-		bool useCIA = (sidHeader.speed & sidHeader.startSong) >> (sidHeader.startSong - 1);
+		bool useCIA = (sidHeader.speed >> (subSong - 1)) & 1;
 		double fps = useCIA ? CIA_REFRESH : screenRefresh;
 
 		//Init song
-		song.marSong->ticksPerBeat = 24;
+		song.marSong->ticksPerBeat = 24;   
 		song.marSong->tempoEvents[0].tempo = fps * 60 / song.marSong->ticksPerBeat;
+		float speedScale = 1;// 3.25 / 4 * 1.635;
+		song.marSong->ticksPerBeat *= speedScale;
+		songLengthS *= speedScale;
 		//song.marSong->tempoEvents[0].tempo = 125.3113553;
 		song.marSong->tempoEvents[0].time = 0;
 		song.marSong->numTempoEvents = 1;
