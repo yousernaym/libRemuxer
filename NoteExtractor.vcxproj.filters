@@ -13,6 +13,15 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="SidSpectro">
+      <UniqueIdentifier>{f5328b39-c4f9-43bb-abad-f1374903ef8a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SidSpectro\Header Files">
+      <UniqueIdentifier>{b3f291c5-49d0-445c-82d5-da855e918106}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SidSpectro\Source Files">
+      <UniqueIdentifier>{cb5ae963-4772-416d-a4d1-62508d482e74}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ModReader.cpp">
@@ -33,6 +42,33 @@
     <ClCompile Include="cpu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="sidspectro\c64.cpp">
+      <Filter>SidSpectro\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sidspectro\cia.cpp">
+      <Filter>SidSpectro\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sidspectro\misc.cpp">
+      <Filter>SidSpectro\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sidspectro\sid.cpp">
+      <Filter>SidSpectro\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sidspectro\sidfile.cpp">
+      <Filter>SidSpectro\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sidspectro\sound.cpp">
+      <Filter>SidSpectro\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sidspectro\tables.cpp">
+      <Filter>SidSpectro\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sidspectro\vic.cpp">
+      <Filter>SidSpectro\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sidspectro\sp_cpu.cpp">
+      <Filter>SidSpectro\Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ModReader.h">
@@ -49,6 +85,33 @@
     </ClInclude>
     <ClInclude Include="cpu.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sidspectro\cia.h">
+      <Filter>SidSpectro\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sidspectro\c64.h">
+      <Filter>SidSpectro\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sidspectro\sid.h">
+      <Filter>SidSpectro\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sidspectro\misc.h">
+      <Filter>SidSpectro\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sidspectro\sidfile.h">
+      <Filter>SidSpectro\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sidspectro\tables.h">
+      <Filter>SidSpectro\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sidspectro\sound.h">
+      <Filter>SidSpectro\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sidspectro\vic.h">
+      <Filter>SidSpectro\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sidspectro\sp_cpu.h">
+      <Filter>SidSpectro\Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
