@@ -25,7 +25,6 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 
 	C64 c64;
 	c64.LoadSIDFile(sidFile);
-	return;
 	float timeS = 0;
 	float ticksPerSeconds = bpm / 60 * song.marSong->ticksPerBeat;
 	while (timeS < songLengthS)
@@ -41,7 +40,7 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 				song.tracks[i].ticks[timeT].notePitch =  (int)(log2(ch.frequency / 20) * 12);
 				if (song.tracks[i].getPrevTick(timeT)->vol == 0)
 					song.tracks[i].ticks[timeT].noteStart = timeT;
-				song.tracks[i].ticks[timeT].vol = ch.amplitude;
+				song.tracks[i].ticks[timeT].vol = (int)ch.amplitude;
 			}
 		}
 		timeS = c64.getTime();

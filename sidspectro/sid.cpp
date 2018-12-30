@@ -132,13 +132,20 @@ float SIDChannel::NextSample()
 		break;
 
 	case wvpulsetriangle:
-		if (phase < pulsewidth) oscamplitude = 0.; else
-		if (phase < 0.5) oscamplitude = phase * 2.; else oscamplitude = 1.-(phase-0.5) * 2.;
+		if (phase < pulsewidth) 
+			oscamplitude = 0.f;
+		else if (phase < 0.5f) 
+			oscamplitude = phase * 2.f;
+		else 
+			oscamplitude = 1.f-(phase-0.5f) * 2.f;
 		break;
 
 	case wvtriangle:
 	case wvring:
-		if (phase < 0.5) oscamplitude = phase * 2.; else oscamplitude = 1.-(phase-0.5) * 2.;
+		if (phase < 0.5f)
+			oscamplitude = phase * 2.f;
+		else
+			oscamplitude = 1.f-(phase-0.5f) * 2.f;
 		break;
 
 	case wvnoise:
@@ -166,7 +173,7 @@ float SIDChannel::NextSample()
 			{
 				phaseadsr = phdecay;
 				amplitude = 1;
-				damplitude = -(1. - s)/d;
+				damplitude = -(1.f - s)/d;
 			}
 		} else {
 			damplitude = -amplitude/r;
@@ -283,7 +290,7 @@ void SID6581::Update(int count)
 				data[offset-2400] = (unsigned char)(ampl*0.5);
 			}
 			freq = (int)floor(channel[1].frequency*0.3)+1;
-			ampl = channel[1].amplitude*255;
+			ampl = (int)channel[1].amplitude*255;
 			if (freq <= 399)
 			{
 				int offset = 2400*(399-freq)+column+1;
@@ -292,7 +299,7 @@ void SID6581::Update(int count)
 				data[offset-2400] = (unsigned char)(ampl*0.5);
 			}
 			freq = (int)floor(channel[2].frequency*0.3)+1;
-			ampl = channel[2].amplitude*255;
+			ampl = (int)channel[2].amplitude*255;
 			if (freq <= 399) 
 			{
 				int offset = 2400*(399-freq)+column+2;
@@ -331,9 +338,11 @@ void SID6581::Write(int index, int value)
 		regs[index] = value;
 		
 		f = regs[0+i*7] | (regs[1+i*7]<<8);
-		if (f == 0) channel[i].frequency = 0.01;
-		else channel[i].frequency = f * 0.060959458;
-		channel[i].pulsewidth = ((regs[3+i*7] & 15)*256 + regs[2+i*7])/40.95/100.;
+		if (f == 0)
+			channel[i].frequency = 0.01f;
+		else 
+			channel[i].frequency = f * 0.060959458f;
+		channel[i].pulsewidth = ((regs[3+i*7] & 15)*256 + regs[2+i*7])/40.95f/100.f;
 
 		//channel[i].pw = (regs[2+i*7] + ((regs[3+i*7]&0xF)<<8)) * 0x100100;
 		//fs = regs[0+i*7] | (regs[1+i*7]<<8);
@@ -342,14 +351,18 @@ void SID6581::Write(int index, int value)
 
 	case 6: case 13: case 20:
 		regs[index] = value;
-		if (channel[i].phaseadsr != phsustain) channel[i].s = (regs[index] >> 4)/15.;
-		if (channel[i].phaseadsr != phrelease) channel[i].r = (releaserate[regs[6+i*7] & 15]/1000.)*samples;
+		if (channel[i].phaseadsr != phsustain) channel
+			[i].s = (regs[index] >> 4)/15.f;
+		if (channel[i].phaseadsr != phrelease) 
+			channel[i].r = (releaserate[regs[6+i*7] & 15]/1000.f)*samples;
 		break;
 
 	case 5: case 12: case 19:
 		regs[index] = value;
-		if (channel[i].phaseadsr != phattack) channel[i].a = (attackrate[regs[5+i*7] >> 4]/1000.)*samples;
-		if (channel[i].phaseadsr != phdecay) channel[i].d = (decayrate[regs[5+i*7] & 15]/1000.)*samples;
+		if (channel[i].phaseadsr != phattack) 
+			channel[i].a = (attackrate[regs[5+i*7] >> 4]/1000.f)*samples;
+		if (channel[i].phaseadsr != phdecay) 
+			channel[i].d = (decayrate[regs[5+i*7] & 15]/1000.f)*samples;
 		break;
 
 	case 4: case 11: case 18:
@@ -387,9 +400,21 @@ void SID6581::Write(int index, int value)
 				break;
 			}
 		}
-		if (i == 0) { Write(0, regs[0]); Write(1, regs[1]); }
-		if (i == 1) { Write(7, regs[7]); Write(8, regs[8]);  }
-		if (i == 2) { Write(14, regs[14]); Write(15, regs[15]); }
+		if (i == 0)
+		{
+			Write(0, regs[0]);
+			Write(1, regs[1]); 
+		}
+		if (i == 1)
+		{
+			Write(7, regs[7]);
+			Write(8, regs[8]);
+		}
+		if (i == 2) 
+		{
+			Write(14, regs[14]);
+			Write(15, regs[15]); 
+		}
 		/*
 		switch(channel[i].phaseadsr)
 		{
@@ -407,13 +432,13 @@ void SID6581::Write(int index, int value)
 		{
 			if ((oldvalue & 1) == 0)
 			{
-				channel[i].a = (attackrate[regs[5 + i * 7] >> 4] / 1000.)*samples;
-				channel[i].d = (decayrate[regs[5 + i * 7] & 15] / 1000.)*samples;
-				channel[i].s = (regs[6 + i * 7] >> 4) / 15.;
-				channel[i].r = (releaserate[regs[6 + i * 7] & 15] / 1000.)*samples;
+				channel[i].a = (attackrate[regs[5 + i * 7] >> 4] / 1000.f)*samples;
+				channel[i].d = (decayrate[regs[5 + i * 7] & 15] / 1000.f)*samples;
+				channel[i].s = (regs[6 + i * 7] >> 4) / 15.f;
+				channel[i].r = (releaserate[regs[6 + i * 7] & 15] / 1000.f)*samples;
 
 				channel[i].phaseadsr = phattack;
-				channel[i].damplitude = 1. / channel[i].a;
+				channel[i].damplitude = 1.f / channel[i].a;
 				channel[i].amplitude = 0;
 				channel[i].gate = gopen;
 			}

@@ -17,11 +17,13 @@ MOS6502::MOS6502(C64 &_c64) : c64(_c64) //std::function<int(int)>_read, std::fun
 	for(int i=0; i<256; i++)
 	{
 		ops[i] = opcodes[i].op | (opcodes[i].amode<<8) | (opcodes[i].count<<16);
-		if (opcodes[i].count == 0) ops[i] = opcodes[i].op | (opcodes[i].amode<<8) | (1<<16);
+		if (opcodes[i].count == 0) 
+			ops[i] = opcodes[i].op | (opcodes[i].amode<<8) | (1<<16);
 		if (
 				(opcodes[i].op == OP_STA) ||
 				(opcodes[i].op == OP_STX) ||
-				(opcodes[i].op == OP_STY)) ops[i] |= 0x1000000;
+				(opcodes[i].op == OP_STY)) 
+			ops[i] |= 0x1000000;
 		if (
 				(opcodes[i].amode != AMODE_ACC) &&
 				(opcodes[i].amode != AMODE_IMM) &&
@@ -232,42 +234,49 @@ int MOS6502::Step(int steps)
 
 		case AMODE_ABS:
 			address = (c64.Read(PC+2) << 8) | c64.Read(PC+1);
-			if (!(op & 0x1000000)) x = c64.Read(address);
+			if (!(op & 0x1000000))
+				x = c64.Read(address);
 			PC += 3;
 			break;
 
 		case AMODE_IMM:
-			if (!(op & 0x1000000)) x = c64.Read(PC+1);
+			if (!(op & 0x1000000))
+				x = c64.Read(PC+1);
 			PC += 2;
 			break;
 
 		case AMODE_ZP:
 			address = c64.Read(PC+1);
-			if (!(op & 0x1000000))  x = c64.Read(address);
+			if (!(op & 0x1000000))
+				x = c64.Read(address);
 			PC += 2;
 			break;
 
 		case AMODE_ABSX:
 			address = ((c64.Read(PC+2) << 8) | c64.Read(PC+1)) + XR;
-			if (!(op & 0x1000000)) x = c64.Read(address);
+			if (!(op & 0x1000000))
+				x = c64.Read(address);
 			PC += 3;
 			break;
 
 		case AMODE_ABSY:
 			address = ((c64.Read(PC+2) << 8) | c64.Read(PC+1)) + YR;
-			if (!(op & 0x1000000)) x = c64.Read(address);
+			if (!(op & 0x1000000)) 
+				x = c64.Read(address);
 			PC += 3;
 			break;
 
 		case AMODE_ZPX:
 			address = (c64.Read(PC+1)+XR) & 0xFF;
-			if (!(op & 0x1000000)) x = c64.Read(address);
+			if (!(op & 0x1000000))
+				x = c64.Read(address);
 			PC += 2;
 			break;
 
 		case AMODE_ZPY:
 			address = (c64.Read(PC+1)+YR) & 0xFF;
-			if (!(op & 0x1000000)) x = c64.Read(address);
+			if (!(op & 0x1000000))
+				x = c64.Read(address);
 			PC += 2;
 			break;
 
@@ -286,14 +295,16 @@ int MOS6502::Step(int steps)
 		case AMODE_INDX:
 			address = (c64.Read(PC+1) + XR) & 0xFF;
 			address = (c64.Read(address+1) << 8) | c64.Read(address);
-			if (!(op & 0x1000000)) x = c64.Read(address);       
+			if (!(op & 0x1000000)) 
+				x = c64.Read(address);       
 			PC += 2;
 			break;
 
 		case AMODE_INDY:
 			address = c64.Read(PC+1);
 			address = (c64.Read(address+1) << 8) + (c64.Read(address)+YR);
-			if (!(op & 0x1000000)) x = c64.Read(address);
+			if (!(op & 0x1000000))
+				x = c64.Read(address);
 			PC += 2;
 			break;
 		}
@@ -388,12 +399,15 @@ int MOS6502::Step(int steps)
 			{
 				help = (AC & 0x0f) + (x & 0x0f);		// Calculate lower nybble
 				if (Carry_Flag) help++;
-				if (help > 9) help = help + 6;									// BCD fixup for lower nybble
+				if (help > 9)
+					help = help + 6;									// BCD fixup for lower nybble
 
 				help2 = (AC >> 4) + (x >> 4);							// Calculate upper nybble
-				if (help > 0x0f) help2 = help2 + 1;
-				int help3 = AC+x;
-				if (Carry_Flag) help3 = help3 + 1;
+				if (help > 0x0f) 
+					help2 = help2 + 1;
+				int help3 = AC + x;
+				if (Carry_Flag)
+					help3 = help3 + 1;
 
 				Zero_Flag = (help3 & 255) == 0;
 
@@ -405,7 +419,9 @@ int MOS6502::Step(int steps)
 				AC = (help2 << 4) | (help & 0x0f);							// Compose result
 				
 
-			} else {
+			} 
+			else 
+			{
 				help = AC + x;
 				if (Carry_Flag) help++;
 				Overflow_Flag = (((~(AC ^ x) & 0x80) ) != 0) && (((AC ^ help) & 0x80) != 0 );
@@ -417,10 +433,12 @@ int MOS6502::Step(int steps)
 			break;
 
 		case OP_SBC:
-			if (Decimal_Flag) {
+			if (Decimal_Flag)
+			{
 				int low = 0x0, high = 0x0;
 				low = (AC & 0x0f) - (x & 0x0f);		// Calculate lower nybble
-				if (!Carry_Flag) low--;
+				if (!Carry_Flag)
+					low--;
 
 				help2 = (AC >> 4) - (x >> 4);							// Calculate upper nybble
 				if ((low & 0x10) != 0)
@@ -428,18 +446,23 @@ int MOS6502::Step(int steps)
 					low = low - 6;											// BCD fixup for lower nybble
 					help2 = help2 - 1;
 				}
-				if ((help2 & 0x10) != 0) help2 = help2 - 6;									// BCD fixup for upper nybble
+				if ((help2 & 0x10) != 0)
+					help2 = help2 - 6;									// BCD fixup for upper nybble
 				int help3 = AC - x;
-				if (!Carry_Flag) help3 = help3 - 1;
+				if (!Carry_Flag) 
+					help3 = help3 - 1;
 
 				Carry_Flag = help3 < 0x100;									// Set flags
 				Overflow_Flag = (((AC ^ help3) & 0x80) != 0) & (((AC ^ x) & 0x80) != 0);
 				Zero_Flag = (help3 & 255) == 0;
 				Negative_Flag = (help3 & 128);
 				AC = (help2 << 4) | (low & 0x0f);							// Compose result
-			} else {
+			}
+			else 
+			{
 				help = AC - x;
-				if (!Carry_Flag) help--;
+				if (!Carry_Flag)
+					help--;
 				Overflow_Flag = (((AC ^ help) & 0x80) ) && (((AC ^ x) & 0x80) );
 				AC = help & 0xFF;
 				Carry_Flag = help >= 0;
@@ -506,7 +529,8 @@ int MOS6502::Step(int steps)
 
 		case OP_ROL:
 			help = x << 1;
-			if (Carry_Flag) help |= 1;
+			if (Carry_Flag)
+				help |= 1;
 			Carry_Flag = help > 255;
 			x = help & 0xFF;
 			Zero_Flag =  x==0;
@@ -697,7 +721,8 @@ int MOS6502::Step(int steps)
 			return count + (steps)*4; // fast endless loop
 			break;
 		}
-		if (address_mode == AMODE_ACC) AC = x&0xFF; 
+		if (address_mode == AMODE_ACC)
+			AC = x&0xFF; 
 		else if (op & 0x2000000) 
 			c64.Write(address, x);
 

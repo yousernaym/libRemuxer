@@ -170,9 +170,9 @@ void CIA6526::Write(int addr, int x)
 	case 13:
 		//set iflags
 		if (x & 0x80)
-		{
 			iflags |= x & ~0x80;
-		} else iflags &= ~x;
+		else
+			iflags &= ~x;
 		break;
 	case 14:
 		if ((x&1) & !(regs[14]&1))

@@ -267,8 +267,8 @@ int main(Song &song, int argc, const char **argv, double songLengthS, int subSon
 		//Init song
 		song.marSong->ticksPerBeat = 24;   
 		song.marSong->tempoEvents[0].tempo = fps * 60 / song.marSong->ticksPerBeat;
-		//float speedScale = 1;// 3.25 / 4 * 1.635;
-		//song.marSong->ticksPerBeat *= speedScale;
+		float speedScale = 1;// 3.25 / 4 * 1.635;
+		song.marSong->ticksPerBeat = (int)(song.marSong->ticksPerBeat * speedScale);
 		songLengthS *= speedScale;
 		//song.marSong->tempoEvents[0].tempo = 125.3113553;
 		song.marSong->tempoEvents[0].time = 0;

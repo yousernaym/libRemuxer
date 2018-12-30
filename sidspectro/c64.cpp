@@ -48,18 +48,22 @@ int C64::Read(unsigned addr)
 	case 0x0:
 		if (addr <= 1)
 		{
-			if (addr == 0) return ddr|0;
-			if (addr == 1) return ((ddr & pr) | (~ddr & 0x17))|0;
+			if (addr == 0)
+				return ddr|0;
+			if (addr == 1)
+				return ((ddr & pr) | (~ddr & 0x17))|0;
 		}
 		break;
 		
 	case 0xA:
 	case 0xB:
-		if (basic_in) return basicrom[addr&0x1FFF]|0;
+		if (basic_in)
+			return basicrom[addr&0x1FFF]|0;
 		break;
 		
 	case 0xD:
-		if (char_in) return charrom[addr&0x0FFF]|0;
+		if (char_in)
+			return charrom[addr&0x0FFF]|0;
 		if (io_in) {
 			if ((addr >= 0xD000) && (addr <= 54271)) return vic.Read(addr&0x3F)|0; else
 			if ((addr >= 0xD400) && (addr <= 55295)) return sid.Read(addr&31); else
@@ -72,7 +76,8 @@ int C64::Read(unsigned addr)
 
 	case 0xE:
 	case 0xF:
-		if (kernel_in) return kernelrom[addr&0x1FFF]|0;
+		if (kernel_in)
+			return kernelrom[addr&0x1FFF]|0;
 		break;
 	}
 
