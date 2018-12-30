@@ -6,10 +6,12 @@
 #include "sid.h"
 #include "sidfile.h"
 
-
-
 class C64
 {
+	friend class MOS6502;
+	friend class CIA6526;
+	friend class VICII;
+
 private:
 	float cyclespersecond = 1000000;
 	unsigned char mem[0x10000];
@@ -24,12 +26,12 @@ private:
 	CIA6526 cia2;
 	VICII vic;
 	MOS6502 cpu;
-	SID6581 sid;
 	//screen = document.getElementById(screenid);
 	//canvas = screen.getContext("2d");
 	//imagedata = canvas.getImageData(0, 0, screen.width, screen.height);
 	//imagedata = canvas.createImageData(800, 400);
 public:
+	SID6581 sid;
 	C64();	
 	void Reset();
 	int Read(unsigned addr);

@@ -14,12 +14,11 @@ wvpulsesawtooth = 8;
 
 class SIDChannel
 {
-	friend class SID6581;
-private:
+public:
 	float frequency = 0;
 	float oscamplitude = 0;
 	float pulsewidth = 0;
-	unsigned char amplitude = 0;
+	float amplitude = 0;
 	float damplitude = 0;
 	float a = 0;
 	float d = 0;
@@ -30,10 +29,11 @@ private:
 	int phaseadsr;
 	float phase = 0.;
 	int rv = 0x7FFFF8; //noise shift register
-public:
+//public:
 	SIDChannel();
 	void SIDChannel::BuildTables();
 	float NextSample();
+	bool isPlaying();
 };
 
 
@@ -44,7 +44,7 @@ public:
 
 class SID6581
 {
-private:
+public:
 	float playposition = 0;
 	float writeposition = 0;
 	unsigned char regs[32];
@@ -54,7 +54,7 @@ private:
 	bool enabled = false;
 	LoopSoundBuffer soundbuffer;
 	float starttime = 0; // soundbuffer.GetTime();
-public:
+//public:
 	SID6581(float _cyclespersecond, unsigned char *_data);
 	void Reset();
 	float NextSample();

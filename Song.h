@@ -8,9 +8,9 @@ typedef multiset<Marshal_Note> TrackNotes;
 struct RunningTickInfo
 {
 	int noteStart = -1;
-	int notePitch;
-	int vol;
-	int ins;
+	int notePitch = 0;
+	int vol = 0;
+	int ins = 0;
 };
 
 class Song

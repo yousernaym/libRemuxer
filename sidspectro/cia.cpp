@@ -3,9 +3,10 @@
 // -------------------------------------------------
 #include "cia.h"
 
-CIA6526::CIA6526(std::function<void()> _interruptfunc, int _no)
+CIA6526::CIA6526(MOS6502 &_cpu, int _no, bool _maskable) : cpu(_cpu)
 {
-	interruptfunc = _interruptfunc;
+	//interruptfunc = std::bind(&MOS6502::MaskableInterrupt, c64.cpu);
+	maskable = _maskable;
 	no = _no;
 	// ports, first four registers
 	Reset();
@@ -28,7 +29,11 @@ void CIA6526::TriggerInterrupt()
 {
 	regs[13] |= 0x80;
 	interrupt = true;
-	interruptfunc();
+	
+	if (maskable)
+		cpu.MaskableInterrupt();
+	else
+		cpu.NonMaskableInterrupt();
 }
 
 void CIA6526::ClearInterrupt()

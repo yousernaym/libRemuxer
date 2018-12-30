@@ -113,7 +113,7 @@ float SIDChannel::NextSample()
 
 */
 
-	float phase = phase - floor(phase);
+	float phase = this->phase - floor(this->phase);
 	float oldphase = floor(phase);
 	phase += (float)frequency/samples;
 	int newphase = floor(phase);
@@ -212,10 +212,14 @@ float SIDChannel::NextSample()
 		}
 		break;
 	}
-	y += ((oscamplitude-0.5)*amplitude);
+	y += ((oscamplitude-0.5f)*amplitude);
 	return y;
 }
 
+bool SIDChannel::isPlaying()
+{
+	return gate == gopen;
+}
 ////////////////////////////////////
 //SID6581
 ////////////////////////////////////
@@ -242,7 +246,7 @@ float SID6581::NextSample()
 	y += channel[0].NextSample();
 	y += channel[1].NextSample();
 	y += channel[2].NextSample();
-	y *= (regs[24]&15)/15.;
+	y *= (regs[24]&15)/15.f;
 	return y*0.3f;
 }
 
@@ -354,33 +358,35 @@ void SID6581::Write(int index, int value)
 		{
 			channel[i].waveform = wvtest; 
 			// TODO reset some stuff
-		} else
-		switch((value>>4)&0xF)
-		{
-		case 4:
-			channel[i].waveform = wvpulse;
-			break;
-		case 2:
-			channel[i].waveform = wvsawtooth;
-			break;
-		case 1:
-			if (value&4) channel[i].waveform = wvring; else channel[i].waveform = wvtriangle;
-			break;
-		case 8:
-			channel[i].waveform = wvnoise;
-			break;
-		case 5:
-			channel[i].waveform = wvpulsetriangle;
-			break;
-		case 6:
-			channel[i].waveform = wvpulsesawtooth;
-			break;
-		case 0:
-		default:
-			channel[i].waveform = wvnone;
-			break;
 		}
-
+		else
+		{
+			switch ((value >> 4) & 0xF)
+			{
+			case 4:
+				channel[i].waveform = wvpulse;
+				break;
+			case 2:
+				channel[i].waveform = wvsawtooth;
+				break;
+			case 1:
+				if (value & 4) channel[i].waveform = wvring; else channel[i].waveform = wvtriangle;
+				break;
+			case 8:
+				channel[i].waveform = wvnoise;
+				break;
+			case 5:
+				channel[i].waveform = wvpulsetriangle;
+				break;
+			case 6:
+				channel[i].waveform = wvpulsesawtooth;
+				break;
+			case 0:
+			default:
+				channel[i].waveform = wvnone;
+				break;
+			}
+		}
 		if (i == 0) { Write(0, regs[0]); Write(1, regs[1]); }
 		if (i == 1) { Write(7, regs[7]); Write(8, regs[8]);  }
 		if (i == 2) { Write(14, regs[14]); Write(15, regs[15]); }
@@ -395,18 +401,22 @@ void SID6581::Write(int index, int value)
 			break;
 		}
 */
-		if ((value & 1) == 0) channel[i].gate = gclosed; else
-		if ((oldvalue & 1) == 0)
+		if ((value & 1) == 0)
+			channel[i].gate = gclosed;
+		else
 		{
-			channel[i].a = (attackrate[regs[5+i*7] >> 4]/1000.)*samples;
-			channel[i].d = (decayrate[regs[5+i*7] & 15]/1000.)*samples;
-			channel[i].s = (regs[6+i*7] >> 4)/15.;
-			channel[i].r = (releaserate[regs[6+i*7] & 15]/1000.)*samples;
+			if ((oldvalue & 1) == 0)
+			{
+				channel[i].a = (attackrate[regs[5 + i * 7] >> 4] / 1000.)*samples;
+				channel[i].d = (decayrate[regs[5 + i * 7] & 15] / 1000.)*samples;
+				channel[i].s = (regs[6 + i * 7] >> 4) / 15.;
+				channel[i].r = (releaserate[regs[6 + i * 7] & 15] / 1000.)*samples;
 
-			channel[i].phaseadsr = phattack;
-			channel[i].damplitude = 1./channel[i].a;
-			channel[i].amplitude = 0;
-			channel[i].gate = gopen;
+				channel[i].phaseadsr = phattack;
+				channel[i].damplitude = 1. / channel[i].a;
+				channel[i].amplitude = 0;
+				channel[i].gate = gopen;
+			}
 		}
 		break;
 	}

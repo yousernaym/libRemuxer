@@ -10,7 +10,7 @@ using namespace std::placeholders;
 //var keyboard = new KeyboardInput();
 //C64 c64;
 
-C64::C64() : cpu(std::bind(&C64::Read, this, _1), std::bind(&C64::Write, this, _1, _2), mem) , cia1(std::bind(&MOS6502::MaskableInterrupt, cpu), 2) , cia2(std::bind(&MOS6502::NonMaskableInterrupt, cpu), 2) , vic(mem, std::bind(&MOS6502::MaskableInterrupt, cpu)) , sid(cyclespersecond, 0)
+C64::C64() : cpu(*this) , cia1(cpu, 2, true) , cia2(cpu, 2, false) , vic(mem, cpu) , sid(cyclespersecond, 0)
 {
 	//mem.resize(0x10000);
 	/*for (int i = 0; i < screen.width*screen.height; i++)
@@ -120,7 +120,7 @@ void C64::Write(unsigned addr, int x)
 			if ((addr >= 0xDC00) && (addr <= 56575)) cia1.Write(addr&0xF, x); else
 			if ((addr >= 54272) && (addr <= 55295)) 
 			{
-				sid.Update(count);
+				//sid.Update(count);
 				sid.Write(addr&31, x);
 			}
 			//DebugMessage("IO Region " + addr);
@@ -143,7 +143,7 @@ void C64::MainLoop()
 		cia1.CalcSteps(diff);
 		vic.CalcSteps(diff);
 	}
-	sid.Update(count);
+	//sid.Update(count);
 
 	//double currenttime = sid.soundbuffer.GetTime();
 	//double elapsedtime = currenttime - starttime;
@@ -258,12 +258,11 @@ void C64::LoadSIDFile(const SIDFile &sidfile)
 	}
 */
 	}
-
 	for(int i=sidfile.offset; i<(int)sidfile.data.size(); i++)
 	{
 		mem[sidfile.loadaddr - sidfile.offset + i] = sidfile.data[i];
 	}
-	
+
 	int memoffset = 1024;	
 	if (sidfile.startpage != 0)
 		memoffset = sidfile.startpage<<8;
@@ -289,6 +288,7 @@ void C64::LoadSIDFile(const SIDFile &sidfile)
 		vic.CalcSteps(diff);
 	}
 */
+
 	memoffset = GenJSR(0xFF84, memoffset); // intialize IO devices
 
 	// set VIC raster lines
@@ -301,7 +301,6 @@ void C64::LoadSIDFile(const SIDFile &sidfile)
 
 //	vic.Write(0x12, 0x37);
 //	vic.Write(0x11, 0x9B);
-
 	memoffset = GenLDAi(sidfile.startsong-1, memoffset);
 	memoffset = GenJSR(sidfile.initaddr, memoffset);
 	Write(memoffset++, 0xB7); // EMU: should emulate endless loop

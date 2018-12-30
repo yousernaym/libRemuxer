@@ -1,7 +1,7 @@
 #pragma once
 #include <mikmod.h>
 #include <mikmod_internals.h>
-#include <math.h>
+#include <cmath>
 
 using namespace std;
 

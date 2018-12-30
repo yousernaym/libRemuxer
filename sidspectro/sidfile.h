@@ -7,8 +7,7 @@ using string = std::string;
 class SIDFile
 {
 public:
-	//if (dataLength < 128) return;
-	std::vector<char> data;
+	std::vector<unsigned char> data;
 	string magicid;
 	int version;
 	int offset;
@@ -26,6 +25,8 @@ public:
 	string released;
 //public:
 	SIDFile(const string &path);
+	~SIDFile();
+
 	void loadFile(const string &path);
 	void Print();
 };

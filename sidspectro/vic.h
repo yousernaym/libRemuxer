@@ -1,11 +1,14 @@
 #pragma once
 #include <functional>
+#include "sp_cpu.h"
 // -------------------------------------------------
 // -------------------- VIC II ---------------------
 // -------------------------------------------------
 
 class VICII
 {
+private:
+	MOS6502 &cpu;
 public:
 	std::function<void()> interruptfunc;;
 	unsigned char *mem;
@@ -28,7 +31,7 @@ public:
 	int charram = 0x0;
 	bool charen = false;
 //public:
-	VICII(unsigned char *_mem, std::function<void()> _interruptfunc);
+	VICII(unsigned char *_mem, MOS6502 &_cpu);
 	void VICII::Reset();
 	int Read(int addr);
 	void SetBank(int _bank);

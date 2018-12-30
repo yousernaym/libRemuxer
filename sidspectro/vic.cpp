@@ -4,9 +4,8 @@
 
 #include "vic.h"
 
-VICII::VICII(unsigned char *_mem, std::function<void()> _interruptfunc)
+VICII::VICII(unsigned char *_mem, MOS6502 &_cpu) : cpu(_cpu)
 {
-	interruptfunc = _interruptfunc;
 	mem = _mem;
 	Reset();
 }
@@ -139,7 +138,7 @@ void VICII::CalcSteps(int count)
 			//if (regs[0x19] == 0)
 			{
 				regs[0x19] = 128 | 1;
-				interruptfunc();
+				cpu.MaskableInterrupt();
 			}
 		}
 	}

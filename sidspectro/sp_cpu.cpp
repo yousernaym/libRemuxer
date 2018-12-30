@@ -4,12 +4,14 @@
 #include "tables.h"
 #include "sp_cpu.h"
 #include "misc.h"
+#include "c64.h"
+using namespace std::placeholders;
 
-MOS6502::MOS6502(std::function<int(int)>_read, std::function<void(int, int)>_write, unsigned char *_mem)
+MOS6502::MOS6502(C64 &_c64) : c64(_c64) //std::function<int(int)>_read, std::function<void(int, int)> _Write, unsigned char *_mem)
 {
-	mem = _mem;
-	Write = _write;
-	Read = _read;
+	mem = c64.mem;
+	//Write = std::bind(&C64::Write, c64, _1, _2);
+	//Read = std::bind(&C64::Read, c64, _1);
 	Reset();
 
 	for(int i=0; i<256; i++)
@@ -49,7 +51,7 @@ void MOS6502::Reset()
 	AC = 0x0;
 	XR = 0x0;
 	YR = 0x0;
-	PC = Read(0xFFFC) + (Read(0xFFFD)<<8);
+	PC = c64.Read(0xFFFC) + (c64.Read(0xFFFD)<<8);
 	SP = 0xFF;
 	PutStatus(32);
 }
@@ -176,28 +178,28 @@ void MOS6502::MaskableInterrupt()
 {
 	//DebugMessage("interrupt");
 	if (IRQ_Disable_Flag) return;
-	Write(256|SP,  ((PC) >> 8) & 0xFF);
+	c64.Write(256|SP,  ((PC) >> 8) & 0xFF);
 	SP = (SP-1)&0xFF;
-	Write(256|SP,  (PC) & 0xFF);
+	c64.Write(256|SP,  (PC) & 0xFF);
 	SP = (SP-1)&0xFF;
 	Brk_Flag = false;
-	Write(256|SP,  GetStatus());
+	c64.Write(256|SP,  GetStatus());
 	SP = (SP-1)&0xFF;
 	IRQ_Disable_Flag = true;
-	PC = Read(0xFFFE) | (Read(0xFFFF) << 8);
+	PC = c64.Read(0xFFFE) | (c64.Read(0xFFFF) << 8);
 }
 
 void MOS6502::NonMaskableInterrupt()
 {    
-	Write(256|SP,  ((PC) >> 8) & 0xFF);
+	c64.Write(256|SP,  ((PC) >> 8) & 0xFF);
 	SP = (SP-1)&0xFF;
-	Write(256|SP,  (PC) & 0xFF);
+	c64.Write(256|SP,  (PC) & 0xFF);
 	SP = (SP-1)&0xFF;
 	Brk_Flag = false;
-	Write(256|SP,  GetStatus());
+	c64.Write(256|SP,  GetStatus());
 	SP = (SP-1)&0xFF;
 	IRQ_Disable_Flag = true;
-	PC = Read(0xFFFA) | (Read(0xFFFB) << 8);
+	PC = c64.Read(0xFFFA) | (c64.Read(0xFFFB) << 8);
 }
 
 int MOS6502::Step(int steps) 
@@ -210,13 +212,13 @@ int MOS6502::Step(int steps)
 	int command = 0;
 	while(steps--)
 	{
-		command = Read(PC);
-		//command = PC<0xA000?mem[PC]:Read(PC);
+		command = c64.Read(PC);
+		//command = PC<0xA000?mem[PC]:c64.Read(PC);
 		int op = ops[command];
 		int address_mode = (op>>8) & 0xFF;
 		int code = op&0xFF;
 		count += (op>>16)&0xFF;
-
+		
 		switch (address_mode)
 		{
 		case AMODE_IMP:
@@ -229,69 +231,69 @@ int MOS6502::Step(int steps)
 			break;
 
 		case AMODE_ABS:
-			address = (Read(PC+2) << 8) | Read(PC+1);
-			if (!(op & 0x1000000)) x = Read(address);
+			address = (c64.Read(PC+2) << 8) | c64.Read(PC+1);
+			if (!(op & 0x1000000)) x = c64.Read(address);
 			PC += 3;
 			break;
 
 		case AMODE_IMM:
-			if (!(op & 0x1000000)) x = Read(PC+1);
+			if (!(op & 0x1000000)) x = c64.Read(PC+1);
 			PC += 2;
 			break;
 
 		case AMODE_ZP:
-			address = Read(PC+1);
-			if (!(op & 0x1000000))  x = Read(address);
+			address = c64.Read(PC+1);
+			if (!(op & 0x1000000))  x = c64.Read(address);
 			PC += 2;
 			break;
 
 		case AMODE_ABSX:
-			address = ((Read(PC+2) << 8) | Read(PC+1)) + XR;
-			if (!(op & 0x1000000)) x = Read(address);
+			address = ((c64.Read(PC+2) << 8) | c64.Read(PC+1)) + XR;
+			if (!(op & 0x1000000)) x = c64.Read(address);
 			PC += 3;
 			break;
 
 		case AMODE_ABSY:
-			address = ((Read(PC+2) << 8) | Read(PC+1)) + YR;
-			if (!(op & 0x1000000)) x = Read(address);
+			address = ((c64.Read(PC+2) << 8) | c64.Read(PC+1)) + YR;
+			if (!(op & 0x1000000)) x = c64.Read(address);
 			PC += 3;
 			break;
 
 		case AMODE_ZPX:
-			address = (Read(PC+1)+XR) & 0xFF;
-			if (!(op & 0x1000000)) x = Read(address);
+			address = (c64.Read(PC+1)+XR) & 0xFF;
+			if (!(op & 0x1000000)) x = c64.Read(address);
 			PC += 2;
 			break;
 
 		case AMODE_ZPY:
-			address = (Read(PC+1)+YR) & 0xFF;
-			if (!(op & 0x1000000)) x = Read(address);
+			address = (c64.Read(PC+1)+YR) & 0xFF;
+			if (!(op & 0x1000000)) x = c64.Read(address);
 			PC += 2;
 			break;
 
 		case AMODE_REL:
-			x = Read(PC+1);
+			x = c64.Read(PC+1);
 			PC += 2;
 			break;
 
 		case AMODE_IND:
-			address = (Read(PC+2) << 8) | Read(PC+1);
-			address = (( Read( (address+1) & 0xFF | address&0xFF00 ) ) << 8) | Read(address);
+			address = (c64.Read(PC+2) << 8) | c64.Read(PC+1);
+			address = (( c64.Read( (address+1) & 0xFF | address&0xFF00 ) ) << 8) | c64.Read(address);
 			address &= 0xFFFF;
 			PC += 3;
 			break;
 
 		case AMODE_INDX:
-			address = (Read(PC+1) + XR) & 0xFF;
-			address = (Read(address+1) << 8) | Read(address);
-			if (!(op & 0x1000000)) x = Read(address);       
+			address = (c64.Read(PC+1) + XR) & 0xFF;
+			address = (c64.Read(address+1) << 8) | c64.Read(address);
+			if (!(op & 0x1000000)) x = c64.Read(address);       
 			PC += 2;
 			break;
 
 		case AMODE_INDY:
-			address = Read(PC+1);
-			address = (Read(address+1) << 8) + (Read(address)+YR);
-			if (!(op & 0x1000000)) x = Read(address);
+			address = c64.Read(PC+1);
+			address = (c64.Read(address+1) << 8) + (c64.Read(address)+YR);
+			if (!(op & 0x1000000)) x = c64.Read(address);
 			PC += 2;
 			break;
 		}
@@ -531,25 +533,25 @@ int MOS6502::Step(int steps)
 			break;
 
 		case OP_PHA:
-			Write(256|SP, AC);
+			c64.Write(256|SP, AC);
 			SP = (SP-1)&0xFF;
 			break;
 
 		case OP_PLA:
 			SP = (SP+1)&0xFF;
-			AC = Read(256|SP);
+			AC = c64.Read(256|SP);
 			Zero_Flag = AC==0;
 			Negative_Flag = (AC & 128);
 			break;
 
 		case OP_PHP:
-			Write(256|SP, GetStatus() | 16);
+			c64.Write(256|SP, GetStatus() | 16);
 			SP = (SP-1)&0xFF;
 			break;
 
 		case OP_PLP:
 			SP = (SP+1)&0xFF;
-			stack = Read(256|SP);
+			stack = c64.Read(256|SP);
 			PutStatus(stack);
 			break;
 
@@ -558,41 +560,41 @@ int MOS6502::Step(int steps)
 			break;
 
 		case OP_JSR:
-			Write( 256|SP, ((PC-1) >> 8) & 0xFF);
+			c64.Write( 256|SP, ((PC-1) >> 8) & 0xFF);
 			SP = (SP-1)&0xFF;
-			Write( 256|SP, (PC-1) & 0xFF);
+			c64.Write( 256|SP, (PC-1) & 0xFF);
 			SP = (SP-1)&0xFF;
 			PC = address;
 			break;
 
 		case OP_RTS:
 			SP = (SP+1)&0xFF;
-			PC = Read(256|SP);
+			PC = c64.Read(256|SP);
 			SP = (SP+1)&0xFF;
-			PC |= (Read(256|SP) << 8);
+			PC |= (c64.Read(256|SP) << 8);
 			PC++;
 			break;
 
 		case OP_RTI:
 			SP = (SP+1)&0xFF;
-			stack = Read(256|SP);
+			stack = c64.Read(256|SP);
 			PutStatus(stack);
 			SP = (SP+1)&0xFF;
-			PC = Read(256|SP);
+			PC = c64.Read(256|SP);
 			SP = (SP+1)&0xFF;
-			PC = PC | (Read(256|SP) << 8);
+			PC = PC | (c64.Read(256|SP) << 8);
 			break;
 
 		case OP_BRK:
-			Write(256|SP,  ((PC+1) >> 8) & 0xFF);
+			c64.Write(256|SP,  ((PC+1) >> 8) & 0xFF);
 			SP = (SP-1)&0xFF;
-			Write(256|SP,  (PC+1) & 0xFF);
+			c64.Write(256|SP,  (PC+1) & 0xFF);
 			SP = (SP-1)&0xFF;
 			Brk_Flag = true;
-			Write(256|SP,  GetStatus());
+			c64.Write(256|SP,  GetStatus());
 			SP = (SP-1)&0xFF;
 			IRQ_Disable_Flag = true;
-			PC = Read(0xFFFE) | (Read(0xFFFF) << 8);
+			PC = c64.Read(0xFFFE) | (c64.Read(0xFFFF) << 8);
 			break;
 
 		case OP_BNE:
@@ -696,7 +698,8 @@ int MOS6502::Step(int steps)
 			break;
 		}
 		if (address_mode == AMODE_ACC) AC = x&0xFF; 
-		else if (op & 0x2000000) Write(address, x);
+		else if (op & 0x2000000) 
+			c64.Write(address, x);
 
 		/*
 	switch (address_mode)
@@ -722,7 +725,7 @@ int MOS6502::Step(int steps)
 				case  OP_STY:
 				case  OP_ROL:
 				case  OP_ROR:
-					Write(address, x);
+					c64.Write(address, x);
 					break;
 			}
 			break;

@@ -44,22 +44,29 @@ SIDFile::SIDFile(const string &path)
 		loadaddr = data[offset] | (data[offset+1]<<8);
 		offset += 2;
 	}
-	if (initaddr == 0) initaddr = loadaddr;
+	if (initaddr == 0)
+		initaddr = loadaddr;
 	endaddr = loadaddr + ((int)data.size() - offset);
+}
+
+SIDFile::~SIDFile()
+{
+	/*if (data)
+		delete[] data;*/
 }
 
 void SIDFile::loadFile(const string &path)
 {
 	//open file
-	std::ifstream infile(path);
-
-	//get length of file
-	infile.seekg(0, infile.end);
-	size_t length = infile.tellg();
-	infile.seekg(0, infile.beg);
-	//read file
-	data.resize(length);
-	infile.read(&data[0], length);
+	std::ifstream infile(path, std::ios::binary);
+	data = std::vector<unsigned char>(std::istreambuf_iterator<char>(infile), {});
+	////get length of file
+	//infile.seekg(0, infile.end);
+	//size_t size = infile.tellg();
+	//
+	//infile.seekg(0, infile.beg);
+	////read file
+	//infile.read(data, dataSize);
 }
 void SIDFile::Print()
 {
