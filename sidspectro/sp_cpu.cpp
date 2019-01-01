@@ -622,36 +622,68 @@ int MOS6502::Step(int steps)
 			break;
 
 		case OP_BNE:
-			if (!Zero_Flag) {PC += ((x<<24)>>24); count++;}
+			if (!Zero_Flag)
+			{
+				PC += ((x<<24)>>24);
+				count++;
+			}
 			break;
 
 		case OP_BCC:
-			if (!Carry_Flag) {PC += ((x<<24)>>24); count++;}
+			if (!Carry_Flag)
+			{
+				PC += ((x<<24)>>24);
+				count++;
+			}
 			count++; // ???
 			break;
 
 		case OP_BEQ:
-			if (Zero_Flag) {PC += ((x<<24)>>24); count++;}
+			if (Zero_Flag)
+			{
+				PC += ((x<<24)>>24);
+				count++;
+			}
 			break;
 
 		case OP_BMI:
-			if (Negative_Flag) {PC += ((x<<24)>>24); count++;}
+			if (Negative_Flag)
+			{
+				PC += ((x<<24)>>24); 
+				count++;
+			}
 			break;
 
 		case OP_BVC:
-			if (!Overflow_Flag) {PC += ((x<<24)>>24); count++;}
+			if (!Overflow_Flag) 
+			{
+				PC += ((x<<24)>>24); 
+				count++;
+			}
 			break;
 
 		case OP_BCS:
-			if (Carry_Flag) {PC += ((x<<24)>>24); count++;}
+			if (Carry_Flag) 
+			{
+				PC += ((x<<24)>>24); 
+				count++;
+			}
 			break;
 
 		case OP_BPL:
-			if (!Negative_Flag) {PC += ((x<<24)>>24); count++;}
+			if (!Negative_Flag)
+			{
+				PC += ((x<<24)>>24);
+				count++;
+			}
 			break;
 
 		case OP_BVS:
-			if (Overflow_Flag) {PC += ((x<<24)>>24); count++;}
+			if (Overflow_Flag)
+			{
+				PC += ((x<<24)>>24); 
+				count++;
+			}
 			break;
 
 		case OP_TAX:
