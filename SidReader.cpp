@@ -1,6 +1,6 @@
 #include "SidReader.h"
-#include "sidspectro\\sidfile.h"
-#include "sidspectro\\c64.h"
+//#include "sidspectro\\sidfile.h"
+//#include "sidspectro\\c64.h"
 int getPitch(float freq, int prevPitch);
 
 unsigned char freqtbllo[] = {
@@ -26,7 +26,7 @@ unsigned char freqtblhi[] = {
 
 SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSong)
 {
-	//sid::main(song, 1, &path, songLengthS, subSong);
+	sid::main(song, 1, &path, songLengthS, subSong);
 	int fps = 60;
 	song.marSong->ticksPerBeat = 24;
 	float bpm = (float)fps * 60 / song.marSong->ticksPerBeat;
@@ -40,51 +40,51 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 		sprintf_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
 	}
 
-	SIDFile sidFile(path);
-	if (subSong > 0)
-		sidFile.startsong = subSong;
+	//SIDFile sidFile(path);
+	//if (subSong > 0)
+	//	sidFile.startsong = subSong;
 
-	C64 c64;
-	c64.LoadSIDFile(sidFile);
-	float timeS = 0;
-	float ticksPerSeconds = bpm / 60 * song.marSong->ticksPerBeat;
-	int oldTimeT = 0;
-	while (timeS < songLengthS)
-	{
-		c64.MainLoop();
-		int timeT = (int)(timeS * ticksPerSeconds);
-		for (int i = 0; i < 3; i++)
-		{
-			for (int j = oldTimeT + 1; j < timeT; j++)
-				song.tracks[i].ticks[j] = song.tracks[i].ticks[oldTimeT];
-			RunningTickInfo &curTick = song.tracks[i].ticks[timeT];
-			RunningTickInfo &prevTick = *song.tracks[i].getPrevTick(timeT);
+	//C64 c64;
+	//c64.LoadSIDFile(sidFile);
+	//float timeS = 0;
+	//float ticksPerSeconds = bpm / 60 * song.marSong->ticksPerBeat;
+	//int oldTimeT = 0;
+	//while (timeS < songLengthS)
+	//{
+	//	c64.MainLoop();
+	//	int timeT = (int)(timeS * ticksPerSeconds);
+	//	for (int i = 0; i < 3; i++)
+	//	{
+	//		for (int j = oldTimeT + 1; j < timeT; j++)
+	//			song.tracks[i].ticks[j] = song.tracks[i].ticks[oldTimeT];
+	//		RunningTickInfo &curTick = song.tracks[i].ticks[timeT];
+	//		RunningTickInfo &prevTick = *song.tracks[i].getPrevTick(timeT);
 
-			curTick.noteStart = prevTick.noteStart;
-			SIDChannel ch = c64.sid.channel[i];
-			if (ch.isPlaying() && ch.frequency >= 20)
-			{
-				//float fPitch = log2(ch.frequency / 20) * 12;
-				//int pitch = (int)fPitch;
-				//if (abs(fPitch - prevTick.notePitch) <= 0.5f)
-				//{
-					//float pitchFrac = fPitch - floor(fPitch);
-				//}
+	//		curTick.noteStart = prevTick.noteStart;
+	//		SIDChannel ch = c64.sid.channel[i];
+	//		if (ch.isPlaying() && ch.frequency >= 20)
+	//		{
+	//			//float fPitch = log2(ch.frequency / 20) * 12;
+	//			//int pitch = (int)fPitch;
+	//			//if (abs(fPitch - prevTick.notePitch) <= 0.5f)
+	//			//{
+	//				//float pitchFrac = fPitch - floor(fPitch);
+	//			//}
 
-				curTick.notePitch = getPitch(ch.frequency, prevTick.notePitch);
-				curTick.notePitch = (int)(log2(ch.frequency / 20) * 12 + 0.5f);
-				
-				if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch)
-					curTick.noteStart = timeT;
-				curTick.vol = 50;// (int)ch.amplitude;
-			}
-			else
-				curTick.vol = 0;
-		}
-		oldTimeT = timeT;
+	//			curTick.notePitch = getPitch(ch.frequency, prevTick.notePitch);
+	//			curTick.notePitch = (int)(log2(ch.frequency / 20) * 12 + 0.5f);
+	//			
+	//			if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch)
+	//				curTick.noteStart = timeT;
+	//			curTick.vol = 50;// (int)ch.amplitude;
+	//		}
+	//		else
+	//			curTick.vol = 0;
+	//	}
+	//	oldTimeT = timeT;
 
-		timeS = c64.getTime();
-	}
+	//	timeS = c64.getTime();
+	//}
 }
 
 SidReader::~SidReader()
