@@ -79,7 +79,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(VC_ProjectDir)libsidplayfp-1.8.8;$(VC_ProjectDir)libsidplayfp-1.8.8\sidplayfp;d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp-1.8.8;$(VC_ProjectDir)libsidplayfp-1.8.8\sidplayfp;d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;$(IncludePath)</IncludePath>
     <LibraryPath>d:\kodning\c++\Libs\boost\stage\lib;$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
@@ -169,6 +169,24 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp-builder.cpp" />
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp-emu.cpp" />
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\Dac.cpp" />
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\EnvelopeGenerator.cpp" />
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\ExternalFilter.cpp" />
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\Filter.cpp" />
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\Filter6581.cpp" />
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\Filter8580.cpp" />
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\FilterModelConfig.cpp" />
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\Integrator.cpp" />
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\OpAmp.cpp" />
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\resample\SincResampler.cpp" />
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\resample\test.cpp" />
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\SID.cpp" />
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\Spline.cpp" />
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\version.cc" />
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\WaveformCalculator.cpp" />
+    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\WaveformGenerator.cpp" />
     <ClCompile Include="libsidplayfp-1.8.8\sidplayfp\c64\c64.cpp" />
     <ClCompile Include="libsidplayfp-1.8.8\sidplayfp\c64\CIA\mos6526.cpp" />
     <ClCompile Include="libsidplayfp-1.8.8\sidplayfp\c64\CIA\timer.cpp" />
@@ -204,6 +222,29 @@
     <ClCompile Include="Song.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp-emu.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\array.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\Dac.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\EnvelopeGenerator.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\ExternalFilter.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\Filter.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\Filter6581.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\Filter8580.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\FilterModelConfig.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\Integrator.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\OpAmp.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\Potentiometer.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\resample\Resampler.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\resample\SincResampler.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\resample\TwoPassSincResampler.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\resample\ZeroOrderResampler.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\SID.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\siddefs-fp.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\Spline.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\Voice.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\WaveformCalculator.h" />
+    <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\WaveformGenerator.h" />
     <ClInclude Include="libsidplayfp-1.8.8\sidplayfp\c64\Banks\Bank.h" />
     <ClInclude Include="libsidplayfp-1.8.8\sidplayfp\c64\Banks\ColorRAMBank.h" />
     <ClInclude Include="libsidplayfp-1.8.8\sidplayfp\c64\Banks\DisconnectedBusBank.h" />

@@ -1,32 +1,27 @@
 #include "SidReader.h"
+#include <fcntl.h>
+
+#include <stdlib.h>
+#include <cstring>
+
+#include <fstream>
+#include <memory>
+#include <vector>
+#include <iostream>
+
+#include <sidplayfp/sidplayfp.h>
+#include <sidplayfp/SidTune.h>
+#include <sidplayfp/SidInfo.h>
+#include <sidplayfp/SidConfig.h>
+#include <builders/residfp-builder/residfp.h> 
+
 //#include "sidspectro\\sidfile.h"
 //#include "sidspectro\\c64.h"
-int getPitch(float freq, int prevPitch);
-
-unsigned char freqtbllo[] = {
-  0x17,0x27,0x39,0x4b,0x5f,0x74,0x8a,0xa1,0xba,0xd4,0xf0,0x0e,
-  0x2d,0x4e,0x71,0x96,0xbe,0xe8,0x14,0x43,0x74,0xa9,0xe1,0x1c,
-  0x5a,0x9c,0xe2,0x2d,0x7c,0xcf,0x28,0x85,0xe8,0x52,0xc1,0x37,
-  0xb4,0x39,0xc5,0x5a,0xf7,0x9e,0x4f,0x0a,0xd1,0xa3,0x82,0x6e,
-  0x68,0x71,0x8a,0xb3,0xee,0x3c,0x9e,0x15,0xa2,0x46,0x04,0xdc,
-  0xd0,0xe2,0x14,0x67,0xdd,0x79,0x3c,0x29,0x44,0x8d,0x08,0xb8,
-  0xa1,0xc5,0x28,0xcd,0xba,0xf1,0x78,0x53,0x87,0x1a,0x10,0x71,
-  0x42,0x89,0x4f,0x9b,0x74,0xe2,0xf0,0xa6,0x0e,0x33,0x20,0xff };
-
-unsigned char freqtblhi[] = {
-  0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x02,
-  0x02,0x02,0x02,0x02,0x02,0x02,0x03,0x03,0x03,0x03,0x03,0x04,
-  0x04,0x04,0x04,0x05,0x05,0x05,0x06,0x06,0x06,0x07,0x07,0x08,
-  0x08,0x09,0x09,0x0a,0x0a,0x0b,0x0c,0x0d,0x0d,0x0e,0x0f,0x10,
-  0x11,0x12,0x13,0x14,0x15,0x17,0x18,0x1a,0x1b,0x1d,0x1f,0x20,
-  0x22,0x24,0x27,0x29,0x2b,0x2e,0x31,0x34,0x37,0x3a,0x3e,0x41,
-  0x45,0x49,0x4e,0x52,0x57,0x5c,0x62,0x68,0x6e,0x75,0x7c,0x83,
-  0x8b,0x93,0x9c,0xa5,0xaf,0xb9,0xc4,0xd0,0xdd,0xea,0xf8,0xff };
 
 
 SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSong)
 {
-	sid::main(song, 1, &path, songLengthS, subSong);
+	//sid::main(song, 1, &path, songLengthS, subSong);
 	int fps = 60;
 	song.marSong->ticksPerBeat = 24;
 	float bpm = (float)fps * 60 / song.marSong->ticksPerBeat;
@@ -40,6 +35,7 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 		sprintf_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
 	}
 
+	
 	//SIDFile sidFile(path);
 	//if (subSong > 0)
 	//	sidFile.startsong = subSong;
@@ -91,22 +87,103 @@ SidReader::~SidReader()
 {
 }
 
-int getPitch(float freq, int prevPitch)
+#define KERNAL_PATH  ""
+#define BASIC_PATH   ""
+#define CHARGEN_PATH ""
+
+#define SAMPLERATE 48000
+
+/*
+ * Load ROM dump from file.
+ * Allocate the buffer if file exists, otherwise return 0.
+ */
+char* SidReader::loadRom(const char* path, size_t romSize)
 {
-	float dist = 0x7fffffff;
-	int newPitch;
-	for (int d = 0; d < 96; d++)
+	char* buffer = 0;
+	std::ifstream is(path, std::ios::binary);
+	if (is.good())
 	{
-		int cmpfreq = freqtbllo[d] | (freqtblhi[d] << 8);
-		
-		if (abs(freq - cmpfreq) < dist)
-		{
-			dist = abs(freq - cmpfreq);
-			// Favor the old note
-			if (d == prevPitch)
-				dist /= 1;
-			newPitch = d;
-		}
+		buffer = new char[romSize];
+		is.read(buffer, romSize);
 	}
-	return newPitch;
+	is.close();
+	return buffer;
+}
+
+int SidReader::initLSPfp(const char *path, int subSong)
+{
+
+	{ // Load ROM files
+		char *kernal = loadRom(KERNAL_PATH, 8192);
+		char *basic = loadRom(BASIC_PATH, 8192);
+		char *chargen = loadRom(CHARGEN_PATH, 4096);
+
+		m_engine.setRoms((const uint8_t*)kernal, (const uint8_t*)basic, (const uint8_t*)chargen);
+
+		delete[] kernal;
+		delete[] basic;
+		delete[] chargen;
+	}
+
+	// Set up a SID builder
+	std::auto_ptr<ReSIDfpBuilder> rs(new ReSIDfpBuilder("Demo"));
+
+	// Get the number of SIDs supported by the engine
+	unsigned int maxsids = (m_engine.info()).maxsids();
+
+	// Create SID emulators
+	rs->create(maxsids);
+
+	// Check if builder is ok
+	if (!rs->getStatus())
+	{
+		std::cerr << rs->error() << std::endl;
+		return -1;
+	}
+
+	// Load tune from file
+	std::auto_ptr<SidTune> tune(new SidTune(path));
+
+	// CHeck if the tune is valid
+	if (!tune->getStatus())
+	{
+		std::cerr << tune->statusString() << std::endl;
+		return -1;
+	}
+
+	// Select default song
+	tune->selectSong(subSong);
+
+	// Configure the engine
+	SidConfig cfg;
+	cfg.frequency = SAMPLERATE;
+	cfg.samplingMethod = SidConfig::INTERPOLATE;
+	cfg.fastSampling = false;
+	cfg.playback = SidConfig::MONO;
+	cfg.sidEmulation = rs.get();
+	if (!m_engine.config(cfg))
+	{
+		std::cerr << m_engine.error() << std::endl;
+		return -1;
+	}
+
+	// Load tune into engine
+	if (!m_engine.load(tune.get()))
+	{
+		std::cerr << m_engine.error() << std::endl;
+		return -1;
+	}
+	   	
+	return 0;
+}
+
+void SidReader::process()
+{
+	int bufferSize = 100;
+	std::vector<short> buffer(bufferSize);
+	for (int i = 0; i < 1000; i++)
+	{
+		m_engine.play(&buffer.front(), bufferSize / sizeof(short));
+		//::write(handle, &buffer.front(), bufferSize);
+	}
 }
