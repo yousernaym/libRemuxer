@@ -128,8 +128,8 @@ int SidReader::initLSPfp(const char *path, int subSong)
 	}
 
 	// Set up a SID builder
-	//std::shared_ptr<ReSIDfpBuilder> rs(new ReSIDfpBuilder("Demo"));
-	ReSIDfpBuilder *rs = new ReSIDfpBuilder("Demo");
+	std::unique_ptr<ReSIDfpBuilder> rs(new ReSIDfpBuilder("Demo"));
+	//ReSIDfpBuilder *rs = new ReSIDfpBuilder("Demo");
 
 
 	// Get the number of SIDs supported by the engine
@@ -146,8 +146,8 @@ int SidReader::initLSPfp(const char *path, int subSong)
 	}
 
 	// Load tune from file
-	//std::shared_ptr<SidTune> tune(new SidTune(path));
-	SidTune *tune = new SidTune(path);
+	std::unique_ptr<SidTune> tune(new SidTune(path));
+	//SidTune *tune = new SidTune(path);
 
 	// CHeck if the tune is valid
 	if (!tune->getStatus())
@@ -165,7 +165,7 @@ int SidReader::initLSPfp(const char *path, int subSong)
 	cfg.samplingMethod = SidConfig::INTERPOLATE;
 	cfg.fastSampling = false;
 	cfg.playback = SidConfig::MONO;
-	cfg.sidEmulation = rs;// .get();
+	cfg.sidEmulation = rs.get();
 	if (!m_engine.config(cfg))
 	{
 		std::cerr << m_engine.error() << std::endl;
@@ -173,12 +173,19 @@ int SidReader::initLSPfp(const char *path, int subSong)
 	}
 
 	// Load tune into engine
-	if (!m_engine.load(tune))
+	if (!m_engine.load(tune.get()))
 	{
 		std::cerr << m_engine.error() << std::endl;
 		return -1;
 	}
 
+	int bufferSize = 10000;
+	std::vector<short> buffer(bufferSize);
+	for (int i = 0; i < 1000; i++)
+	{
+		m_engine.play(&buffer.front(), bufferSize / sizeof(short));
+		//::write(handle, &buffer.front(), bufferSize);
+	}
 	return 0;
 }
 
