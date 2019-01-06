@@ -7,8 +7,8 @@ class Wav
 {
 private:
 	std::ofstream outFile;
-	const int sampleRate = 44100;
-	const int channelCount = 2;
+	const int sampleRate = 48000;
+	const int channelCount = 1;
 	std::vector<SampleType> samples;
 	void writeNumber(int bytes, int number)
 	{
@@ -37,7 +37,7 @@ public:
 		outFile << "WAVEfmt ";
 		writeNumber(4, 16);
 		writeNumber(2, 1);
-		writeNumber(2, 2);
+		writeNumber(2, channelCount);
 		writeNumber(4, sampleRate);
 		writeNumber(4, sampleRate * blockAlign);
 		writeNumber(2, blockAlign);

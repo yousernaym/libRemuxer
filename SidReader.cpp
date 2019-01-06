@@ -124,9 +124,12 @@ int SidReader::initLSPfp(const char *path, int subSong)
 
 		m_engine.setRoms((const uint8_t*)kernal, (const uint8_t*)basic, (const uint8_t*)chargen);
 
-		delete[] kernal;
-		delete[] basic;
-		delete[] chargen;
+		if (kernal)
+			delete[] kernal;
+		if (basic)
+			delete[] basic;
+		if (chargen)
+			delete[] chargen;
 	}
 
 	// Set up a SID builder
@@ -182,11 +185,11 @@ int SidReader::initLSPfp(const char *path, int subSong)
 	}
 
 	Wav<short> wav;
-	int bufferSize = 5000;
+	int bufferSize = 25000;
 	std::vector<short> buffer(bufferSize);
-	for (int i = 0; i < 1; i++)
+	for (int i = 0; i < 20; i++)
 	{
-		m_engine.play(&buffer.front(), bufferSize / sizeof(short));
+		m_engine.play(&buffer.front(), bufferSize);
 		//::write(handle, &buffer.front(), bufferSize);
 		wav.addSamples(buffer);
 	}
@@ -200,7 +203,7 @@ void SidReader::process()
 	std::vector<short> buffer(bufferSize);
 	for (int i = 0; i < 1000; i++)
 	{
-		m_engine.play(&buffer.front(), bufferSize / sizeof(short));
+		m_engine.play(&buffer.front(), bufferSize);
 		//::write(handle, &buffer.front(), bufferSize);
 	}
 }
