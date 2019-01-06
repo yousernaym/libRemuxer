@@ -29,7 +29,7 @@
 #include <sstream>
 #include <limits>
 
-#include <siddefs-fp.h>
+#include "siddefs-fp.h"
 
 #ifdef HAVE_CONFIG_H
 #  include "config.h"

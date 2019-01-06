@@ -21,10 +21,10 @@
 #define SIDDEFS_FP_H
 
 // Compilation configuration.
-#define RESID_BRANCH_HINTS 1
+#define RESID_BRANCH_HINTS @RESID_BRANCH_HINTS@
 
 // Compiler specifics.
-#define HAVE_BUILTIN_EXPECT 0
+#define HAVE_BUILTIN_EXPECT @HAVE_BUILTIN_EXPECT@
 
 #ifndef M_PI
 #  define M_PI    3.14159265358979323846
@@ -51,13 +51,13 @@ extern "C"
 #ifndef __VERSION_CC__
 extern const char* residfp_version_string;
 #else
-const char* residfp_version_string = "1.8.8";
+const char* residfp_version_string = "@PACKAGE_VERSION@";
 #endif
 }
 
 // Inlining on/off.
-#define RESID_INLINING 1
-#define RESID_INLINE inline
-#define RESID_HAVE_LOG1P 1
+#define RESID_INLINING @RESID_INLINING@
+#define RESID_INLINE @RESID_INLINE@
+#define RESID_HAVE_LOG1P @RESID_HAVE_LOG1P@
 
 #endif // SIDDEFS_FP_H

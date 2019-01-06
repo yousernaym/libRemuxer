@@ -39,7 +39,7 @@ const char* ReSIDfp::getCredits()
     {
         // Setup credits
         std::ostringstream ss;
-        ss << "ReSIDfp V" << VERSION << " Engine:\n";
+        ss << "ReSIDfp V" << "VERSION" << " Engine:\n";
         ss << "\t(C) 1999-2002 Simon White\n";
         ss << "MOS6581 (SID) Emulation (ReSIDfp V" << residfp_version_string << "):\n";
         ss << "\t(C) 1999-2002 Dag Lem\n";

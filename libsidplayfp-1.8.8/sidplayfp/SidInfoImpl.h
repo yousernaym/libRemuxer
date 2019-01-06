@@ -43,7 +43,7 @@
 #   define PACKAGE_VERSION ""
 #endif
 
-#ifndef PACKAGE_URL
+#ifndef PACKAGE_UFL
 #   define PACKAGE_URL ""
 #endif
 
