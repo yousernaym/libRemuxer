@@ -314,6 +314,7 @@
     <ClInclude Include="ModReader.h" />
     <ClInclude Include="SidReader.h" />
     <ClInclude Include="Song.h" />
+    <ClInclude Include="Wav.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\..\c++\Libs\MUSIC\libmikmod-3.3.10\docs\mikmod.html" />

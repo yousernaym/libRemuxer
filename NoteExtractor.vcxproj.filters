@@ -449,6 +449,9 @@
     <ClInclude Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\siddefs-fp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Wav.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\..\c++\Libs\MUSIC\libmikmod-3.3.10\docs\mikmod.html" />

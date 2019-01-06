@@ -1,3 +1,4 @@
+#include "Wav.h"
 #include "SidReader.h"
 #include <fcntl.h>
 
@@ -22,7 +23,8 @@
 SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSong)
 {
 	initLSPfp(path, subSong);
-	process();
+	return;
+	//process();
 	//sid::main(song, 1, &path, songLengthS, subSong);
 	int fps = 60;
 	song.marSong->ticksPerBeat = 24;
@@ -179,13 +181,16 @@ int SidReader::initLSPfp(const char *path, int subSong)
 		return -1;
 	}
 
-	int bufferSize = 10000;
+	Wav<short> wav;
+	int bufferSize = 5000;
 	std::vector<short> buffer(bufferSize);
-	for (int i = 0; i < 1000; i++)
+	for (int i = 0; i < 1; i++)
 	{
 		m_engine.play(&buffer.front(), bufferSize / sizeof(short));
 		//::write(handle, &buffer.front(), bufferSize);
+		wav.addSamples(buffer);
 	}
+	wav.createFile("output.wav");
 	return 0;
 }
 
