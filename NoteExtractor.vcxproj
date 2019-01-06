@@ -27,13 +27,13 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v141</PlatformToolset>
@@ -70,28 +70,30 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp-1.8.8;$(VC_ProjectDir)libsidplayfp-1.8.8\sidplayfp;d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;$(IncludePath)</IncludePath>
     <LibraryPath>d:\kodning\c++\Libs\boost\stage\lib;$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp-1.8.8;$(VC_ProjectDir)libsidplayfp-1.8.8\sidplayfp;d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp-1.8.8;$(VC_ProjectDir)libsidplayfp-1.8.8\sidplayfp;d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;$(IncludePath)</IncludePath>
     <LibraryPath>d:\kodning\c++\Libs\boost\stage\lib;$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;d:\kodning\c++\mallar\gameEngine\Gfx Engine\Shaders;d:\kodning\c++\mallar\gameEngine\Gfx Engine\3d;d:\kodning\c++\mallar\gameEngine\Gfx Engine\2d;d:\kodning\c++\mallar\gameEngine\Gfx Engine\;d:\kodning\c++\mallar\gameEngine;d:\kodning\c++\mallar\General lib\;d:\kodning\c++\Libs\zlib;d:\kodning\c++\Libs\DirectX\Include;d:\kodning\c++\Libs\boost;$(IncludePath)</IncludePath>
+    <IncludePath>$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp-1.8.8;$(VC_ProjectDir)libsidplayfp-1.8.8\sidplayfp;d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;$(IncludePath)</IncludePath>
     <LibraryPath>d:\kodning\c++\Libs\boost\stage\lib;$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;d:\kodning\c++\mallar\gameEngine\Gfx Engine\Shaders;d:\kodning\c++\mallar\gameEngine\Gfx Engine\3d;d:\kodning\c++\mallar\gameEngine\Gfx Engine\2d;d:\kodning\c++\mallar\gameEngine\Gfx Engine\;d:\kodning\c++\mallar\gameEngine;d:\kodning\c++\mallar\General lib\;d:\kodning\c++\Libs\zlib;d:\kodning\c++\Libs\DirectX\Include;d:\kodning\c++\Libs\boost;$(IncludePath)</IncludePath>
+    <IncludePath>$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp-1.8.8;$(VC_ProjectDir)libsidplayfp-1.8.8\sidplayfp;d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;$(IncludePath)</IncludePath>
     <LibraryPath>d:\kodning\c++\Libs\boost\stage\lib;$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -181,7 +183,6 @@
     <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\Integrator.cpp" />
     <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\OpAmp.cpp" />
     <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\resample\SincResampler.cpp" />
-    <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\resample\test.cpp" />
     <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\SID.cpp" />
     <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\Spline.cpp" />
     <ClCompile Include="libsidplayfp-1.8.8\builders\residfp-builder\residfp\version.cc" />

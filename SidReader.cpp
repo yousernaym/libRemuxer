@@ -21,6 +21,8 @@
 
 SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSong)
 {
+	initLSPfp(path, subSong);
+	process();
 	//sid::main(song, 1, &path, songLengthS, subSong);
 	int fps = 60;
 	song.marSong->ticksPerBeat = 24;
@@ -34,7 +36,7 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 		song.tracks[i].ticks.resize(int(songLengthS * fps) + 1);
 		sprintf_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
 	}
-
+	
 	
 	//SIDFile sidFile(path);
 	//if (subSong > 0)
@@ -126,7 +128,9 @@ int SidReader::initLSPfp(const char *path, int subSong)
 	}
 
 	// Set up a SID builder
-	std::auto_ptr<ReSIDfpBuilder> rs(new ReSIDfpBuilder("Demo"));
+	//std::shared_ptr<ReSIDfpBuilder> rs(new ReSIDfpBuilder("Demo"));
+	ReSIDfpBuilder *rs = new ReSIDfpBuilder("Demo");
+
 
 	// Get the number of SIDs supported by the engine
 	unsigned int maxsids = (m_engine.info()).maxsids();
@@ -142,7 +146,8 @@ int SidReader::initLSPfp(const char *path, int subSong)
 	}
 
 	// Load tune from file
-	std::auto_ptr<SidTune> tune(new SidTune(path));
+	//std::shared_ptr<SidTune> tune(new SidTune(path));
+	SidTune *tune = new SidTune(path);
 
 	// CHeck if the tune is valid
 	if (!tune->getStatus())
@@ -160,7 +165,7 @@ int SidReader::initLSPfp(const char *path, int subSong)
 	cfg.samplingMethod = SidConfig::INTERPOLATE;
 	cfg.fastSampling = false;
 	cfg.playback = SidConfig::MONO;
-	cfg.sidEmulation = rs.get();
+	cfg.sidEmulation = rs;// .get();
 	if (!m_engine.config(cfg))
 	{
 		std::cerr << m_engine.error() << std::endl;
@@ -168,18 +173,18 @@ int SidReader::initLSPfp(const char *path, int subSong)
 	}
 
 	// Load tune into engine
-	if (!m_engine.load(tune.get()))
+	if (!m_engine.load(tune))
 	{
 		std::cerr << m_engine.error() << std::endl;
 		return -1;
 	}
-	   	
+
 	return 0;
 }
 
 void SidReader::process()
 {
-	int bufferSize = 100;
+	int bufferSize = 10000;
 	std::vector<short> buffer(bufferSize);
 	for (int i = 0; i < 1000; i++)
 	{
