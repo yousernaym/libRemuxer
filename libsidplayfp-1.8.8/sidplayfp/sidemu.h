@@ -33,6 +33,12 @@
 class sidbuilder;
 class EventContext;
 
+struct SIDChannel
+{
+	int frequency;
+	bool isPlaying;
+};
+
 /**
  * Inherit this class to create a new SID emulation.
  */

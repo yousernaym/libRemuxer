@@ -40,6 +40,8 @@ namespace SIDPLAYFP_NAMESPACE
     class Player;
 }
 
+struct SIDChannel;
+
 /**
  * sidplayfp
  */
@@ -167,6 +169,11 @@ public:
      * Get the CIA 1 Timer A programmed value.
      */
     uint_least16_t getCia1TimerA() const;
+
+	/**
+	* Get state of channel in SID chip
+	*/
+	void getSIDChannel(SIDChannel &output, int channel) const;
 };
 
 #endif // SIDPLAYFP_H

@@ -31,6 +31,7 @@
 
 class sidemu;
 
+struct SIDChannel;
 /**
  * This class implements the mixer.
  */
@@ -199,6 +200,8 @@ public:
      * Get the number of samples generated up to now.
      */
     uint_least32_t samplesGenerated() const { return m_sampleIndex; }
+
+	void getSIDChannel(SIDChannel &output, int channel) const;
 };
 
 #endif // MIXER_H

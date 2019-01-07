@@ -36,7 +36,7 @@ class sidbuilder;
 
 class ReSIDfp: public sidemu
 {
-private:
+public:
     RESID_NAMESPACE::SID &m_sid;
 
 public:

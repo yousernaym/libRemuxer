@@ -15,7 +15,6 @@ public:
 	SidReader(Song &song, const char *path, double songLengthS, int subSong);
 	~SidReader();
 	char* loadRom(const char* path, size_t romSize);
-	int initLSPfp(const char *path, int subSong);
-	void process();
+	int process(const char *path, int subSong, double songLengthS);
 };
 

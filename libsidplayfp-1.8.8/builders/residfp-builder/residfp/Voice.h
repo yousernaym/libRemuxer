@@ -35,7 +35,7 @@ namespace reSIDfp
  */
 class Voice
 {
-private:
+public:
     WaveformGenerator* waveformGenerator;
 
     EnvelopeGenerator* envelopeGenerator;

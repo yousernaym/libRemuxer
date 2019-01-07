@@ -55,7 +55,7 @@ public:
  */
 class SID
 {
-private:
+public:
     /// Bus value stays alive for some time after each operation.
     static const int BUS_TTL;
 

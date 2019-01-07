@@ -184,11 +184,11 @@ uint_least32_t Player::play(short *buffer, uint_least32_t count)
             while (m_isPlaying && m_mixer.notFinished())
             {
                 for (int i = 0; i < sidemu::OUTPUTBUFFERSIZE; i++)
-                    m_c64.getEventScheduler()->clock();
+                m_c64.getEventScheduler()->clock();
 
                 m_mixer.clockChips();
                 m_mixer.doMix();
-            }
+			}
             count = m_mixer.samplesGenerated();
         }
         else
@@ -203,6 +203,7 @@ uint_least32_t Player::play(short *buffer, uint_least32_t count)
                 m_mixer.resetBufs();
             }
         }
+		int value = m_mixer.getSid(0)->peek(0xd400);
     }
     else
     {

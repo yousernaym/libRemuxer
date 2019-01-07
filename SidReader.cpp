@@ -15,17 +15,24 @@
 #include <sidplayfp/SidInfo.h>
 #include <sidplayfp/SidConfig.h>
 #include <builders/residfp-builder/residfp.h> 
+#include <sidplayfp/sidemu.h>
+
 
 //#include "sidspectro\\sidfile.h"
 //#include "sidspectro\\c64.h"
+#define KERNAL_PATH  "d:\\hämta mh\\kodning\\MUSIC\\c64\\kernal.901227-03.bin"
+#define BASIC_PATH   "d:\\hämta mh\\kodning\\MUSIC\\c64\\basic.901226-01.bin"
+#define CHARGEN_PATH ""
 
+#define SAMPLERATE 44100
 
 SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSong)
 {
-	initLSPfp(path, subSong);
-	return;
-	//process();
-	//sid::main(song, 1, &path, songLengthS, subSong);
+	//songLengthS = 5;
+	if (songLengthS == 0)
+		songLengthS = 300;
+	//process(path, subSong, songLengthS);
+	
 	int fps = 60;
 	song.marSong->ticksPerBeat = 24;
 	float bpm = (float)fps * 60 / song.marSong->ticksPerBeat;
@@ -39,84 +46,6 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 		sprintf_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
 	}
 	
-	
-	//SIDFile sidFile(path);
-	//if (subSong > 0)
-	//	sidFile.startsong = subSong;
-
-	//C64 c64;
-	//c64.LoadSIDFile(sidFile);
-	//float timeS = 0;
-	//float ticksPerSeconds = bpm / 60 * song.marSong->ticksPerBeat;
-	//int oldTimeT = 0;
-	//while (timeS < songLengthS)
-	//{
-	//	c64.MainLoop();
-	//	int timeT = (int)(timeS * ticksPerSeconds);
-	//	for (int i = 0; i < 3; i++)
-	//	{
-	//		for (int j = oldTimeT + 1; j < timeT; j++)
-	//			song.tracks[i].ticks[j] = song.tracks[i].ticks[oldTimeT];
-	//		RunningTickInfo &curTick = song.tracks[i].ticks[timeT];
-	//		RunningTickInfo &prevTick = *song.tracks[i].getPrevTick(timeT);
-
-	//		curTick.noteStart = prevTick.noteStart;
-	//		SIDChannel ch = c64.sid.channel[i];
-	//		if (ch.isPlaying() && ch.frequency >= 20)
-	//		{
-	//			//float fPitch = log2(ch.frequency / 20) * 12;
-	//			//int pitch = (int)fPitch;
-	//			//if (abs(fPitch - prevTick.notePitch) <= 0.5f)
-	//			//{
-	//				//float pitchFrac = fPitch - floor(fPitch);
-	//			//}
-
-	//			curTick.notePitch = getPitch(ch.frequency, prevTick.notePitch);
-	//			curTick.notePitch = (int)(log2(ch.frequency / 20) * 12 + 0.5f);
-	//			
-	//			if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch)
-	//				curTick.noteStart = timeT;
-	//			curTick.vol = 50;// (int)ch.amplitude;
-	//		}
-	//		else
-	//			curTick.vol = 0;
-	//	}
-	//	oldTimeT = timeT;
-
-	//	timeS = c64.getTime();
-	//}
-}
-
-SidReader::~SidReader()
-{
-}
-
-#define KERNAL_PATH  ""
-#define BASIC_PATH   ""
-#define CHARGEN_PATH ""
-
-#define SAMPLERATE 48000
-
-/*
- * Load ROM dump from file.
- * Allocate the buffer if file exists, otherwise return 0.
- */
-char* SidReader::loadRom(const char* path, size_t romSize)
-{
-	char* buffer = 0;
-	std::ifstream is(path, std::ios::binary);
-	if (is.good())
-	{
-		buffer = new char[romSize];
-		is.read(buffer, romSize);
-	}
-	is.close();
-	return buffer;
-}
-
-int SidReader::initLSPfp(const char *path, int subSong)
-{
-
 	{ // Load ROM files
 		char *kernal = loadRom(KERNAL_PATH, 8192);
 		char *basic = loadRom(BASIC_PATH, 8192);
@@ -146,8 +75,7 @@ int SidReader::initLSPfp(const char *path, int subSong)
 	// Check if builder is ok
 	if (!rs->getStatus())
 	{
-		std::cerr << rs->error() << std::endl;
-		return -1;
+		throw rs->error();
 	}
 
 	// Load tune from file
@@ -157,8 +85,7 @@ int SidReader::initLSPfp(const char *path, int subSong)
 	// CHeck if the tune is valid
 	if (!tune->getStatus())
 	{
-		std::cerr << tune->statusString() << std::endl;
-		return -1;
+		throw tune->statusString();
 	}
 
 	// Select default song
@@ -173,37 +100,80 @@ int SidReader::initLSPfp(const char *path, int subSong)
 	cfg.sidEmulation = rs.get();
 	if (!m_engine.config(cfg))
 	{
-		std::cerr << m_engine.error() << std::endl;
-		return -1;
+		throw m_engine.error();
 	}
 
 	// Load tune into engine
 	if (!m_engine.load(tune.get()))
 	{
-		std::cerr << m_engine.error() << std::endl;
-		return -1;
+		throw m_engine.error();
 	}
 
 	Wav<short> wav;
-	int bufferSize = 25000;
+	int bufferSize = 1000;
 	std::vector<short> buffer(bufferSize);
-	for (int i = 0; i < 20; i++)
+	SIDChannel channelState;
+	
+	float timeS = 0;
+	float ticksPerSeconds = bpm / 60 * song.marSong->ticksPerBeat;
+	int oldTimeT = 0;
+	for (int i = 0; i < (int)((double)SAMPLERATE / bufferSize * songLengthS) + 1; i++)
 	{
 		m_engine.play(&buffer.front(), bufferSize);
-		//::write(handle, &buffer.front(), bufferSize);
+		//m_engine.config().sidEmulation.
+		
+		int timeT = (int)(timeS * ticksPerSeconds);
+		for (int c = 0; c < 3; c++)
+		{
+			for (int t = oldTimeT + 1; t < timeT; t++)
+				song.tracks[c].ticks[t] = song.tracks[c].ticks[oldTimeT];
+			RunningTickInfo &curTick = song.tracks[c].ticks[timeT];
+			RunningTickInfo &prevTick = *song.tracks[c].getPrevTick(timeT);
+
+			curTick.noteStart = prevTick.noteStart;
+			m_engine.getSIDChannel(channelState, c);
+
+			if (channelState.isPlaying && channelState.frequency >= 20)
+			{
+				curTick.notePitch = (int)(log2(channelState.frequency / 20) * 12 + 0.5f);
+
+				if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch)
+					curTick.noteStart = timeT;
+				curTick.vol = 50;// (int)ch.amplitude;
+			}
+			else
+				curTick.vol = 0;
+		}
+		oldTimeT = timeT;
+		timeS = (float)i * bufferSize / SAMPLERATE;
+
 		wav.addSamples(buffer);
 	}
 	wav.createFile("output.wav");
-	return 0;
 }
 
-void SidReader::process()
+SidReader::~SidReader()
 {
-	int bufferSize = 10000;
-	std::vector<short> buffer(bufferSize);
-	for (int i = 0; i < 1000; i++)
-	{
-		m_engine.play(&buffer.front(), bufferSize);
-		//::write(handle, &buffer.front(), bufferSize);
-	}
 }
+
+
+
+/*
+ * Load ROM dump from file.
+ * Allocate the buffer if file exists, otherwise return 0.
+ */
+char* SidReader::loadRom(const char* path, size_t romSize)
+{
+	char* buffer = 0;
+	std::ifstream is(path, std::ios::binary);
+	if (is.good())
+	{
+		buffer = new char[romSize];
+		is.read(buffer, romSize);
+	}
+	is.close();
+	return buffer;
+}
+
+
+

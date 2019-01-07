@@ -115,3 +115,9 @@ uint_least16_t sidplayfp::getCia1TimerA() const
 {
     return sidplayer.getCia1TimerA();
 }
+
+void sidplayfp::getSIDChannel(SIDChannel &output, int channel) const
+{
+	sidplayer.getSIDChannel(output, channel);
+}
+

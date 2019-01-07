@@ -23,8 +23,8 @@
 #include "mixer.h"
 
 #include <algorithm>
-
-#include "sidemu.h"
+#include "residfp-emu.h"
+//#include "sidemu.h"
 
 void clockChip(sidemu *s) { s->clock(); }
 
@@ -193,4 +193,14 @@ void Mixer::setVolume(int_least32_t left, int_least32_t right)
     m_volume.clear();
     m_volume.push_back(left);
     m_volume.push_back(right);
+}
+
+void Mixer::getSIDChannel(SIDChannel &output, int channel) const
+{
+	ReSIDfp *chip = (ReSIDfp*)m_chips[0];
+	int offset = channel * 7;
+	//output.frequency = (chip->read(0xd401 + offset) << 8) | chip->peek(0xd400 + offset);
+	//output.isPlaying = chip->peek(0xd404 + offset) & 1;
+	output.frequency = chip->m_sid.voice[channel]->waveformGenerator->readFreq();
+	output.isPlaying = true;
 }
