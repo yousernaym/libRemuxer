@@ -25,6 +25,7 @@
 #include "EnvelopeGenerator.h"
 
 #include "Dac.h"
+//extern bool isPlaying = false;
 
 namespace reSIDfp
 {
@@ -150,7 +151,8 @@ void EnvelopeGenerator::writeCONTROL_REG(unsigned char control)
 
     if (gate_next)
     {
-        // Gate bit on: Start attack, decay, sustain.
+		//isPlaying = true;
+		// Gate bit on: Start attack, decay, sustain.
         state = ATTACK;
         rate = adsrtable[attack];
 
@@ -165,7 +167,8 @@ void EnvelopeGenerator::writeCONTROL_REG(unsigned char control)
     else
     {
         // Gate bit off: Start release.
-        state = RELEASE;
+		//isPlaying = false;
+		state = RELEASE;
         rate = adsrtable[release];
     }
 

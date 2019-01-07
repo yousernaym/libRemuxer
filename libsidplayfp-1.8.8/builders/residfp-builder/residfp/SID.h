@@ -55,7 +55,7 @@ public:
  */
 class SID
 {
-public:
+private:
     /// Bus value stays alive for some time after each operation.
     static const int BUS_TTL;
 
@@ -277,6 +277,9 @@ public:
      * @param enable false to turn off filter emulation
      */
     void enableFilter(bool enable);
+
+	Voice *getVoice(int index) { return voice[index]; }
+
 };
 
 } // namespace reSIDfp

@@ -32,12 +32,7 @@
 
 class sidbuilder;
 class EventContext;
-
-struct SIDChannel
-{
-	int frequency;
-	bool isPlaying;
-};
+struct NoteState;
 
 /**
  * Inherit this class to create a new SID emulation.
@@ -131,6 +126,7 @@ public:
     virtual void sampling(float systemfreq SID_UNUSED, float outputfreq SID_UNUSED,
         SidConfig::sampling_method_t method SID_UNUSED, bool fast SID_UNUSED) {}
 
+	virtual void getNoteState(NoteState &state, int channel) const = 0;
     /**
      * Get a detailed error message.
      */

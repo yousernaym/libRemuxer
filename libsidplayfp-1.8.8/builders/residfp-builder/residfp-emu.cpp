@@ -166,3 +166,9 @@ void ReSIDfp::model(SidConfig::sid_model_t model)
     m_sid.setChipModel (chipModel);
     m_status = true;
 }
+
+void ReSIDfp::getNoteState(NoteState &state, int channel) const
+{
+	m_sid.getVoice(channel)->getNoteState(state);
+}
+

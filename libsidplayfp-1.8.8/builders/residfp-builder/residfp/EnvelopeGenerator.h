@@ -195,6 +195,8 @@ public:
      * @return envelope counter
      */
     unsigned char readENV() const { return envelope_counter; }
+
+	bool isPlaying() const { return gate; }
 };
 
 } // namespace reSIDfp

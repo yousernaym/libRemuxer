@@ -26,6 +26,7 @@
 #include "siddefs-fp.h"
 #include "WaveformGenerator.h"
 #include "EnvelopeGenerator.h"
+#include "sidplayfp.h"
 
 namespace reSIDfp
 {
@@ -35,7 +36,7 @@ namespace reSIDfp
  */
 class Voice
 {
-public:
+private:
     WaveformGenerator* waveformGenerator;
 
     EnvelopeGenerator* envelopeGenerator;
@@ -97,6 +98,11 @@ public:
         waveformGenerator->reset();
         envelopeGenerator->reset();
     }
+	void getNoteState(NoteState &state)
+	{
+		state.isPlaying = envelopeGenerator->isPlaying();
+		state.frequency = waveformGenerator->readFreq();
+	}
 };
 
 } // namespace reSIDfp

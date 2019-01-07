@@ -47,7 +47,7 @@
 class SidTune;
 class SidInfo;
 class sidbuilder;
-struct SIDChannel;
+struct NoteState;
 
 SIDPLAYFP_NAMESPACE_START
 
@@ -137,9 +137,9 @@ public:
 
     uint_least16_t getCia1TimerA() const { return m_c64.getCia1TimerA(); }
 
-	void getSIDChannel(SIDChannel &output, int channel) const 
+	void getNoteState(NoteState &output, int channel) const
 	{
-		m_mixer.getSIDChannel(output, channel); 
+		m_mixer.getNoteState(output, channel);
 	}
 
 };

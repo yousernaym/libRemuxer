@@ -40,7 +40,12 @@ namespace SIDPLAYFP_NAMESPACE
     class Player;
 }
 
-struct SIDChannel;
+struct NoteState
+{
+	int frequency;
+	bool isPlaying;
+};
+
 
 /**
  * sidplayfp
@@ -173,7 +178,7 @@ public:
 	/**
 	* Get state of channel in SID chip
 	*/
-	void getSIDChannel(SIDChannel &output, int channel) const;
+	void getNoteState(NoteState &output, int channel) const;
 };
 
 #endif // SIDPLAYFP_H

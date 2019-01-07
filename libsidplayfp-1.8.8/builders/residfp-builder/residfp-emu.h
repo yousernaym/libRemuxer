@@ -36,7 +36,7 @@ class sidbuilder;
 
 class ReSIDfp: public sidemu
 {
-public:
+private:
     RESID_NAMESPACE::SID &m_sid;
 
 public:
@@ -64,7 +64,8 @@ public:
     void sampling(float systemclock, float freq,
         SidConfig::sampling_method_t method, bool fast);
 
-    void filter6581Curve(double filterCurve);
+	void getNoteState(NoteState &state, int channel) const;
+	void filter6581Curve(double filterCurve);
     void filter8580Curve(double filterCurve);
     void model(SidConfig::sid_model_t model);
 };

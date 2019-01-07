@@ -33,7 +33,7 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 		songLengthS = 300;
 	//process(path, subSong, songLengthS);
 	
-	int fps = 60;
+	int fps = 50;
 	song.marSong->ticksPerBeat = 24;
 	float bpm = (float)fps * 60 / song.marSong->ticksPerBeat;
 	song.marSong->tempoEvents[0].tempo = bpm;
@@ -94,7 +94,8 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 	// Configure the engine
 	SidConfig cfg;
 	cfg.frequency = SAMPLERATE;
-	cfg.samplingMethod = SidConfig::INTERPOLATE;
+	//cfg.samplingMethod = SidConfig::INTERPOLATE;
+	cfg.samplingMethod = SidConfig::RESAMPLE_INTERPOLATE;
 	cfg.fastSampling = false;
 	cfg.playback = SidConfig::MONO;
 	cfg.sidEmulation = rs.get();
@@ -114,7 +115,7 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 	Wav<short> wav;
 	int bufferSize = 1000;
 	std::vector<short> buffer(bufferSize);
-	SIDChannel channelState;
+	NoteState noteState;
 	
 	float timeS = 0;
 	float ticksPerSeconds = bpm / 60 * song.marSong->ticksPerBeat;
@@ -136,11 +137,11 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 			RunningTickInfo &prevTick = *song.tracks[c].getPrevTick(timeT);
 
 			curTick.noteStart = prevTick.noteStart;
-			m_engine.getSIDChannel(channelState, c);
+			m_engine.getNoteState(noteState, c);
 
-			if (channelState.isPlaying && channelState.frequency >= 20)
+			if (noteState.isPlaying && noteState.frequency >= 20)
 			{
-				curTick.notePitch = (int)(log2(channelState.frequency / 20) * 12 + 0.5f);
+				curTick.notePitch = (int)(log2(noteState.frequency / 20) * 12 + 0.5f);
 
 				if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch)
 					curTick.noteStart = timeT;
