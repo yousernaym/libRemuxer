@@ -24,7 +24,7 @@ ModReader::ModReader(Song &_song, const string &modPath, const string &mixdownPa
 {
 	song = &_song;
 	marSong = song->marSong;
-
+	
 	string cmdLine;
 	BOOL mixdown = mixdownPath.size() > 0;
 	

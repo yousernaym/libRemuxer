@@ -147,9 +147,11 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 		oldTimeT = timeT;
 		timeS = (float)i * bufferSize / SAMPLERATE;
 
-		wav.addSamples(buffer);
+		if (mixdownPath[0] != 0)
+			wav.addSamples(buffer);
 	}
-	wav.createFile("output.wav");
+	if (mixdownPath[0] != 0)
+		wav.createFile(mixdownPath);
 }
 
 SidReader::~SidReader()
