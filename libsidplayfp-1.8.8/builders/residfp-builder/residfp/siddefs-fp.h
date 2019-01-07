@@ -43,7 +43,7 @@ namespace reSIDfp {
 
 typedef enum { MOS6581=1, MOS8580 } ChipModel;
 
-typedef enum { DECIMATE=1, RESAMPLE } SamplingMethod;
+typedef enum { DECIMATE=1, RESAMPLE, SILENT } SamplingMethod;
 }
 
 extern "C"

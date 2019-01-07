@@ -80,6 +80,8 @@ protected:
 
     std::string m_error;
 
+	bool m_disableAudio = false;
+
 public:
     sidemu(sidbuilder *builder) :
         m_builder (builder),
@@ -153,6 +155,7 @@ public:
 
     void poke(uint_least16_t address, uint8_t value) { write(address & 0x1f, value); }
     uint8_t peek(uint_least16_t address) { return read(address & 0x1f); }
+	void disableAudio(bool b) { m_disableAudio = b; }
 };
 
 #endif // SIDEMU_H

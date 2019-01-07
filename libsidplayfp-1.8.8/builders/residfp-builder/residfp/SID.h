@@ -243,7 +243,7 @@ public:
      * @param buf audio output buffer
      * @return number of samples produced
      */
-    int clock(int cycles, short* buf);
+    int clock(int cycles, short* bufbuf, bool disableAudio);
 
     /**
      * Clock SID forward with no audio production.
@@ -311,7 +311,7 @@ void SID::ageBusValue(int n)
 RESID_INLINE
 int SID::output() const
 {
-    const int v1 = voice[0]->output(voice[2]->wave());
+	const int v1 = voice[0]->output(voice[2]->wave());
     const int v2 = voice[1]->output(voice[0]->wave());
     const int v3 = voice[2]->output(voice[1]->wave());
 
@@ -320,7 +320,7 @@ int SID::output() const
 
 
 RESID_INLINE
-int SID::clock(int cycles, short* buf)
+int SID::clock(int cycles, short* buf, bool disableAudio)
 {
     ageBusValue(cycles);
     int s = 0;
@@ -339,19 +339,21 @@ int SID::clock(int cycles, short* buf)
             for (int i = 0; i < delta_t; i++)
             {
                 /* clock waveform generators */
-                voice[0]->wave()->clock();
-                voice[1]->wave()->clock();
-                voice[2]->wave()->clock();
+				if (!disableAudio)
+				{
+					voice[0]->wave()->clock();
+					voice[1]->wave()->clock();
+					voice[2]->wave()->clock();
 
-                /* clock envelope generators */
-                voice[0]->envelope()->clock();
-                voice[1]->envelope()->clock();
-                voice[2]->envelope()->clock();
-
-                if (unlikely(resampler->input(output())))
-                {
-                    buf[s++] = resampler->getOutput();
-                }
+					/* clock envelope generators */
+					voice[0]->envelope()->clock();
+					voice[1]->envelope()->clock();
+					voice[2]->envelope()->clock();
+				}
+				if (unlikely(resampler->input(output())))
+				{
+					buf[s++] = resampler->getOutput();
+				}
             }
 
             if (unlikely(delayedOffset != -1))

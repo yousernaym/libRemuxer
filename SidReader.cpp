@@ -28,7 +28,7 @@
 
 SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSong)
 {
-	//songLengthS = 5;
+	songLengthS = 5;
 	if (songLengthS == 0)
 		songLengthS = 300;
 	//process(path, subSong, songLengthS);
@@ -98,6 +98,8 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 	cfg.fastSampling = false;
 	cfg.playback = SidConfig::MONO;
 	cfg.sidEmulation = rs.get();
+	cfg.disableAudio = mixdownPath[0] == 0;
+
 	if (!m_engine.config(cfg))
 	{
 		throw m_engine.error();
@@ -117,9 +119,12 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 	float timeS = 0;
 	float ticksPerSeconds = bpm / 60 * song.marSong->ticksPerBeat;
 	int oldTimeT = 0;
-	for (int i = 0; i < (int)((double)SAMPLERATE / bufferSize * songLengthS) + 1; i++)
+	int samplesProcessed = 0;
+	for (int i = 0; i < SAMPLERATE * songLengthS; i += samplesProcessed)
 	{
-		m_engine.play(&buffer.front(), bufferSize);
+		samplesProcessed = m_engine.play(&buffer.front(), bufferSize);
+		//samplesProcessed = m_engine.play(0, bufferSize);
+
 		//m_engine.config().sidEmulation.
 		
 		int timeT = (int)(timeS * ticksPerSeconds);
@@ -145,7 +150,7 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 				curTick.vol = 0;
 		}
 		oldTimeT = timeT;
-		timeS = (float)i * bufferSize / SAMPLERATE;
+		timeS = (float)i / SAMPLERATE;
 
 		if (mixdownPath[0] != 0)
 			wav.addSamples(buffer);

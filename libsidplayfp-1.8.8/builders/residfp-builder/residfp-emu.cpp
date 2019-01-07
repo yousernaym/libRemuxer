@@ -98,7 +98,7 @@ void ReSIDfp::clock()
 {
     const event_clock_t cycles = m_context->getTime(m_accessClk, EVENT_CLOCK_PHI1);
     m_accessClk += cycles;
-    m_bufferpos += m_sid.clock(cycles, m_buffer+m_bufferpos);
+    m_bufferpos += m_sid.clock(cycles, m_buffer+m_bufferpos, m_disableAudio);
 }
 
 void ReSIDfp::filter(bool enable)
@@ -109,21 +109,26 @@ void ReSIDfp::filter(bool enable)
 void ReSIDfp::sampling(float systemclock, float freq,
         SidConfig::sampling_method_t method, bool fast SID_UNUSED)
 {
-    reSIDfp::SamplingMethod sampleMethod;
-    switch (method)
-    {
-    case SidConfig::INTERPOLATE:
-        sampleMethod = reSIDfp::DECIMATE;
-        break;
-    case SidConfig::RESAMPLE_INTERPOLATE:
-        sampleMethod = reSIDfp::RESAMPLE;
-        break;
-    default:
-        m_status = false;
-        m_error = ERR_INVALID_SAMPLING;
-        return;
-    }
-
+	reSIDfp::SamplingMethod sampleMethod;
+	if (m_disableAudio)
+		sampleMethod = reSIDfp::SILENT;
+	else
+	{
+		switch (method)
+		{
+		case SidConfig::INTERPOLATE:
+			sampleMethod = reSIDfp::DECIMATE;
+			break;
+		case SidConfig::RESAMPLE_INTERPOLATE:
+			sampleMethod = reSIDfp::RESAMPLE;
+			break;
+		default:
+			m_status = false;
+			m_error = ERR_INVALID_SAMPLING;
+			return;
+		}
+	}
+	
     try
     {
         // Round half frequency to the nearest multiple of 5000

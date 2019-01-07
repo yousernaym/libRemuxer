@@ -128,7 +128,7 @@ public:
     /**
      * Do the mixing.
      */
-    void doMix();
+    void doMix(bool disableAudio);
 
     /**
      * This clocks the SID chips to the present moment, if they aren't already.

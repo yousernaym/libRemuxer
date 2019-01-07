@@ -25,47 +25,79 @@
 namespace reSIDfp
 {
 
-/**
- * Abstraction of a resampling process. Given enough input, produces output.
- * Constructors take additional arguments that configure these objects.
- */
-class Resampler
-{
-protected:
-    virtual int output() const = 0;
+	/**
+	 * Abstraction of a resampling process. Given enough input, produces output.
+	 * Constructors take additional arguments that configure these objects.
+	 */
+	class Resampler
+	{
+	protected:
+		virtual int output() const = 0;
 
-    Resampler() {}
+		Resampler() {}
 
-public:
-    virtual ~Resampler() {}
+	public:
+		virtual ~Resampler() {}
 
-    /**
-     * Input a sample into resampler. Output "true" when resampler is ready with new sample.
-     *
-     * @param sample input sample
-     * @return true when a sample is ready
-     */
-    virtual bool input(int sample) = 0;
+		/**
+		 * Input a sample into resampler. Output "true" when resampler is ready with new sample.
+		 *
+		 * @param sample input sample
+		 * @return true when a sample is ready
+		 */
+		virtual bool input(int sample) = 0;
 
-    /**
-     * Output a sample from resampler.
-     *
-     * @return resampled sample
-     */
-    short getOutput() const
-    {
-        int value = output();
+		/**
+		 * Output a sample from resampler.
+		 *
+		 * @return resampled sample
+		 */
+		short getOutput() const
+		{
+			int value = output();
 
-        // Clip signed integer value into the -32768,32767 range.
-        if (value < -32768) value = -32768;
-        if (value > 32767) value = 32767;
+			// Clip signed integer value into the -32768,32767 range.
+			if (value < -32768) value = -32768;
+			if (value > 32767) value = 32767;
 
-        return value;
-    }
+			return value;
+		}
 
-    virtual void reset() = 0;
+		virtual void reset() = 0;
+	};
+
+	class SilentResampler : public Resampler
+	{
+		const int cyclesPerSample;
+		int sampleOffset;
+	public:
+		SilentResampler(double clockFrequency, double samplingFrequency) :
+			cyclesPerSample(static_cast<int>(clockFrequency / samplingFrequency * 1024.)),
+			sampleOffset(0)
+		{
+		}
+		bool input(int sample)
+		{
+			bool ready = false;
+
+			if (sampleOffset < 1024)
+			{
+				ready = true;
+				sampleOffset += cyclesPerSample;
+			}
+
+			sampleOffset -= 1024;
+
+			return ready;
+		}
+
+		int output() const { return 0; }
+
+		void reset()
+		{
+			sampleOffset = 0;
+		}
 };
-
 } // namespace reSIDfp
 
 #endif

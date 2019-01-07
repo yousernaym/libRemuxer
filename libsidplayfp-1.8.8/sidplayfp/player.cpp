@@ -181,29 +181,29 @@ uint_least32_t Player::play(short *buffer, uint_least32_t count)
     {
         if (count && buffer)
         {
-            while (m_isPlaying && m_mixer.notFinished())
-            {
-                for (int i = 0; i < sidemu::OUTPUTBUFFERSIZE; i++)
-                m_c64.getEventScheduler()->clock();
-
-                m_mixer.clockChips();
-                m_mixer.doMix();
+			while (m_isPlaying && m_mixer.notFinished())
+			{
+				for (int i = 0; i < sidemu::OUTPUTBUFFERSIZE; i++)
+					m_c64.getEventScheduler()->clock();
+					
+				m_mixer.clockChips();
+				m_mixer.doMix(m_cfg.disableAudio);
 			}
             count = m_mixer.samplesGenerated();
         }
         else
         {
-            int size = m_c64.getMainCpuSpeed() / m_cfg.frequency;
-            while (m_isPlaying && --size)
-            {
-                for (int i = 0; i < sidemu::OUTPUTBUFFERSIZE; i++)
-                    m_c64.getEventScheduler()->clock();
-
-                m_mixer.clockChips();
-                m_mixer.resetBufs();
-            }
+			int size = m_c64.getMainCpuSpeed() / m_cfg.frequency;
+			int bufferIterations = (int)((float)count * size / sidemu::OUTPUTBUFFERSIZE);
+			for (int j = 0; j < bufferIterations; j ++)
+			{
+				for (int i = 0; i < sidemu::OUTPUTBUFFERSIZE; i++)
+					m_c64.getEventScheduler()->clock();
+				m_mixer.clockChips();
+				m_mixer.resetBufs();
+			}
+			count = bufferIterations * sidemu::OUTPUTBUFFERSIZE / size;
         }
-		int value = m_mixer.getSid(0)->peek(0xd400);
     }
     else
     {

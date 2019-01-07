@@ -93,8 +93,7 @@ private:
     void sidRelease();
     void sidCreate(sidbuilder *builder, SidConfig::sid_model_t defaultModel,
                     bool forced, const std::vector<unsigned int> &extraSidAddresses);
-    void sidParams(double cpuFreq, int frequency,
-                    SidConfig::sampling_method_t sampling, bool fastSampling);
+    void sidParams(double cpuFreq, int frequency, SidConfig::sampling_method_t sampling, bool fastSampling, bool disableAudio);
 
     static SidConfig::sid_model_t getModel (SidTuneInfo::model_t sidModel, SidConfig::sid_model_t defaultModel, bool forced);
 

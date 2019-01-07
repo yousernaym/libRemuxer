@@ -66,9 +66,9 @@ void Mixer::resetBufs()
     std::for_each(m_chips.begin(), m_chips.end(), bufferPos(0));
 }
 
-void Mixer::doMix()
+void Mixer::doMix(bool disableAudio)
 {
-    short *buf = m_sampleBuffer + m_sampleIndex;
+	short *buf = m_sampleBuffer + m_sampleIndex;
 
     // extract buffer info now that the SID is updated.
     // clock() may update bufferpos.
@@ -91,27 +91,31 @@ void Mixer::doMix()
 
         // This is a crude boxcar low-pass filter to
         // reduce aliasing during fast forward.
-        for (size_t k = 0; k < m_buffers.size(); k++)
-        {
-            int_least32_t sample = 0;
-            const short *buffer = m_buffers[k] + i;
-            for (int j = 0; j < m_fastForwardFactor; j++)
-            {
-                sample += buffer[j];
-            }
+		if (!disableAudio)
+		{
+			for (size_t k = 0; k < m_buffers.size(); k++)
+			{
+				int_least32_t sample = 0;
+				const short *buffer = m_buffers[k] + i;
+				for (int j = 0; j < m_fastForwardFactor; j++)
+				{
+					sample += buffer[j];
+				}
 
-            m_iSamples[k] = sample / m_fastForwardFactor;
-        }
+				m_iSamples[k] = sample / m_fastForwardFactor;
+			}
+		}
 
         // increment i to mark we ate some samples, finish the boxcar thing.
         i += m_fastForwardFactor;
 
-        const int dither = triangularDithering();
+        const int dither = disableAudio ? 0 : triangularDithering();
 
         const unsigned int channels = m_stereo ? 2 : 1;
         for (unsigned int ch = 0; ch < channels; ch++)
         {
-            *buf++ = static_cast<short>(((this->*(m_mix[ch]))() * m_volume[ch] + dither) / VOLUME_MAX);
+            if (!disableAudio)
+				*buf++ = static_cast<short>(((this->*(m_mix[ch]))() * m_volume[ch] + dither) / VOLUME_MAX);
             m_sampleIndex++;
         }
     }

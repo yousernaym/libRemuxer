@@ -81,7 +81,7 @@ bool Player::config(const SidConfig &cfg)
 
             m_c64.setModel(model);
 
-            sidParams(m_c64.getMainCpuSpeed(), cfg.frequency, cfg.samplingMethod, cfg.fastSampling);
+            sidParams(m_c64.getMainCpuSpeed(), cfg.frequency, cfg.samplingMethod, cfg.fastSampling, cfg.disableAudio);
 
             // Configure, setup and install C64 environment/events
             initialise();
@@ -104,7 +104,7 @@ bool Player::config(const SidConfig &cfg)
     m_mixer.setStereo(isStereo);
     m_mixer.setVolume(cfg.leftVolume, cfg.rightVolume);
 
-    // Update Configuration
+	// Update Configuration
     m_cfg = cfg;
 
     return true;
@@ -329,15 +329,14 @@ void Player::sidCreate(sidbuilder *builder, SidConfig::sid_model_t defaultModel,
     }
 }
 
-void Player::sidParams(double cpuFreq, int frequency,
-                        SidConfig::sampling_method_t sampling, bool fastSampling)
+void Player::sidParams(double cpuFreq, int frequency, SidConfig::sampling_method_t sampling, bool fastSampling, bool disableAudio)
 {
     for (unsigned int i = 0; ; i++)
     {
         sidemu *s = m_mixer.getSid(i);
         if (s == 0)
             break;
-
+		s->disableAudio(disableAudio);
         s->sampling((float)cpuFreq, frequency, sampling, fastSampling);
     }
 }
