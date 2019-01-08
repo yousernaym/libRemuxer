@@ -32,12 +32,12 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 {
 	if (songLengthS == 0)
 		songLengthS = 300;
-	double fadeOut = 7;
-	songLengthS += fadeOut;
-	//process(path, subSong, songLengthS);
+	double fadeOutS = 7;
+	songLengthS += fadeOutS;
 	
-	int fps = 50;
-	song.marSong->ticksPerBeat = 24;
+	float resoScale = 10;
+	int fps = 50 * resoScale;
+	song.marSong->ticksPerBeat = 24 * resoScale;
 	float bpm = (float)fps * 60 / song.marSong->ticksPerBeat;
 	song.marSong->tempoEvents[0].tempo = bpm;
 	song.marSong->tempoEvents[0].time = 0;
@@ -49,25 +49,22 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 		sprintf_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
 	}
 	
-	{ // Load ROM files
-		char *kernal = loadRom(KERNAL_PATH, 8192);
-		char *basic = loadRom(BASIC_PATH, 8192);
-		char *chargen = loadRom(CHARGEN_PATH, 4096);
+	 // Load ROM files
+	char *kernal = loadRom(KERNAL_PATH, 8192);
+	char *basic = loadRom(BASIC_PATH, 8192);
+	char *chargen = loadRom(CHARGEN_PATH, 4096);
 
-		m_engine.setRoms((const uint8_t*)kernal, (const uint8_t*)basic, (const uint8_t*)chargen);
+	m_engine.setRoms((const uint8_t*)kernal, (const uint8_t*)basic, (const uint8_t*)chargen);
 
-		if (kernal)
-			delete[] kernal;
-		if (basic)
-			delete[] basic;
-		if (chargen)
-			delete[] chargen;
-	}
+	if (kernal)
+		delete[] kernal;
+	if (basic)
+		delete[] basic;
+	if (chargen)
+		delete[] chargen;
 
 	// Set up a SID builder
 	std::unique_ptr<ReSIDfpBuilder> rs(new ReSIDfpBuilder("Demo"));
-	//ReSIDfpBuilder *rs = new ReSIDfpBuilder("Demo");
-
 
 	// Get the number of SIDs supported by the engine
 	unsigned int maxsids = (m_engine.info()).maxsids();
@@ -77,13 +74,11 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 
 	// Check if builder is ok
 	if (!rs->getStatus())
-	{
 		throw rs->error();
-	}
 
 	// Load tune from file
 	std::unique_ptr<SidTune> tune(new SidTune(path));
-	//SidTune *tune = new SidTune(path);
+	
 	auto tuneInfo = tune->getInfo();
 	SidTuneInfo::clock_t clockType = tuneInfo->clockSpeed();
 	const float PHI =
@@ -93,9 +88,7 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 
 	// CHeck if the tune is valid
 	if (!tune->getStatus())
-	{
 		throw tune->statusString();
-	}
 
 	// Select default song
 	tune->selectSong(subSong);
@@ -115,15 +108,11 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 	//cfg.defaultSidModel = SidConfig::sid_model_t::MOS8580;
 
 	if (!m_engine.config(cfg))
-	{
 		throw m_engine.error();
-	}
 
 	// Load tune into engine
 	if (!m_engine.load(tune.get()))
-	{
 		throw m_engine.error();
-	}
 
 	Wav<short> wav;
 	int bufferSize = 500;
@@ -132,54 +121,47 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 	
 	float timeS = 0;
 	float ticksPerSeconds = bpm / 60 * song.marSong->ticksPerBeat;
-	int oldTimeT = 0;
+	int oldTimeT = -1;
 	int samplesProcessed = 0;
 	int samplesToPorcess = (int)(SAMPLERATE * songLengthS);
-	int samplesBeforeFadeout = samplesToPorcess - (int)(fadeOut * SAMPLERATE);
+	int samplesBeforeFadeout = samplesToPorcess - (int)(fadeOutS * SAMPLERATE);
 	
 	for (int i = 0; i < samplesToPorcess; i += samplesProcessed)
 	{
-		samplesProcessed = m_engine.play(&buffer.front(), bufferSize);
-		//samplesProcessed = m_engine.play(0, bufferSize);
-
-		//m_engine.config().sidEmulation.
-		
+		timeS = (float)i / SAMPLERATE;
 		int timeT = (int)(timeS * ticksPerSeconds);
-		for (int c = 0; c < 3; c++)
+		samplesProcessed = m_engine.play(&buffer.front(), bufferSize);
+
+		if (timeT > oldTimeT)
 		{
-			for (int t = oldTimeT + 1; t < timeT; t++)
-				song.tracks[c].ticks[t] = song.tracks[c].ticks[oldTimeT];
-			RunningTickInfo &curTick = song.tracks[c].ticks[timeT];
-			RunningTickInfo &prevTick = *song.tracks[c].getPrevTick(timeT);
-
-			curTick.noteStart = prevTick.noteStart;
-			m_engine.getNoteState(noteState, c);
-
-			float freq = noteState.frequency / freqConSt;
-						
-			if (noteState.isPlaying && freq >= 33 && freq <= 10000)
+			for (int c = 0; c < 3; c++)
 			{
-				curTick.notePitch = (int)(log2(freq / 32.7031956626) * 12 + 0.5f) + 5; //32.7031956626
+				for (int t = oldTimeT + 1; t < timeT; t++)
+					song.tracks[c].ticks[t] = song.tracks[c].ticks[oldTimeT];
+				RunningTickInfo &curTick = song.tracks[c].ticks[timeT];
+				RunningTickInfo &prevTick = *song.tracks[c].getPrevTick(timeT);
 
-				if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || noteState.playStateChanged)
-					curTick.noteStart = timeT;
-				curTick.vol = 50;// (int)ch.amplitude;
-				if (noteState.playStateChanged)
-					prevTick.vol = 0;
-			}
-			else
-			{
-				curTick.vol = 0;
-				if (noteState.playStateChanged)
+				curTick.noteStart = prevTick.noteStart;
+				m_engine.getNoteState(noteState, c);
+
+				float freq = noteState.frequency / freqConSt;
+
+				if (noteState.isPlaying && freq >= 33 && freq <= 10000)
 				{
-					prevTick.vol = 50;
-					prevTick.noteStart = timeT - 1;
+					curTick.notePitch = (int)(log2(freq / 32.7031956626) * 12 + 0.5f) + 1; //32.7031956626
+
+					if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || noteState.playStateChanged)
+						curTick.noteStart = timeT;
+					curTick.vol = 50;// (int)ch.amplitude;
+					if (noteState.playStateChanged)
+						prevTick.vol = 0;
 				}
+				else
+					curTick.vol = 0;
 			}
 		}
+			
 		oldTimeT = timeT;
-		timeS = (float)i / SAMPLERATE;
-
 		if (mixdownPath[0] != 0)
 		{
 			if (i > samplesBeforeFadeout)
