@@ -80,11 +80,24 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 	std::unique_ptr<SidTune> tune(new SidTune(path));
 	
 	auto tuneInfo = tune->getInfo();
-	SidTuneInfo::clock_t clockType = tuneInfo->clockSpeed();
-	const float PHI =
-		clockType == SidTuneInfo::CLOCK_NTSC ?
-			1022727 : 985248;
+	
+	float PHI;
+	int iMinFreq, iMaxFreq;
+	if (tuneInfo->clockSpeed() == SidTuneInfo::CLOCK_NTSC)
+	{
+		PHI = 1022727;
+		iMinFreq = 268;
+		iMaxFreq = 64832;
+	}
+	else
+	{
+		PHI = 985248;
+		iMinFreq = 279;
+		iMaxFreq = 65535;
+	}
 	const float freqConSt = 256 * 256 * 256 / PHI;
+	const float minFreq = iMinFreq / freqConSt;
+	const float maxFreq = iMaxFreq / freqConSt;
 
 	// CHeck if the tune is valid
 	if (!tune->getStatus())
@@ -146,9 +159,10 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 
 				float freq = noteState.frequency / freqConSt;
 
-				if (noteState.isPlaying && freq >= 20 && freq <= 10000)
+				//noteState.isPlaying = true;
+				if (noteState.isPlaying && freq >= minFreq && freq <= maxFreq)
 				{
-					curTick.notePitch = (int)(log2(freq / 32.7031956626) * 12 + 0.5f) + 1; //32.7031956626
+					curTick.notePitch = (int)(log2(freq  / minFreq) * 12 + 0.5f) + 1;
 
 					if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || noteState.playStateChanged)
 						curTick.noteStart = timeT;
