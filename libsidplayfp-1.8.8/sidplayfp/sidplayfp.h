@@ -44,6 +44,7 @@ struct NoteState
 {
 	int frequency;
 	bool isPlaying;
+	bool playStateChanged;
 };
 
 

@@ -25,7 +25,6 @@
 #include "EnvelopeGenerator.h"
 
 #include "Dac.h"
-//extern bool isPlaying = false;
 
 namespace reSIDfp
 {
@@ -129,6 +128,7 @@ void EnvelopeGenerator::reset()
     release = 0;
 
     gate = false;
+	gateChanged = false;
 
     lfsr = 0x7fff;
     exponential_counter = 0;
@@ -151,7 +151,6 @@ void EnvelopeGenerator::writeCONTROL_REG(unsigned char control)
 
     if (gate_next)
     {
-		//isPlaying = true;
 		// Gate bit on: Start attack, decay, sustain.
         state = ATTACK;
         rate = adsrtable[attack];
@@ -167,12 +166,12 @@ void EnvelopeGenerator::writeCONTROL_REG(unsigned char control)
     else
     {
         // Gate bit off: Start release.
-		//isPlaying = false;
 		state = RELEASE;
         rate = adsrtable[release];
     }
 
-    gate = gate_next;
+	gateChanged = true;
+	gate = gate_next;
 }
 
 void EnvelopeGenerator::writeATTACK_DECAY(unsigned char attack_decay)

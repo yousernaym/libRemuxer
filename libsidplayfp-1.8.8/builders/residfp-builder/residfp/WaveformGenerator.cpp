@@ -95,7 +95,7 @@ void WaveformGenerator::setWaveformModels(matrix_t* models)
 
 void WaveformGenerator::setChipModel(ChipModel chipModel)
 {
-    double dacBits[DAC_BITS];
+	double dacBits[DAC_BITS];
     Dac::kinkedDac(dacBits, DAC_BITS, chipModel == MOS6581 ? 2.20 : 2.00, chipModel == MOS8580);
 
     for (unsigned int i = 0; i < (1 << DAC_BITS); i++)

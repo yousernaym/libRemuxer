@@ -92,6 +92,8 @@ private:
 
     /// Gate bit
     bool gate;
+	///true if gate changed since last isPlaying() call.
+	bool gateChanged = false;
 
     /// The current digital value of envelope output.
     unsigned char envelope_counter;
@@ -196,7 +198,8 @@ public:
      */
     unsigned char readENV() const { return envelope_counter; }
 
-	bool isPlaying() const { return gate; }
+	bool isPlaying() { gateChanged = false;  return gate; }
+	bool playStateChanged() const { return gateChanged; }
 };
 
 } // namespace reSIDfp

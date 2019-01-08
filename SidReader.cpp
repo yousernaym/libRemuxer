@@ -16,6 +16,8 @@
 #include <sidplayfp/SidConfig.h>
 #include <builders/residfp-builder/residfp.h> 
 #include <sidplayfp/sidemu.h>
+#include <sidplayfp/SidtuneInfo.h>
+
 
 
 //#include "sidspectro\\sidfile.h"
@@ -28,9 +30,10 @@
 
 SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSong)
 {
-	songLengthS = 5;
 	if (songLengthS == 0)
 		songLengthS = 300;
+	double fadeOut = 7;
+	songLengthS += fadeOut;
 	//process(path, subSong, songLengthS);
 	
 	int fps = 50;
@@ -81,6 +84,12 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 	// Load tune from file
 	std::unique_ptr<SidTune> tune(new SidTune(path));
 	//SidTune *tune = new SidTune(path);
+	auto tuneInfo = tune->getInfo();
+	SidTuneInfo::clock_t clockType = tuneInfo->clockSpeed();
+	const float PHI =
+		clockType == SidTuneInfo::CLOCK_NTSC ?
+			1022727 : 985248;
+	const float freqConSt = 256 * 256 * 256 / PHI;
 
 	// CHeck if the tune is valid
 	if (!tune->getStatus())
@@ -100,6 +109,10 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 	cfg.playback = SidConfig::MONO;
 	cfg.sidEmulation = rs.get();
 	cfg.disableAudio = mixdownPath[0] == 0;
+	//cfg.forceSidModel = true;
+	//cfg.forceC64Model = true;
+	//cfg.defaultC64Model = SidConfig::c64_model_t::DREAN;
+	//cfg.defaultSidModel = SidConfig::sid_model_t::MOS8580;
 
 	if (!m_engine.config(cfg))
 	{
@@ -113,7 +126,7 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 	}
 
 	Wav<short> wav;
-	int bufferSize = 1000;
+	int bufferSize = 500;
 	std::vector<short> buffer(bufferSize);
 	NoteState noteState;
 	
@@ -121,7 +134,10 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 	float ticksPerSeconds = bpm / 60 * song.marSong->ticksPerBeat;
 	int oldTimeT = 0;
 	int samplesProcessed = 0;
-	for (int i = 0; i < SAMPLERATE * songLengthS; i += samplesProcessed)
+	int samplesToPorcess = (int)(SAMPLERATE * songLengthS);
+	int samplesBeforeFadeout = samplesToPorcess - (int)(fadeOut * SAMPLERATE);
+	
+	for (int i = 0; i < samplesToPorcess; i += samplesProcessed)
 	{
 		samplesProcessed = m_engine.play(&buffer.front(), bufferSize);
 		//samplesProcessed = m_engine.play(0, bufferSize);
@@ -139,22 +155,41 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 			curTick.noteStart = prevTick.noteStart;
 			m_engine.getNoteState(noteState, c);
 
-			if (noteState.isPlaying && noteState.frequency >= 20)
+			float freq = noteState.frequency / freqConSt;
+						
+			if (noteState.isPlaying && freq >= 33 && freq <= 10000)
 			{
-				curTick.notePitch = (int)(log2(noteState.frequency / 20) * 12 + 0.5f);
+				curTick.notePitch = (int)(log2(freq / 32.7031956626) * 12 + 0.5f) + 5; //32.7031956626
 
-				if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch)
+				if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || noteState.playStateChanged)
 					curTick.noteStart = timeT;
 				curTick.vol = 50;// (int)ch.amplitude;
+				if (noteState.playStateChanged)
+					prevTick.vol = 0;
 			}
 			else
+			{
 				curTick.vol = 0;
+				if (noteState.playStateChanged)
+				{
+					prevTick.vol = 50;
+					prevTick.noteStart = timeT - 1;
+				}
+			}
 		}
 		oldTimeT = timeT;
 		timeS = (float)i / SAMPLERATE;
 
 		if (mixdownPath[0] != 0)
+		{
+			if (i > samplesBeforeFadeout)
+			{
+				float scale = (float)(samplesToPorcess - i) / (samplesToPorcess - samplesBeforeFadeout);
+				for (int i = 0; i < buffer.size(); i++)
+					buffer[i] *= scale;
+			}
 			wav.addSamples(buffer);
+		}
 	}
 	if (mixdownPath[0] != 0)
 		wav.createFile(mixdownPath);
