@@ -146,7 +146,7 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 
 				float freq = noteState.frequency / freqConSt;
 
-				if (noteState.isPlaying && freq >= 33 && freq <= 10000)
+				if (noteState.isPlaying && freq >= 20 && freq <= 10000)
 				{
 					curTick.notePitch = (int)(log2(freq / 32.7031956626) * 12 + 0.5f) + 1; //32.7031956626
 
