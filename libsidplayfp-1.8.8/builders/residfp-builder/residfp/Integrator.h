@@ -1,3 +1,4 @@
+#include <fstream>
 /*
  * This file is part of libsidplayfp, a SID player engine.
  *
@@ -176,7 +177,11 @@ public:
         kVddt(kVddt),
         n_snake(n_snake) {}
 
-    void setVw(unsigned short Vw) { Vddt_Vw_2 = (kVddt - Vw) * (kVddt - Vw) >> 1; }
+	void setVw(unsigned short Vw)
+	{
+		Vw += 3000;
+		Vddt_Vw_2 = (kVddt - Vw) * (kVddt - Vw) >> 1;
+	}
 
     int solve(int vi);
 };
