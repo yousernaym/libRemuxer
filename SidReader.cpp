@@ -22,9 +22,9 @@
 
 //#include "sidspectro\\sidfile.h"
 //#include "sidspectro\\c64.h"
-#define KERNAL_PATH  "roms\\kernal.901227-03.bin"
+#define KERNAL_PATH  "roms\\kernal.901227-02.bin"
 #define BASIC_PATH   "roms\\basic.901226-01.bin"
-#define CHARGEN_PATH ""
+#define CHARGEN_PATH "roms\\characters.901225-01.bin"
 
 #define SAMPLERATE 44100
 
