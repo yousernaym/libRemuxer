@@ -22,8 +22,8 @@
 
 //#include "sidspectro\\sidfile.h"
 //#include "sidspectro\\c64.h"
-#define KERNAL_PATH  "d:\\hämta mh\\kodning\\MUSIC\\c64\\kernal.901227-03.bin"
-#define BASIC_PATH   "d:\\hämta mh\\kodning\\MUSIC\\c64\\basic.901226-01.bin"
+#define KERNAL_PATH  "roms\\kernal.901227-03.bin"
+#define BASIC_PATH   "roms\\basic.901226-01.bin"
 #define CHARGEN_PATH ""
 
 #define SAMPLERATE 44100
