@@ -81,8 +81,11 @@ SidReader::SidReader(Song &song)
 	// Load tune from file
 	std::unique_ptr<SidTune> tune(new SidTune(g_args.inputPath));
 	
+	// CHeck if the tune is valid
+	if (!tune->getStatus())
+		throw tune->statusString();
+
 	auto tuneInfo = tune->getInfo();
-	
 	float PHI;
 	int iMinFreq, iMaxFreq;
 	if (tuneInfo->clockSpeed() == SidTuneInfo::CLOCK_NTSC)
@@ -100,10 +103,6 @@ SidReader::SidReader(Song &song)
 	const float freqConSt = 256 * 256 * 256 / PHI;
 	const float minFreq = iMinFreq / freqConSt;
 	const float maxFreq = iMaxFreq / freqConSt;
-
-	// CHeck if the tune is valid
-	if (!tune->getStatus())
-		throw tune->statusString();
 
 	// Select default song
 	tune->selectSong(g_args.subSong);
