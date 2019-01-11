@@ -1,7 +1,9 @@
 #pragma once
 #include <set>
 #include <vector>
-#include "NoteExtractor.h"
+#include <map>
+#include "Remuxer.h"
+#include "FileFormat.h"
 typedef multiset<Marshal_Note> TrackNotes;
 //typedef vector<TrackNotes> Notes;
 
@@ -13,15 +15,19 @@ struct RunningTickInfo
 	int ins = 0;
 };
 
-class Song
+class Song : FileFormat
 {
+private:
 	vector<TrackNotes> notes;
+	void writeVL(unsigned value); //Write variable length value to file
+	void createNoteEvents(map<int, vector<bool>> *noteEvents, Marshal_Track track);
 public:
 	struct Track;
 	vector<Track> tracks;
 	Marshal_Song *marSong;
 	Song(Marshal_Song *_marSong);
-	void createNoteList(BOOL insTrack);
+	void createNoteList();
+	void saveMidiFile(const string &path);
 };
 
 struct Song::Track

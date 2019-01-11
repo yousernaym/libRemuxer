@@ -20,19 +20,19 @@ void ModReader::sInit()
 	/* initialize the library */
 }
 
-ModReader::ModReader(Song &_song, const string &modPath, const string &mixdownPath, BOOL insTrack)
+ModReader::ModReader(Song &_song)
 {
 	song = &_song;
 	marSong = song->marSong;
 	
 	string cmdLine;
-	BOOL mixdown = mixdownPath.size() > 0;
+	BOOL mixdown = g_args.audioPath[0] > 0;
 	
 	md_device = 2; //nosound driver
 	if (mixdown)
 	{
 		md_device = 1; //wav writer
-		cmdLine = "file=" + string(mixdownPath);
+		cmdLine = "file=" + string(g_args.audioPath);
 	}
 		
 	if (MikMod_Init(cmdLine.c_str()))
@@ -41,7 +41,7 @@ ModReader::ModReader(Song &_song, const string &modPath, const string &mixdownPa
 		OutputDebugStringA(err.c_str());
 		assert(false);
 	}
-	module = Player_Load(modPath.c_str(), 64, 0);
+	module = Player_Load(g_args.inputPath, 64, 0);
 	
 	if (module)
 	{
@@ -70,7 +70,7 @@ ModReader::ModReader(Song &_song, const string &modPath, const string &mixdownPa
 			marSong->tracks[i].numNotes = 0;
 		//-----------------------------------
 
-		if (insTrack)	//One track per instrument/sample
+		if (g_args.insTrack)	//One track per instrument/sample
 		{
 			if (module->instruments)
 			{
@@ -495,28 +495,6 @@ void ModReader::getCellRepLen(BYTE replen, int &repeat, int &length)
 	repeat = (replen >> 5) & 7;
 	length = replen & 31;
 }
-
-//bool addNote(vector<RunningCellInfo> &row, vector<TrackNotes> &notes, bool modInsTrack, int channel, int noteEnd)
-//{
-//	Marshal_Note note;
-//	note.pitch = row[channel].note;
-//	note.start = row[channel].noteStartT; 
-//	note.stop = noteEnd;
-//	unsigned  track = modInsTrack ? row[channel].ins : channel + 1; //add 1 to channel because first track is reserved (for "global"?)
-//	if (track >= notes.size())
-//		notes.resize(track + 1);
-//	notes[track].insert(note);
-//	if (notes[track].size() >= MAX_TRACKNOTES)
-//		return false;
-//	//marMod.tracks[ins].notes[marMod.tracks[ins].numNotes++] = notesElem;
-//	//if (marMod.numTracks < track + 1)
-//		//marMod.numTracks = ins + 1;
-//	//if (marMod.tracks[ins].numNotes >= MAX_TRACKNOTES)
-//		//return FALSE;
-//	return true;
-//}
-
-//bool addNote(vector<RunningCellInfo> &row, vector<TrackNotes> &notes, bool modInsTrack, int channel, int noteEnd)
 
 double ModReader::getRowDur(double tempo, double speed)
 {

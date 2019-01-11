@@ -2,6 +2,7 @@
 #include <mikmod.h>
 #include <mikmod_internals.h>
 #include "song.h"
+#include "remuxer.h"
 
 using namespace std;
 //------------------------------------
@@ -148,7 +149,7 @@ class ModReader
 	Song *song;
 	Marshal_Song *marSong;
 public:
-	ModReader(Song &_song, const string &modPath, const string &mixdown, BOOL insTrack);
+	ModReader(Song &_song);
 	~ModReader();
 	static void sInit();
 	void getCellRepLen(BYTE replen, int &repeat, int &length);

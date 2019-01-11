@@ -3,17 +3,12 @@
 #include <vector>
 
 template <class SampleType>
-class Wav
+class Wav : FileFormat
 {
 private:
-	std::ofstream outFile;
 	const int sampleRate = 44100;
 	const int channelCount = 1;
 	std::vector<SampleType> samples;
-	void writeNumber(int bytes, int number)
-	{
-		outFile.write(reinterpret_cast<const char*>(&number), bytes);
-	}
 public:
 	Wav()
 	{
@@ -27,26 +22,24 @@ public:
 	{
 		samples.insert(samples.end(), newSamples.begin(), newSamples.end());
 	}
-	void createFile(const std::string &path)
+	void saveFile(const std::string &path)
 	{
 		int blockAlign = sizeof(SampleType) * channelCount;
-		int dataSize = samples.size() * sizeof(SampleType);
-		outFile.open(path, std::ios::binary | std::ios::out);
+		int dataSize = (int)samples.size() * sizeof(SampleType);
+		createFile(path);
 		outFile << "RIFF";
-		writeNumber(4, 36 + dataSize);
+		writeLE(4, 36 + dataSize);
 		outFile << "WAVEfmt ";
-		writeNumber(4, 16);
-		writeNumber(2, 1);
-		writeNumber(2, channelCount);
-		writeNumber(4, sampleRate);
-		writeNumber(4, sampleRate * blockAlign);
-		writeNumber(2, blockAlign);
-		writeNumber(2, sizeof(SampleType) * 8);
+		writeLE(4, 16);
+		writeLE(2, 1);
+		writeLE(2, channelCount);
+		writeLE(4, sampleRate);
+		writeLE(4, sampleRate * blockAlign);
+		writeLE(2, blockAlign);
+		writeLE(2, sizeof(SampleType) * 8);
 		outFile << "data";
-		writeNumber(4, dataSize);
-		//samples.clear();
-		//samples = vector<short>(1000);
-		outFile.write(reinterpret_cast<const char*>(&samples[0]), dataSize);
+		writeLE(4, dataSize);
+		writeChunk(&samples[0], dataSize);
 		outFile.close();
 	}
 };

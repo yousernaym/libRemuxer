@@ -1,5 +1,6 @@
 #include "Wav.h"
 #include "SidReader.h"
+
 #include <fcntl.h>
 
 #include <stdlib.h>
@@ -28,14 +29,14 @@
 
 #define SAMPLERATE 44100
 
-SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSong)
+SidReader::SidReader(Song &song)
 {
-	if (songLengthS == 0)
-		songLengthS = 300;
-	double fadeOutS = 7;
-	songLengthS += fadeOutS;
+	if (g_args.songLengthS == 0)
+		g_args.songLengthS = 300;
+	float fadeOutS = 7;
+	g_args.songLengthS += fadeOutS;
 	
-	float resoScale = 10;
+	int resoScale = 10;
 	int fps = 50 * resoScale;
 	song.marSong->ticksPerBeat = 24 * resoScale;
 	float bpm = (float)fps * 60 / song.marSong->ticksPerBeat;
@@ -45,7 +46,7 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 	song.tracks.resize(3);
 	for (int i = 0; i < 3; i++)
 	{
-		song.tracks[i].ticks.resize(int(songLengthS * fps) + 1);
+		song.tracks[i].ticks.resize(int(g_args.songLengthS * fps) + 1);
 		sprintf_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
 	}
 	
@@ -77,7 +78,7 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 		throw rs->error();
 
 	// Load tune from file
-	std::unique_ptr<SidTune> tune(new SidTune(path));
+	std::unique_ptr<SidTune> tune(new SidTune(g_args.inputPath));
 	
 	auto tuneInfo = tune->getInfo();
 	
@@ -104,7 +105,7 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 		throw tune->statusString();
 
 	// Select default song
-	tune->selectSong(subSong);
+	tune->selectSong(g_args.subSong);
 
 	// Configure the engine
 	SidConfig cfg;
@@ -114,7 +115,7 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 	cfg.fastSampling = false;
 	cfg.playback = SidConfig::MONO;
 	cfg.sidEmulation = rs.get();
-	cfg.disableAudio = mixdownPath[0] == 0;
+	cfg.disableAudio = g_args.audioPath[0] == 0;
 	//cfg.forceSidModel = true;
 	//cfg.forceC64Model = true;
 	//cfg.defaultC64Model = SidConfig::c64_model_t::DREAN;
@@ -136,7 +137,7 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 	float ticksPerSeconds = bpm / 60 * song.marSong->ticksPerBeat;
 	int oldTimeT = -1;
 	int samplesProcessed = 0;
-	int samplesToPorcess = (int)(SAMPLERATE * songLengthS);
+	int samplesToPorcess = (int)(SAMPLERATE * g_args.songLengthS);
 	int samplesBeforeFadeout = samplesToPorcess - (int)(fadeOutS * SAMPLERATE);
 	
 	for (int i = 0; i < samplesToPorcess; i += samplesProcessed)
@@ -176,19 +177,19 @@ SidReader::SidReader(Song &song, const char *path, double songLengthS, int subSo
 		}
 			
 		oldTimeT = timeT;
-		if (mixdownPath[0] != 0)
+		if (g_args.audioPath[0] != 0)
 		{
 			if (i > samplesBeforeFadeout)
 			{
 				float scale = (float)(samplesToPorcess - i) / (samplesToPorcess - samplesBeforeFadeout);
 				for (int i = 0; i < buffer.size(); i++)
-					buffer[i] *= scale;
+					buffer[i] = (int)(buffer[i] * scale);
 			}
 			wav.addSamples(buffer);
 		}
 	}
-	if (mixdownPath[0] != 0)
-		wav.createFile(mixdownPath);
+	if (g_args.audioPath[0] != 0)
+		wav.saveFile(g_args.audioPath);
 }
 
 SidReader::~SidReader()

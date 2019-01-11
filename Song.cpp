@@ -1,11 +1,13 @@
 #include "song.h"
+#include "fstream"
+#include <assert.h>
 
 Song::Song(Marshal_Song *_marSong)
 {
 	marSong = _marSong;
 }
 
-void Song::createNoteList(BOOL insTrack)
+void Song::createNoteList()
 {
 	int resolutionScale = 480 / marSong->ticksPerBeat;
 	marSong->ticksPerBeat = marSong->ticksPerBeat * resolutionScale;;
@@ -32,7 +34,7 @@ void Song::createNoteList(BOOL insTrack)
 				note.pitch = prevTick.notePitch;
 				note.start = int(prevTick.noteStart * resolutionScale);
 				note.stop = int(j * resolutionScale);
-				unsigned track = insTrack ? prevTick.ins : i + 1; //add 1 to channel because first track is reserved for "global" (modules can't have ins indices <1
+				unsigned track = g_args.insTrack ? prevTick.ins : i + 1; //add 1 to channel because first track is reserved for "global" (modules can't have ins indices <1
 				if (track >= notes.size())
 					notes.resize(track + 1);
 				notes[track].insert(note);
@@ -61,3 +63,79 @@ void Song::createNoteList(BOOL insTrack)
 		marSong->tempoEvents[i].time *= resolutionScale;
 	}
 }
+
+void Song::saveMidiFile(const string &path)
+{
+	createFile(path);
+	outFile << "MThd";
+	writeBE(4, 6); //Length of header data
+	writeBE(2, 1); //Midi format 1
+	writeBE(2, marSong->numTracks);
+	writeBE(2, marSong->ticksPerBeat); //MSB is 0,so use ticks per beat (quarter note)
+	
+	for (int t = 0; t < marSong->numTracks; t++)
+	{
+		int absoluteTime = 0;
+		outFile << "MTrk";
+		std::streampos trackLengthPos = outFile.tellp(); //Store file poInter for writing of track length
+		writeBE(4, 0); //Write length as 0 for now
+		if (t == 0) //Write tempo events to track 0
+		{
+			for (int i = 0; i < marSong->numTempoEvents; i++)
+			{
+				writeVL(marSong->tempoEvents[i].time);
+				writeBE(2, 0Xff51); //Tempo event type
+				writeVL(3); //Length of event data
+				writeBE(3, 60000000 / marSong->tempoEvents[i].tempo); //Microseconds per beat
+			}
+		}
+		else //Track 1+
+		{
+			Marshal_Track track = marSong->tracks[t];
+			writeVL(0); //Time
+			writeBE(2, 0xff03); //Track name event type
+			writeVL(strlen(track.name)); //Length of track name
+			outFile << track.name;
+			map<int, vector<bool>> noteEvents;
+			createNoteEvents(&noteEvents, track);
+			for each (auto eventsAtTime in noteEvents)
+			{
+				int deltaTime = eventsAtTime.first - absoluteTime;
+				for each (bool on in eventsAtTime.second)
+				{
+					writeVL(deltaTime);
+					int status = on ? 0x90 : 0x80;
+					writeByte(status); //note on/off
+					writeByte(0x40); //velocity
+				}
+			}
+		}
+		writeBE(3, 0xff2f00); //End of track event
+		std::streampos endOfTrackPos = outFile.tellp();
+		outFile.seekp(trackLengthPos);
+		writeBE(4, endOfTrackPos - trackLengthPos);
+		outFile.seekp(endOfTrackPos);
+	}
+}
+
+void Song::writeVL(unsigned value)
+{
+	int shift = 25;
+	for (int i = 0; i < 4; i++)
+	{
+		int byte = (value >> shift) & 0x7f;
+		if (i < 3)
+			byte |= 0x80;
+		writeByte(byte);		
+	}
+}
+
+void Song::createNoteEvents(map<int, vector<bool>> *noteEvents, Marshal_Track track)
+{
+	for (int i = 0; i < track.numNotes; i++)
+	{
+		auto note = track.notes[i];
+		(*noteEvents)[note.start].push_back(true);
+	}
+}
+
