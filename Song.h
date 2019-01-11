@@ -15,12 +15,18 @@ struct RunningTickInfo
 	int ins = 0;
 };
 
+struct MidiNoteEvent
+{
+	bool on;
+	int pitch;
+};
+
 class Song : FileFormat
 {
 private:
 	vector<TrackNotes> notes;
 	void writeVL(unsigned value); //Write variable length value to file
-	void createNoteEvents(map<int, vector<bool>> *noteEvents, Marshal_Track track);
+	void createNoteEvents(map<int, vector<MidiNoteEvent>> *noteEvents, Marshal_Track track);
 public:
 	struct Track;
 	vector<Track> tracks;

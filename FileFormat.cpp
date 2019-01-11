@@ -12,7 +12,9 @@ FileFormat::~FileFormat()
 
 unsigned FileFormat::swapBytes(size_t size, unsigned value)
 {
-	assert(size >= 2 && size <= 4);
+	assert(size >= 1 && size <= 4);
+	if (size == 1)
+		return value;
 	unsigned bytes[4];
 	for (int i = 0; i < 4; i++)
 		bytes[i] = value & (0xff << 8 * i);

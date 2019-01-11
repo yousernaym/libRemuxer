@@ -50,18 +50,19 @@ void closeLib()
 
 BOOL beginProcessing(Args &a)
 {
-	Marshal_Song marSong = marshalSong;
-	g_args = a;
-	Song song(&marSong);
-	if (g_args.inputPath != NULL)
+	g_args.insTrack = a.insTrack;
+	g_args.songLengthS = a.songLengthS;
+	g_args.subSong = a.subSong;
+	Song song(&marshalSong);
+	if (a.inputPath != NULL)
 		strcpy_s(g_args.inputPath, MAX_PATH_LENGTH, a.inputPath);
 	else
 		g_args.inputPath[0] = NULL;
-	if (g_args.audioPath != NULL)
+	if (a.audioPath != NULL)
 		strcpy_s(g_args.audioPath, MAX_PATH_LENGTH, a.audioPath);
 	else
 		g_args.audioPath[0] = NULL;
-	if (g_args.midiPath != NULL)
+	if (a.midiPath != NULL)
 		strcpy_s(g_args.midiPath, MAX_PATH_LENGTH, a.midiPath);
 	else
 		g_args.midiPath[0] = NULL;
@@ -85,8 +86,16 @@ BOOL beginProcessing(Args &a)
 	}
 			
 	song.createNoteList();
+	if (g_args.midiPath[0])
+		song.saveMidiFile(g_args.midiPath);
 	return TRUE;
 }
+
+float process()
+{
+	return 1;
+}
+
 
 
 

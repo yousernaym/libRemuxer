@@ -31,6 +31,7 @@
 
 SidReader::SidReader(Song &song)
 {
+	//g_args.songLengthS = 3;
 	if (g_args.songLengthS == 0)
 		g_args.songLengthS = 300;
 	float fadeOutS = 7;
