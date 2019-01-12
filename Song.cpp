@@ -62,6 +62,9 @@ void Song::createNoteList()
 	{
 		marSong->tempoEvents[i].time *= resolutionScale;
 	}
+
+	if (g_args.midiPath[0])
+		saveMidiFile(g_args.midiPath);
 }
 
 void Song::saveMidiFile(const string &path)

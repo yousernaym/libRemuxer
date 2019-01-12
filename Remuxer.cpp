@@ -90,9 +90,6 @@ BOOL beginProcessing(Args &a)
 		}
 	}
 			
-	song.createNoteList();
-	if (g_args.midiPath[0])
-		song.saveMidiFile(g_args.midiPath);
 	return TRUE;
 }
 

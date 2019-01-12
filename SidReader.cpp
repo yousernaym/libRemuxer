@@ -15,11 +15,8 @@
 #include <sidplayfp/SidTune.h>
 #include <sidplayfp/SidInfo.h>
 #include <sidplayfp/SidConfig.h>
-#include <builders/residfp-builder/residfp.h> 
 #include <sidplayfp/sidemu.h>
 #include <sidplayfp/SidtuneInfo.h>
-
-
 
 //#include "sidspectro\\sidfile.h"
 //#include "sidspectro\\c64.h"
@@ -91,7 +88,7 @@ void SidReader::beginProcess(const Args &args)
 		delete[] chargen;
 
 	// Set up a SID builder
-	std::unique_ptr<ReSIDfpBuilder> rs(new ReSIDfpBuilder("Demo"));
+	rs = std::make_unique<ReSIDfpBuilder>("Demo");
 
 	// Get the number of SIDs supported by the engine
 	unsigned int maxsids = (m_engine.info()).maxsids();
@@ -218,6 +215,7 @@ float SidReader::process()
 	{
 		if (g_args.audioPath[0] != 0)
 			wav.saveFile(g_args.audioPath);
+		song.createNoteList();
 		return -1;
 	}
 }

@@ -4,11 +4,12 @@
 #include "SongReader.h"
 #include "Wav.h"
 #include <sidplayfp/sidplayfp.h>
+#include <builders/residfp-builder/residfp.h> 
 
 class SidReader : public SongReader
 {
 	sidplayfp m_engine;
-	
+	std::unique_ptr<ReSIDfpBuilder> rs;
 	Wav<short> wav;
 	const int bufferSize = 500;
 	std::vector<short> buffer;

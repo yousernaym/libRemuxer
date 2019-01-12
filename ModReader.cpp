@@ -494,6 +494,7 @@ void ModReader::beginProcessing(Args args)
 		throw err.str();
 	}
 	marSong->ticksPerBeat = 24;
+	song.createNoteList();
 }
 
 float ModReader::process()
