@@ -222,6 +222,7 @@
     <ClCompile Include="ModReader.cpp" />
     <ClCompile Include="SidReader.cpp" />
     <ClCompile Include="Song.cpp" />
+    <ClCompile Include="SongReader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FileFormat.h" />
@@ -316,6 +317,7 @@
     <ClInclude Include="ModReader.h" />
     <ClInclude Include="SidReader.h" />
     <ClInclude Include="Song.h" />
+    <ClInclude Include="SongReader.h" />
     <ClInclude Include="Wav.h" />
   </ItemGroup>
   <ItemGroup>

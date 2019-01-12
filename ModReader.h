@@ -3,6 +3,7 @@
 #include <mikmod_internals.h>
 #include "song.h"
 #include "remuxer.h"
+#include "SongReader.h"
 
 using namespace std;
 //------------------------------------
@@ -130,7 +131,7 @@ struct RunningCellInfo
 	Loop loop;
 };
 
-class ModReader
+class ModReader : public SongReader
 {
 	const int sampleRate = 44100;
 	const double semitone = 1.0594630943593; //12th root of 2
@@ -146,7 +147,6 @@ class ModReader
 	int ptnJump = -1;
 	int ptnStart = 0;
 	//Loop loop;
-	Song *song;
 	Marshal_Song *marSong;
 public:
 	ModReader(Song &_song);
@@ -158,6 +158,7 @@ public:
 	void readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, RunningCellInfo &runningCellInfo, int songPos, int row);
 	void updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo);
 	void updateCellTicks(Song::Track &track, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo);
-	
+	void beginProcessing(Args args);
+	float process();
 };
 

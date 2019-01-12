@@ -20,179 +20,9 @@ void ModReader::sInit()
 	/* initialize the library */
 }
 
-ModReader::ModReader(Song &_song)
+ModReader::ModReader(Song &_song) : SongReader(_song)
 {
-	song = &_song;
-	marSong = song->marSong;
-	
-	string cmdLine;
-	BOOL mixdown = g_args.audioPath[0] > 0;
-	
-	md_device = 2; //nosound driver
-	if (mixdown)
-	{
-		md_device = 1; //wav writer
-		cmdLine = "file=" + string(g_args.audioPath);
-	}
-		
-	if (MikMod_Init(cmdLine.c_str()))
-	{
-		string err = (string)"Could not initialize Mikmod, reason: " + (string)MikMod_strerror(MikMod_errno);
-		OutputDebugStringA(err.c_str());
-		assert(false);
-	}
-	module = Player_Load(g_args.inputPath, 64, 0);
-	
-	if (module)
-	{
-		song->tracks.resize(module->numchn);
-		for (unsigned i = 0; i < song->tracks.size(); i++)
-		{
-			song->tracks[i].ticks.reserve(30000);
-			song->tracks[i].ticks.resize(1);
-		}
-		curRowInfo.resize(module->numchn);
-		runningRowInfo.resize(module->numchn);
-		
-		//Marshall data--------------------------
-		//marSong->ticksPerMeasure = module->sngspd * 16; //assuming 4 rows per beat
-		curSongSpeed = module->initspeed;
-
-		//int curSongBpm = module->inittempo;
-		rowDur = getRowDur(module->inittempo, module->initspeed);
-
-		marSong->tempoEvents[0].tempo = module->inittempo;
-		marSong->tempoEvents[0].time = 0;
-		marSong->numTempoEvents = 1;
-
-		marSong->numTracks = 0;//module->numins;
-		for (int i = 0; i < MAX_MIDITRACKS; i++)
-			marSong->tracks[i].numNotes = 0;
-		//-----------------------------------
-
-		if (g_args.insTrack)	//One track per instrument/sample
-		{
-			if (module->instruments)
-			{
-				for (int i = 0; i < module->numins; i++)
-				{
-					if (module->instruments[i].insname != NULL)
-						strcpy_s(marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, module->instruments[i].insname);
-					else
-						marSong->tracks[i + 1].name[0] = NULL;
-				}
-			}
-			else
-			{
-				for (int i = 0; i < module->numsmp; i++)
-				{
-					if (module->samples[i].samplename != NULL)
-						strcpy_s(marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, module->samples[i].samplename);
-					else
-						marSong->tracks[i + 1].name[0] = NULL;
-				}
-			}
-		}
-		else	//One track per mod channel
-		{
-			for (int i = 0; i < module->numchn; i++)
-			{
-				ostringstream s;
-				s << "Channel " << i + 1;
-				strcpy_s(marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, s.str().c_str());
-			}
-		}
-
-		//ZeroMemory(&loop, sizeof(loop));
-
-		//int timeT = 0;
-		//double timeS = 0;
-		//int ptnStart = 0;
-
-
-		//Loop through patterns
-		for (int p = 0; p < module->numpos; p++)
-		{
-			ptnJump = -1;
-			int pattern = module->patterns[module->positions[p]];
-			//Loop through rows
-			for (int t = 0; t < module->numchn; t++)
-				runningRowInfo[t].offset = runningRowInfo[t].repeatsLeft = 0;
-			for (int r = 0; r < module->pattrows[pattern]; r++)
-			{
-				ptnDelay = 0;
-				//Loop through channels/tracks
-				for (int t = 0; t < module->numchn; t++)
-				{
-					BYTE *track = module->tracks[pattern*module->numchn + t];
-					readNextCell(track, curRowInfo[t], runningRowInfo[t]);
-					if (ptnJump >= 0 || r >= ptnStart)
-						readCellFx(song->tracks[t].ticks[timeT], curRowInfo[t], runningRowInfo[t], p, r);
-				}
-				if (ptnJump == -1)
-				{
-					if (r < ptnStart)
-						continue;
-					else
-						ptnStart = 0;
-				}
-				tickDur = rowDur / curSongSpeed;
-				//Loop through channels/tracks
-				for (int t = 0; t < module->numchn; t++)
-				{
-					song->tracks[t].ticks.resize(song->tracks[t].ticks.size() + curSongSpeed * (ptnDelay + 1));
-					RunningTickInfo *curTick = &song->tracks[t].ticks[timeT];
-					updateCell(*curTick, curRowInfo[t], runningRowInfo[t]);
-					updateCellTicks(song->tracks[t], curRowInfo[t], runningRowInfo[t]);
-					
-				}
-				
-				/*if (!ptnStart || ptnJump >= 0)
-				{*/
-					timeT += curSongSpeed *(ptnDelay + 1);
-					timeS += rowDur * (ptnDelay + 1);
-				//}
-				if (ptnJump >= 0)
-				{
-					p = ptnJump - 1;
-					break;
-				}
-				/*if (loop.jump)
-				{
-				loop.jump = false;
-				p = loop.startP - 1;
-				ptnStart = loop.startR;
-				break;
-				}*/
-			}
-		}
-		marSong->songLengthT = timeT;
-
-		//error:
-		if (mixdown)
-		{
-			module->loop = false; //Don't allow backwards loops
-			Player_Start(module);
-			while (Player_Active() && module->sngtime < timeS * 1024) //break if last pattern has a pattern-break
-			{
-				MikMod_Update();
-			}
-			Player_Stop();
-		}
-		Player_Free(module);
-		module = 0;
-		MikMod_Exit();
-
-	}
-	else
-	{
-		MikMod_Exit();
-		ostringstream err;
-		err << "Could not load module, reason: " << MikMod_strerror(MikMod_errno);
-		OutputDebugStringA(err.str().c_str());
-		throw err.str();
-	}
-	marSong->ticksPerBeat = 24;
+	marSong = song.marSong;
 }
 
 ModReader::~ModReader()
@@ -501,6 +331,186 @@ double ModReader::getRowDur(double tempo, double speed)
 	double spb = 1 / (tempo / 60); //seconds per beat
 	double spr = spb / 4; //seconds per row
 	return spr * speed / 6;
+}
+
+void ModReader::beginProcessing(Args args)
+{
+	string cmdLine;
+	BOOL mixdown = g_args.audioPath[0] > 0;
+
+	md_device = 2; //nosound driver
+	if (mixdown)
+	{
+		md_device = 1; //wav writer
+		cmdLine = "file=" + string(g_args.audioPath);
+	}
+
+	if (MikMod_Init(cmdLine.c_str()))
+	{
+		string err = (string)"Could not initialize Mikmod, reason: " + (string)MikMod_strerror(MikMod_errno);
+		OutputDebugStringA(err.c_str());
+		assert(false);
+	}
+	module = Player_Load(g_args.inputPath, 64, 0);
+
+	if (module)
+	{
+		song.tracks.resize(module->numchn);
+		for (unsigned i = 0; i < song.tracks.size(); i++)
+		{
+			song.tracks[i].ticks.reserve(30000);
+			song.tracks[i].ticks.resize(1);
+		}
+		curRowInfo.resize(module->numchn);
+		runningRowInfo.resize(module->numchn);
+
+		//Marshall data--------------------------
+		//marSong->ticksPerMeasure = module->sngspd * 16; //assuming 4 rows per beat
+		curSongSpeed = module->initspeed;
+
+		//int curSongBpm = module->inittempo;
+		rowDur = getRowDur(module->inittempo, module->initspeed);
+
+		marSong->tempoEvents[0].tempo = module->inittempo;
+		marSong->tempoEvents[0].time = 0;
+		marSong->numTempoEvents = 1;
+
+		marSong->numTracks = 0;//module->numins;
+		for (int i = 0; i < MAX_MIDITRACKS; i++)
+			marSong->tracks[i].numNotes = 0;
+		//-----------------------------------
+
+		if (g_args.insTrack)	//One track per instrument/sample
+		{
+			if (module->instruments)
+			{
+				for (int i = 0; i < module->numins; i++)
+				{
+					if (module->instruments[i].insname != NULL)
+						strcpy_s(marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, module->instruments[i].insname);
+					else
+						marSong->tracks[i + 1].name[0] = NULL;
+				}
+			}
+			else
+			{
+				for (int i = 0; i < module->numsmp; i++)
+				{
+					if (module->samples[i].samplename != NULL)
+						strcpy_s(marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, module->samples[i].samplename);
+					else
+						marSong->tracks[i + 1].name[0] = NULL;
+				}
+			}
+		}
+		else	//One track per mod channel
+		{
+			for (int i = 0; i < module->numchn; i++)
+			{
+				ostringstream s;
+				s << "Channel " << i + 1;
+				strcpy_s(marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, s.str().c_str());
+			}
+		}
+
+		//ZeroMemory(&loop, sizeof(loop));
+
+		//int timeT = 0;
+		//double timeS = 0;
+		//int ptnStart = 0;
+
+
+		//Loop through patterns
+		for (int p = 0; p < module->numpos; p++)
+		{
+			ptnJump = -1;
+			int pattern = module->patterns[module->positions[p]];
+			//Loop through rows
+			for (int t = 0; t < module->numchn; t++)
+				runningRowInfo[t].offset = runningRowInfo[t].repeatsLeft = 0;
+			for (int r = 0; r < module->pattrows[pattern]; r++)
+			{
+				ptnDelay = 0;
+				//Loop through channels/tracks
+				for (int t = 0; t < module->numchn; t++)
+				{
+					BYTE *track = module->tracks[pattern*module->numchn + t];
+					readNextCell(track, curRowInfo[t], runningRowInfo[t]);
+					if (ptnJump >= 0 || r >= ptnStart)
+						readCellFx(song.tracks[t].ticks[timeT], curRowInfo[t], runningRowInfo[t], p, r);
+				}
+				if (ptnJump == -1)
+				{
+					if (r < ptnStart)
+						continue;
+					else
+						ptnStart = 0;
+				}
+				tickDur = rowDur / curSongSpeed;
+				//Loop through channels/tracks
+				for (int t = 0; t < module->numchn; t++)
+				{
+					song.tracks[t].ticks.resize(song.tracks[t].ticks.size() + curSongSpeed * (ptnDelay + 1));
+					RunningTickInfo *curTick = &song.tracks[t].ticks[timeT];
+					updateCell(*curTick, curRowInfo[t], runningRowInfo[t]);
+					updateCellTicks(song.tracks[t], curRowInfo[t], runningRowInfo[t]);
+
+				}
+
+				/*if (!ptnStart || ptnJump >= 0)
+				{*/
+				timeT += curSongSpeed * (ptnDelay + 1);
+				timeS += rowDur * (ptnDelay + 1);
+				//}
+				if (ptnJump >= 0)
+				{
+					p = ptnJump - 1;
+					break;
+				}
+				/*if (loop.jump)
+				{
+				loop.jump = false;
+				p = loop.startP - 1;
+				ptnStart = loop.startR;
+				break;
+				}*/
+			}
+		}
+		marSong->songLengthT = timeT;
+
+		if (g_args.audioPath)
+		{
+			module->loop = false; //Don't allow backwards loops
+			Player_Start(module);
+		}
+
+	}
+	else
+	{
+		MikMod_Exit();
+		ostringstream err;
+		err << "Could not load module, reason: " << MikMod_strerror(MikMod_errno);
+		OutputDebugStringA(err.str().c_str());
+		throw err.str();
+	}
+	marSong->ticksPerBeat = 24;
+}
+
+float ModReader::process()
+{
+	if (Player_Active() && module->sngtime < timeS * 1024) //break if last pattern has a pattern-break
+	{
+		MikMod_Update();
+		return (float)module->sngpos / module->numpos;
+	}
+	else
+	{
+		Player_Stop();
+		Player_Free(module);
+		module = 0;
+		MikMod_Exit();
+		return -1;
+	}
 }
 
 //----------------------------------------

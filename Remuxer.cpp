@@ -5,6 +5,10 @@
 #include "sidreader.h"
 
 Marshal_Song marshalSong;
+Song song(&marshalSong);
+SongReader *songReader;
+ModReader modReader(song);
+SidReader sidReader(song);
 Args g_args;
 
 void initLib()
@@ -53,7 +57,6 @@ BOOL beginProcessing(Args &a)
 	g_args.insTrack = a.insTrack;
 	g_args.songLengthS = a.songLengthS;
 	g_args.subSong = a.subSong;
-	Song song(&marshalSong);
 	if (a.inputPath != NULL)
 		strcpy_s(g_args.inputPath, MAX_PATH_LENGTH, a.inputPath);
 	else
@@ -69,15 +72,17 @@ BOOL beginProcessing(Args &a)
 	
 	try 
 	{
-		ModReader modReader(song);
+		modReader.beginProcessing(g_args);
 		song.marSong->songType = Marshal_SongType::Mod;
+		songReader = &modReader;
 	}
 	catch (...)
 	{
 		try
 		{
-			SidReader sidReader(song); 
+			sidReader.beginProcess(g_args);
 			song.marSong->songType = Marshal_SongType::Sid;
+			songReader = &sidReader;
 		}
 		catch (...)
 		{
@@ -93,7 +98,7 @@ BOOL beginProcessing(Args &a)
 
 float process()
 {
-	return 1;
+	return songReader->process();
 }
 
 

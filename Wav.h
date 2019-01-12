@@ -22,6 +22,12 @@ public:
 	{
 		samples.insert(samples.end(), newSamples.begin(), newSamples.end());
 	}
+
+	void clearSamples()
+	{
+		samples.clear();
+	}
+
 	void saveFile(const std::string &path)
 	{
 		int blockAlign = sizeof(SampleType) * channelCount;
