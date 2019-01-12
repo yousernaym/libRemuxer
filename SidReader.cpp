@@ -108,23 +108,16 @@ void SidReader::beginProcess(const Args &args)
 		throw tune->statusString();
 
 	auto tuneInfo = tune->getInfo();
-	float PHI;
-	int iMinFreq, iMaxFreq;
 	if (tuneInfo->clockSpeed() == SidTuneInfo::CLOCK_NTSC)
 	{
-		PHI = 1022727;
-		iMinFreq = 268;
-		iMaxFreq = 64832;
+		minFreq = 268;
+		maxFreq = 64832;
 	}
 	else
 	{
-		PHI = 985248;
-		iMinFreq = 279;
-		iMaxFreq = 65535;
+		minFreq = 279;
+		maxFreq = 65535;
 	}
-	freqConSt = 256 * 256 * 256 / PHI;
-	minFreq = iMinFreq / freqConSt;
-	maxFreq = iMaxFreq / freqConSt;
 
 	// Select default song
 	tune->selectSong(g_args.subSong);
@@ -179,7 +172,7 @@ float SidReader::process()
 			curTick.noteStart = prevTick.noteStart;
 			m_engine.getNoteState(noteState, c);
 
-			float freq = noteState.frequency / freqConSt;
+			float freq = noteState.frequency;
 
 			//noteState.isPlaying = true;
 			if (noteState.isPlaying && freq >= minFreq && freq <= maxFreq)

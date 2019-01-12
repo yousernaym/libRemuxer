@@ -15,8 +15,8 @@ class SidReader : public SongReader
 	std::vector<short> buffer;
 	NoteState noteState;
 	float freqConSt;
-	float minFreq;
-	float maxFreq;
+	int minFreq;
+	int maxFreq;
 	float timeS;
 	float ticksPerSeconds;
 	int oldTimeT;
