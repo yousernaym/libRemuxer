@@ -133,6 +133,7 @@ struct RunningCellInfo
 
 class ModReader : public SongReader
 {
+	Args args;
 	const int sampleRate = 44100;
 	const double semitone = 1.0594630943593; //12th root of 2
 	vector<RunningCellInfo> runningRowInfo;
@@ -158,7 +159,7 @@ public:
 	void readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, RunningCellInfo &runningCellInfo, int songPos, int row);
 	void updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo);
 	void updateCellTicks(Song::Track &track, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo);
-	void beginProcessing(Args args);
+	void beginProcessing(const Args &_args);
 	float process();
 };
 

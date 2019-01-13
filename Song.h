@@ -32,7 +32,7 @@ public:
 	vector<Track> tracks;
 	Marshal_Song *marSong;
 	Song(Marshal_Song *_marSong);
-	void createNoteList();
+	void createNoteList(const Args &args);
 	void saveMidiFile(const string &path);
 };
 

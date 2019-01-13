@@ -7,7 +7,7 @@ Song::Song(Marshal_Song *_marSong)
 	marSong = _marSong;
 }
 
-void Song::createNoteList()
+void Song::createNoteList(const Args &args)
 {
 	int resolutionScale = 480 / marSong->ticksPerBeat;
 	marSong->ticksPerBeat = marSong->ticksPerBeat * resolutionScale;;
@@ -34,7 +34,7 @@ void Song::createNoteList()
 				note.pitch = prevTick.notePitch;
 				note.start = int(prevTick.noteStart * resolutionScale);
 				note.stop = int(j * resolutionScale);
-				unsigned track = g_args.insTrack ? prevTick.ins : i + 1; //add 1 to channel because first track is reserved for "global" (modules can't have ins indices <1
+				unsigned track = args.insTrack ? prevTick.ins : i + 1; //add 1 to channel because first track is reserved for "global" (modules can't have ins indices < 1
 				if (track >= notes.size())
 					notes.resize(track + 1);
 				notes[track].insert(note);
@@ -63,8 +63,8 @@ void Song::createNoteList()
 		marSong->tempoEvents[i].time *= resolutionScale;
 	}
 
-	if (g_args.midiPath[0])
-		saveMidiFile(g_args.midiPath);
+	if (args.midiPath[0])
+		saveMidiFile(args.midiPath);
 }
 
 void Song::saveMidiFile(const string &path)

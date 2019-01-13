@@ -66,8 +66,6 @@ struct Args
 };
 #pragma pack(pop, 8)
 
-extern Args g_args;
-
 extern "C"
 {
 	__declspec(dllexport) void initLib();

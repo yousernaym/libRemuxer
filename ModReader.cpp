@@ -333,16 +333,17 @@ double ModReader::getRowDur(double tempo, double speed)
 	return spr * speed / 6;
 }
 
-void ModReader::beginProcessing(Args args)
+void ModReader::beginProcessing(const Args &_args)
 {
+	args = _args;
 	string cmdLine;
-	BOOL mixdown = g_args.audioPath[0] > 0;
+	BOOL mixdown = args.audioPath[0] > 0;
 
 	md_device = 2; //nosound driver
 	if (mixdown)
 	{
 		md_device = 1; //wav writer
-		cmdLine = "file=" + string(g_args.audioPath);
+		cmdLine = "file=" + string(args.audioPath);
 	}
 
 	if (MikMod_Init(cmdLine.c_str()))
@@ -351,7 +352,7 @@ void ModReader::beginProcessing(Args args)
 		OutputDebugStringA(err.c_str());
 		assert(false);
 	}
-	module = Player_Load(g_args.inputPath, 64, 0);
+	module = Player_Load(args.inputPath, 64, 0);
 
 	if (module)
 	{
@@ -380,7 +381,7 @@ void ModReader::beginProcessing(Args args)
 			marSong->tracks[i].numNotes = 0;
 		//-----------------------------------
 
-		if (g_args.insTrack)	//One track per instrument/sample
+		if (args.insTrack)	//One track per instrument/sample
 		{
 			if (module->instruments)
 			{
@@ -478,7 +479,7 @@ void ModReader::beginProcessing(Args args)
 		}
 		marSong->songLengthT = timeT;
 
-		if (g_args.audioPath)
+		if (args.audioPath)
 		{
 			module->loop = false; //Don't allow backwards loops
 			Player_Start(module);
@@ -494,7 +495,7 @@ void ModReader::beginProcessing(Args args)
 		throw err.str();
 	}
 	marSong->ticksPerBeat = 24;
-	song.createNoteList();
+	song.createNoteList(args);
 }
 
 float ModReader::process()
