@@ -26,7 +26,7 @@ class SidReader : public SongReader
 public:
 	SidReader(Song &song);
 	~SidReader();
-	char* loadRom(const char* path, size_t romSize);
+	vector<char> loadRom(const char* path, size_t romSize);
 	void beginProcess(const Args &args);
 	float process();
 };

@@ -28,7 +28,25 @@
 
 SidReader::SidReader(Song &_song) : SongReader(_song), buffer(bufferSize)
 {
-	
+	// Load ROM files
+	auto kernal = loadRom(KERNAL_PATH, 8192);
+	auto basic = loadRom(BASIC_PATH, 8192);
+	auto chargen = loadRom(CHARGEN_PATH, 4096);
+
+	m_engine.setRoms((const uint8_t*)&kernal[0], (const uint8_t*)&basic[0], (const uint8_t*)&chargen[0]);
+
+	// Set up a SID builder
+	rs = std::make_unique<ReSIDfpBuilder>("ResidflBuilder");
+
+	// Get the number of SIDs supported by the engine
+	unsigned int maxsids = (m_engine.info()).maxsids();
+
+	// Create SID emulators
+	rs->create(maxsids);
+
+	// Check if builder is ok
+	if (!rs->getStatus())
+		throw rs->error();
 }
 
 SidReader::~SidReader()
@@ -39,14 +57,14 @@ SidReader::~SidReader()
  * Load ROM dump from file.
  * Allocate the buffer if file exists, otherwise return 0.
  */
-char* SidReader::loadRom(const char* path, size_t romSize)
+vector<char> SidReader::loadRom(const char* path, size_t romSize)
 {
-	char* buffer = 0;
+	vector<char> buffer;
 	std::ifstream is(path, std::ios::binary);
 	if (is.good())
 	{
-		buffer = new char[romSize];
-		is.read(buffer, romSize);
+		buffer.resize(romSize);
+		is.read(&buffer[0], romSize);
 	}
 	is.close();
 	return buffer;
@@ -73,33 +91,7 @@ void SidReader::beginProcess(const Args &args)
 		sprintf_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
 	}
 
-	// Load ROM files
-	char *kernal = loadRom(KERNAL_PATH, 8192);
-	char *basic = loadRom(BASIC_PATH, 8192);
-	char *chargen = loadRom(CHARGEN_PATH, 4096);
-
-	m_engine.setRoms((const uint8_t*)kernal, (const uint8_t*)basic, (const uint8_t*)chargen);
-
-	if (kernal)
-		delete[] kernal;
-	if (basic)
-		delete[] basic;
-	if (chargen)
-		delete[] chargen;
-
-	// Set up a SID builder
-	rs = std::make_unique<ReSIDfpBuilder>("Demo");
-
-	// Get the number of SIDs supported by the engine
-	unsigned int maxsids = (m_engine.info()).maxsids();
-
-	// Create SID emulators
-	rs->create(maxsids);
-
-	// Check if builder is ok
-	if (!rs->getStatus())
-		throw rs->error();
-
+	
 	// Load tune from file
 	std::unique_ptr<SidTune> tune(new SidTune(g_args.inputPath));
 
