@@ -72,7 +72,7 @@ BOOL beginProcessing(Args &a)
 	
 	try 
 	{
-		modReader.beginProcessing(a);
+		modReader.beginProcessing(args);
 		song.marSong->songType = Marshal_SongType::Mod;
 		songReader = &modReader;
 	}

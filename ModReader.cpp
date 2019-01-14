@@ -479,7 +479,7 @@ void ModReader::beginProcessing(const Args &_args)
 		}
 		marSong->songLengthT = timeT;
 
-		if (args.audioPath)
+		if (args.audioPath[0])
 		{
 			module->loop = false; //Don't allow backwards loops
 			Player_Start(module);
@@ -500,7 +500,7 @@ void ModReader::beginProcessing(const Args &_args)
 
 float ModReader::process()
 {
-	if (Player_Active() && module->sngtime < timeS * 1024) //break if last pattern has a pattern-break
+	if (args.audioPath[0] && Player_Active() && module->sngtime < timeS * 1024) //break if last pattern has a pattern-break
 	{
 		MikMod_Update();
 		return (float)module->sngpos / module->numpos;
