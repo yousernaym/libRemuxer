@@ -57,22 +57,22 @@ BOOL beginProcessing(Args &a)
 	args.insTrack = a.insTrack;
 	args.songLengthS = a.songLengthS;
 	args.subSong = a.subSong;
-	if (a.inputPath != NULL)
+	if (a.inputPath)
 		strcpy_s(args.inputPath, MAX_PATH_LENGTH, a.inputPath);
 	else
 		args.inputPath[0] = NULL;
-	if (a.audioPath != NULL)
+	if (a.audioPath)
 		strcpy_s(args.audioPath, MAX_PATH_LENGTH, a.audioPath);
 	else
 		args.audioPath[0] = NULL;
-	if (a.midiPath != NULL)
+	if (a.midiPath)
 		strcpy_s(args.midiPath, MAX_PATH_LENGTH, a.midiPath);
 	else
 		args.midiPath[0] = NULL;
 	
 	try 
 	{
-		modReader.beginProcessing(args);
+		modReader.beginProcessing(a);
 		song.marSong->songType = Marshal_SongType::Mod;
 		songReader = &modReader;
 	}
@@ -80,7 +80,7 @@ BOOL beginProcessing(Args &a)
 	{
 		try
 		{
-			sidReader.beginProcess(args);
+			sidReader.beginProcess(a);
 			song.marSong->songType = Marshal_SongType::Sid;
 			songReader = &sidReader;
 		}

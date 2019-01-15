@@ -69,7 +69,7 @@ vector<char> SidReader::loadRom(const char* path, size_t romSize)
 	is.close();
 	return buffer;
 }
-void SidReader::beginProcess(const Args &_args)
+void SidReader::beginProcess(Args &_args)
 {
 	args = _args;
 	//args.songLengthS = 3;
@@ -78,12 +78,11 @@ void SidReader::beginProcess(const Args &_args)
 	float fadeOutS = 7;
 	args.songLengthS += fadeOutS;
 
-	ticksPerSeconds = 500;
-	song.marSong->ticksPerBeat = 240;
-	float bpm = ticksPerSeconds * 60 / song.marSong->ticksPerBeat;
-	song.marSong->tempoEvents[0].tempo = bpm;
-	song.marSong->tempoEvents[0].time = 0;
+	song.marSong->ticksPerBeat = 240; 
+	song.marSong->tempoEvents[0].tempo = 125;
 	song.marSong->numTempoEvents = 1;
+	ticksPerSeconds = (float)(song.marSong->tempoEvents[0].tempo * song.marSong->ticksPerBeat / 60.);
+	song.marSong->tempoEvents[0].time = 0;
 
 	song.tracks.resize(3);
 	for (int i = 0; i < 3; i++)
@@ -91,7 +90,6 @@ void SidReader::beginProcess(const Args &_args)
 		song.tracks[i].ticks.resize(int((args.songLengthS + (float)buffer.size() / SAMPLERATE) * ticksPerSeconds) + 1);
 		sprintf_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
 	}
-
 	
 	// Load tune from file
 	std::unique_ptr<SidTune> tune(new SidTune(args.inputPath));
@@ -111,10 +109,11 @@ void SidReader::beginProcess(const Args &_args)
 		minFreq = 279;
 		maxFreq = 65535;
 	}
-
+	_args.numSubSongs = tuneInfo->songs();
+	
 	// Select default song
-	tune->selectSong(args.subSong);
-
+	_args.subSong = tune->selectSong(args.subSong);
+	
 	// Configure the engine
 	SidConfig cfg;
 	cfg.frequency = SAMPLERATE;

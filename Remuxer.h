@@ -63,6 +63,7 @@ struct Args
 	BOOL insTrack;
 	float songLengthS;
 	int subSong;
+	int numSubSongs;
 };
 #pragma pack(pop, 8)
 
