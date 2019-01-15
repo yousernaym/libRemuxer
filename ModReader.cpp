@@ -507,12 +507,16 @@ float ModReader::process()
 	}
 	else
 	{
-		Player_Stop();
-		Player_Free(module);
-		module = 0;
-		MikMod_Exit();
 		return -1;
 	}
+}
+
+void ModReader::finish()
+{
+	Player_Stop();
+	Player_Free(module);
+	module = 0;
+	MikMod_Exit();
 }
 
 //----------------------------------------

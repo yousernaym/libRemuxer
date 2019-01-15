@@ -196,11 +196,15 @@ float SidReader::process()
 		return (float)samplesProcessed / samplesToPorcess;
 	else
 	{
-		if (args.audioPath[0] != 0)
-			wav.saveFile(args.audioPath);
-		song.createNoteList(args);
 		return -1;
 	}
+}
+
+void SidReader::finish()
+{
+	if (args.audioPath[0] != 0)
+		wav.saveFile(args.audioPath);
+	song.createNoteList(args);
 }
 
 

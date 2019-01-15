@@ -28,5 +28,6 @@ public:
 	vector<char> loadRom(const char* path, size_t romSize);
 	void beginProcess(const Args &_args);
 	float process();
+	void finish();
 };
 

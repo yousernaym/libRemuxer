@@ -98,6 +98,11 @@ float process()
 	return songReader->process();
 }
 
+void finish()
+{
+	songReader->finish();
+}
+
 
 
 

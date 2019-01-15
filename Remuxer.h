@@ -72,4 +72,5 @@ extern "C"
 	__declspec(dllexport) void closeLib();
 	__declspec(dllexport) BOOL beginProcessing(Args &a);
 	__declspec(dllexport) float process();
+	__declspec(dllexport) void finish();
 }

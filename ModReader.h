@@ -161,5 +161,6 @@ public:
 	void updateCellTicks(Song::Track &track, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo);
 	void beginProcessing(const Args &_args);
 	float process();
+	void finish();
 };
 

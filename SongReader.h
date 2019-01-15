@@ -10,5 +10,6 @@ public:
 	SongReader(Song &_song);
 	virtual ~SongReader();
 	virtual float process() = 0;
+	virtual void finish() = 0;
 };
 
