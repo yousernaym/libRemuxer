@@ -78,17 +78,17 @@ void SidReader::beginProcess(const Args &_args)
 	float fadeOutS = 7;
 	args.songLengthS += fadeOutS;
 
-	int resoScale = 10;
-	int fps = 50 * resoScale;
-	song.marSong->ticksPerBeat = 24 * resoScale;
-	float bpm = (float)fps * 60 / song.marSong->ticksPerBeat;
+	ticksPerSeconds = 500;
+	song.marSong->ticksPerBeat = 240;
+	float bpm = ticksPerSeconds * 60 / song.marSong->ticksPerBeat;
 	song.marSong->tempoEvents[0].tempo = bpm;
 	song.marSong->tempoEvents[0].time = 0;
 	song.marSong->numTempoEvents = 1;
+
 	song.tracks.resize(3);
 	for (int i = 0; i < 3; i++)
 	{
-		song.tracks[i].ticks.resize(int(args.songLengthS * fps) + 1);
+		song.tracks[i].ticks.resize(int((args.songLengthS + (float)buffer.size() / SAMPLERATE) * ticksPerSeconds) + 1);
 		sprintf_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
 	}
 
@@ -139,7 +139,6 @@ void SidReader::beginProcess(const Args &_args)
 	wav.clearSamples();
 	
 	timeS = 0;
-	ticksPerSeconds = bpm / 60 * song.marSong->ticksPerBeat;
 	oldTimeT = 0;
 	samplesProcessed = 0;
 	samplesToPorcess = (int)(SAMPLERATE * args.songLengthS);
