@@ -347,12 +347,12 @@ int SID::clock(int cycles, short* buf, bool disableAudio)
 					voice[0]->wave()->clock();
 					voice[1]->wave()->clock();
 					voice[2]->wave()->clock();
-
-					/* clock envelope generators */
-					voice[0]->envelope()->clock();
-					voice[1]->envelope()->clock();
-					voice[2]->envelope()->clock();
 				}
+				/* clock envelope generators */
+				voice[0]->envelope()->clock();
+				voice[1]->envelope()->clock();
+				voice[2]->envelope()->clock();
+				
 				if (unlikely(resampler->input(output())))
 				{
 					buf[s++] = resampler->getOutput();

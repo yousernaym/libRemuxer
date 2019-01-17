@@ -26,6 +26,7 @@ void initLib()
 	{
 		ZeroMemory(&marshalSong.tracks[t], sizeof(Marshal_Track));
 		marshalSong.tracks[t].name = new char[MAX_TRACKNAME_LENGTH];
+		marshalSong.tracks[t].name[0] = 0;
 		marshalSong.tracks[t].notes = new Marshal_Note[MAX_TRACKNOTES];
 		//for (int n = 0; n < MAX_MIDITRACKS; n++)
 			//ZeroMemory(&marshalModule.tracks[t].notes[n], sizeof(Marshal_Note));
@@ -55,6 +56,7 @@ void closeLib()
 BOOL beginProcessing(Args &a)
 {
 	args.insTrack = a.insTrack;
+	//args.insTrack = true;
 	args.songLengthS = a.songLengthS;
 	args.subSong = a.subSong;
 	if (a.inputPath)
