@@ -198,8 +198,8 @@ public:
      */
     unsigned char readENV() const { return envelope_counter; }
 
-	bool isPlaying() { gateChanged = false;  return gate; }
-	bool playStateChanged() const { return gateChanged; }
+	bool getGate() { return gate; }
+	bool getGateChanged() { bool temp = gateChanged; gateChanged = false; return temp; }
 };
 
 } // namespace reSIDfp

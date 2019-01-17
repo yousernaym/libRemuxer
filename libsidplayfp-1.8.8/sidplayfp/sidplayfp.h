@@ -43,8 +43,9 @@ namespace SIDPLAYFP_NAMESPACE
 struct NoteState
 {
 	int frequency;
-	bool isPlaying;
-	bool playStateChanged;
+	bool gate;
+	int volume;
+	bool gateChanged;
 };
 
 

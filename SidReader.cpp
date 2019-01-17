@@ -164,14 +164,14 @@ float SidReader::process()
 			int freq = noteState.frequency;
 
 			//noteState.isPlaying = true;
-			if (noteState.isPlaying && freq >= minFreq && freq <= maxFreq)
+			//noteState.gateChanged = false;
+			if (noteState.volume && freq >= minFreq && freq <= maxFreq)
 			{
 				curTick.notePitch = (int)(log2((float)freq / minFreq) * 12 + 0.5f) + 1;
-
-				if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || noteState.playStateChanged)
+				if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || noteState.gateChanged)
 					curTick.noteStart = timeT;
-				curTick.vol = 50;// (int)ch.amplitude;
-				if (noteState.playStateChanged)
+				curTick.vol = noteState.volume;
+				if (noteState.gateChanged)
 					prevTick.vol = 0;
 			}
 			else

@@ -100,8 +100,9 @@ public:
     }
 	void getNoteState(NoteState &state)
 	{
-		state.playStateChanged = envelopeGenerator->playStateChanged();
-		state.isPlaying = envelopeGenerator->isPlaying();
+		state.gateChanged = envelopeGenerator->getGateChanged();
+		state.gate = envelopeGenerator->getGate();
+		state.volume = envelopeGenerator->output();
 		state.frequency = waveformGenerator->readFreq();
 	}
 };
