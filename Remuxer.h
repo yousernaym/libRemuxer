@@ -27,6 +27,7 @@ struct Marshal_Note
 	int start;
 	int stop;
 	int pitch;
+	int chn;
 	bool operator<(const Marshal_Note &right) const
 	{
 		return start < right.start;

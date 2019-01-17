@@ -10,6 +10,7 @@
 #include <memory>
 #include <vector>
 #include <iostream>
+#include <array>
 
 #include <sidplayfp/sidplayfp.h>
 #include <sidplayfp/SidTune.h>
@@ -18,13 +19,13 @@
 #include <sidplayfp/sidemu.h>
 #include <sidplayfp/SidtuneInfo.h>
 
-//#include "sidspectro\\sidfile.h"
-//#include "sidspectro\\c64.h"
 #define KERNAL_PATH  "roms\\kernal.901227-03.bin"
 #define BASIC_PATH   "roms\\basic.901226-01.bin"
 #define CHARGEN_PATH "roms\\characters.901225-01.bin"
-
 #define SAMPLERATE 44100
+
+std::array<string, 4> waveformNames = { "Triangle", "Sawtooth", "Pulse", "Noise" };
+
 
 SidReader::SidReader(Song &_song) : SongReader(_song), buffer(500)
 {
@@ -88,7 +89,13 @@ void SidReader::beginProcess(Args &_args)
 	for (int i = 0; i < 3; i++)
 	{
 		song.tracks[i].ticks.resize(int((args.songLengthS + (float)buffer.size() / SAMPLERATE) * ticksPerSeconds) + 1);
-		sprintf_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
+		if (!args.insTrack)
+			sprintf_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
+	}
+	if (args.insTrack)
+	{
+		for (int i = 0; i < waveformNames.size(); i++)
+			strcpy_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, waveformNames[i].c_str());
 	}
 	
 	// Load tune from file
@@ -155,6 +162,7 @@ float SidReader::process()
 		{
 			for (int t = oldTimeT + 1; t < timeT; t++)
 				song.tracks[c].ticks[t] = song.tracks[c].ticks[oldTimeT];
+
 			RunningTickInfo &curTick = song.tracks[c].ticks[timeT];
 			RunningTickInfo &prevTick = *song.tracks[c].getPrevTick(timeT);
 
@@ -170,6 +178,7 @@ float SidReader::process()
 				curTick.notePitch = (int)(log2((float)freq / minFreq) * 12 + 0.5f) + 1;
 				if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || noteState.gateChanged)
 					curTick.noteStart = timeT;
+				curTick.ins = noteState.waveform;
 				curTick.vol = noteState.volume;
 				if (noteState.gateChanged)
 					prevTick.vol = 0;

@@ -46,6 +46,7 @@ struct NoteState
 	bool gate;
 	int volume;
 	bool gateChanged;
+	int waveform;
 };
 
 

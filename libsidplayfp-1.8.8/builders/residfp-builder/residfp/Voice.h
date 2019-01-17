@@ -104,6 +104,11 @@ public:
 		state.gate = envelopeGenerator->getGate();
 		state.volume = envelopeGenerator->output();
 		state.frequency = waveformGenerator->readFreq();
+		state.waveform = waveformGenerator->readWaveform();
+		if (state.waveform == 4)
+			state.waveform = 3;
+		else if (state.waveform == 8)
+			state.waveform = 4;
 	}
 };
 

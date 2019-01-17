@@ -34,7 +34,8 @@ void Song::createNoteList(const Args &args)
 				note.pitch = prevTick.notePitch;
 				note.start = int(prevTick.noteStart * resolutionScale);
 				note.stop = int(j * resolutionScale);
-				unsigned track = args.insTrack ? prevTick.ins : i + 1; //add 1 to channel because first track is reserved for "global" (modules can't have ins indices < 1
+				note.chn = i % 16; //Keep channel number below 16 for midi compatibility. //TODO: Keep track of which channels are used and choose unused ones, to avoid midi notes on the same channel and same pitch cutting each other off.
+				unsigned track = args.insTrack ? prevTick.ins : i + 1; //add 1 to channel because first track is reserved for "global" (songs can't have ins indices < 1.
 				if (track >= notes.size())
 					notes.resize(track + 1);
 				notes[track].insert(note);
@@ -113,7 +114,7 @@ void Song::saveMidiFile(const string &path)
 				{
 					writeVL(eventsAtTime.first - absoluteTime);
 					absoluteTime = eventsAtTime.first;
-					writeByte(noteEvent.on ? 0x90 : 0x80); //note on/off
+					writeByte((noteEvent.on ? 0x90 : 0x80) | noteEvent.chn); //note on/off
 					writeByte(noteEvent.pitch); //pitch
 					writeByte(64); //velocity
 				}
@@ -151,6 +152,7 @@ void Song::createNoteEvents(map<int, vector<MidiNoteEvent>> *noteEvents, Marshal
 		MidiNoteEvent noteEvent;
 		noteEvent.on = true;
 		noteEvent.pitch = note.pitch;
+		noteEvent.chn = note.chn;
 		(*noteEvents)[note.start].push_back(noteEvent);
 		noteEvent.on = false;
 		(*noteEvents)[note.stop].push_back(noteEvent);

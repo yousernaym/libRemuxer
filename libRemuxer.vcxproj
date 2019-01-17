@@ -73,7 +73,7 @@
     <IncludePath>$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp-1.8.8;$(VC_ProjectDir)libsidplayfp-1.8.8\sidplayfp;d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;$(IncludePath)</IncludePath>
     <LibraryPath>d:\kodning\c++\Libs\boost\stage\lib;$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
@@ -83,20 +83,20 @@
     <IncludePath>$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp-1.8.8;$(VC_ProjectDir)libsidplayfp-1.8.8\sidplayfp;d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;$(IncludePath)</IncludePath>
     <LibraryPath>d:\kodning\c++\Libs\boost\stage\lib;$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp-1.8.8;$(VC_ProjectDir)libsidplayfp-1.8.8\sidplayfp;d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;$(IncludePath)</IncludePath>
     <LibraryPath>d:\kodning\c++\Libs\boost\stage\lib;$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp-1.8.8\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp-1.8.8;$(VC_ProjectDir)libsidplayfp-1.8.8\sidplayfp;d:\kodning\c++\Libs\boost;d:\kodning\c++\libs\Music\libmikmod-3.3.10\include;$(IncludePath)</IncludePath>
     <LibraryPath>d:\kodning\c++\Libs\boost\stage\lib;$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
