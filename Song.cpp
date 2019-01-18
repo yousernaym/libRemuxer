@@ -7,7 +7,7 @@ Song::Song(Marshal_Song *_marSong)
 	marSong = _marSong;
 }
 
-void Song::createNoteList(const Args &args)
+void Song::createNoteList(const Args &args, const std::set<int> *usedInstruments)
 {
 	int resolutionScale = 480 / marSong->ticksPerBeat;
 	marSong->ticksPerBeat = marSong->ticksPerBeat * resolutionScale;;
@@ -35,7 +35,32 @@ void Song::createNoteList(const Args &args)
 				note.start = int(prevTick.noteStart * resolutionScale);
 				note.stop = int(j * resolutionScale);
 				note.chn = i % 16; //Keep channel number below 16 for midi compatibility. //TODO: Keep track of which channels are used and choose unused ones, to avoid midi notes on the same channel and same pitch cutting each other off.
-				unsigned track = args.insTrack ? prevTick.ins : i + 1; //add 1 to channel because first track is reserved for "global" (songs can't have ins indices < 1.
+				unsigned track;
+				if (args.insTrack)
+				{
+					int noteIns = prevTick.ins;
+					if (usedInstruments)
+					{
+						//Only create tracks for instruments that were actually used
+						int t = 1;
+						for each (int ins in *usedInstruments)
+						{
+							if (ins == noteIns)
+								track = t;
+							t++;
+						}
+					}
+					else
+					{
+						//Track number corresponds with instrument number
+						track = noteIns; //No need for +1 because instruments start at 1
+					}
+				}
+				else
+				{
+					//Track number corresponds with channel number + 1 since track 0 should only be used for tempo and such
+					track = i + 1; 
+				}
 				if (track >= notes.size())
 					notes.resize(track + 1);
 				notes[track].insert(note);

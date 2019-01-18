@@ -2,15 +2,14 @@
 #include "SidReader.h"
 
 #include <fcntl.h>
-
 #include <stdlib.h>
 #include <cstring>
-
 #include <fstream>
 #include <memory>
 #include <vector>
 #include <iostream>
 #include <array>
+#include <map>
 
 #include <sidplayfp/sidplayfp.h>
 #include <sidplayfp/SidTune.h>
@@ -24,7 +23,8 @@
 #define CHARGEN_PATH "roms\\characters.901225-01.bin"
 #define SAMPLERATE 44100
 
-std::array<string, 4> waveformNames = { "Triangle", "Sawtooth", "Pulse", "Noise" };
+std::map<int, string> waveformNames = { {1, "Triangle"}, {2, "Sawtooth"}, {4, "Pulse"}, {8, "Noise"} };
+std::set<int> usedWaveformCombos;
 
 
 SidReader::SidReader(Song &_song) : SongReader(_song), buffer(500)
@@ -92,15 +92,10 @@ void SidReader::beginProcess(Args &_args)
 		if (!args.insTrack)
 			sprintf_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
 	}
-	if (args.insTrack)
-	{
-		for (int i = 0; i < waveformNames.size(); i++)
-			strcpy_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, waveformNames[i].c_str());
-	}
-	
+		
 	// Load tune from file
 	std::unique_ptr<SidTune> tune(new SidTune(args.inputPath));
-
+	
 	// CHeck if the tune is valid
 	if (!tune->getStatus())
 		throw tune->statusString();
@@ -173,15 +168,16 @@ float SidReader::process()
 
 			//noteState.isPlaying = true;
 			//noteState.gateChanged = false;
-			if (noteState.volume && freq >= minFreq && freq <= maxFreq)
+			if (noteState.waveform > 0 && noteState.volume > 0 && freq >= minFreq && freq <= maxFreq)
 			{
 				curTick.notePitch = (int)(log2((float)freq / minFreq) * 12 + 0.5f) + 1;
-				if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || noteState.gateChanged)
+				if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || noteState.gateChanged && noteState.gate)
 					curTick.noteStart = timeT;
 				curTick.ins = noteState.waveform;
+				usedWaveformCombos.insert(curTick.ins);
 				curTick.vol = noteState.volume;
-				if (noteState.gateChanged)
-					prevTick.vol = 0;
+				//if (noteState.gateChanged && noteState.gate)
+					//prevTick.vol = 0;
 			}
 			else
 				curTick.vol = 0;
@@ -212,7 +208,28 @@ void SidReader::finish()
 {
 	if (args.audioPath[0] != 0)
 		wav.saveFile(args.audioPath);
-	song.createNoteList(args);
+	
+	if (args.insTrack)
+	{
+		//Use waveform names as track names
+		int t = 1;
+		for each(int waveformCombo in usedWaveformCombos)
+		{
+			//First waveform
+			std::string trackName = waveformNames[waveformCombo & 1];
+			
+			//Loop through the remaining 3 waveform bits
+			for (int i = 1; i < 4; i++)
+			{
+				int maskedWaveform = waveformCombo & (1 << i);
+				if (maskedWaveform)
+					trackName += (trackName.empty() ? "" : " + ") + waveformNames[maskedWaveform];
+			}
+			strcpy_s(song.marSong->tracks[t].name, MAX_TRACKNAME_LENGTH, trackName.c_str());
+			t++;
+		}
+	}
+	song.createNoteList(args, &usedWaveformCombos);
 }
 
 
