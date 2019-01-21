@@ -133,9 +133,9 @@ void Song::saveMidiFile(const string &path)
 			outFile << track.name;
 			map<int, vector<MidiNoteEvent>> noteEvents;
 			createNoteEvents(&noteEvents, track);
-			for each (auto eventsAtTime in noteEvents)
+			for each (const auto &eventsAtTime in noteEvents)
 			{
-				for each (MidiNoteEvent noteEvent in eventsAtTime.second)
+				for each (const auto &noteEvent in eventsAtTime.second)
 				{
 					writeVL(eventsAtTime.first - absoluteTime);
 					absoluteTime = eventsAtTime.first;
