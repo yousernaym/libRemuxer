@@ -96,6 +96,7 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 	{
 		RunningTickInfo &curTick = track.ticks[timeT+t];
 		RunningTickInfo &prevTick = *track.getPrevTick(timeT+t);
+
 		//Volume sliding effects
 		if (t == 0 && cellInfo.volSlideVelScale == 1 || t > 0 && cellInfo.volSlideVelScale > 1)
 		{
@@ -131,23 +132,32 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 			}
 		}
 		int cellTick = t % curSongSpeed;
-					
-		if ((cellInfo.noteStartOffset == t || //Note starts at current tick (first tick of cell or start is offset using edx command)
+
+		if ((cellInfo.noteStartOffset == t && cellInfo.note > 0 || //Note starts at current tick (first tick of cell or start is offset using edx command)
 			cellInfo.retriggerOffset > 0 && t % cellInfo.retriggerOffset == 0 ||  //Retrigger effect (e9x)
-			cellInfo.noteStartOffset > 0 && t % curSongSpeed != 0 && t % cellInfo.noteStartOffset == 0)  //If pattern delay is used, note can be replayed on repeats if edx is used.
-			&& cellInfo.note > 0 && !runningCellInfo.volEnvEnded && curTick.vol && runningCellInfo.samplePlaying)
+			cellInfo.noteStartOffset > 0 && t % curSongSpeed != 0 && t % cellInfo.noteStartOffset == 0 && cellInfo.note > 0)  //If pattern delay is used, note can be replayed on repeats if edx is used.
+			&& !runningCellInfo.volEnvEnded && curTick.vol && runningCellInfo.samplePlaying)
 		{
 			curTick.noteStart = timeT + t;
-			curTick.notePitch = cellInfo.note;
+			int arpStep = t % 3;
+			curTick.notePitch = cellInfo.arpPitches[0] > 0 ? cellInfo.arpPitches[arpStep] : runningCellInfo.note;
 		}
 		if (cellInfo.noteEndOffset == t)
 			curTick.noteStart = -1;
-			
+
 		if (curTick.vol == 0)
 			curTick.noteStart = -1;
-		//Mark start of new note because volume went from 0 to >0
+		
 		//Copy current tick to next tick
-		*track.getNextTick(timeT+t) = curTick;
+		auto nextTick = track.getNextTick(timeT + t);
+		*nextTick = curTick;
+		
+		//If this cell has an arpeggio effect, reset next tick with a new, unarpeggiated note
+		if (cellInfo.arpPitches[0] > 0)
+		{
+			nextTick->notePitch = cellInfo.arpPitches[0];
+			nextTick->noteStart = timeT + t + 1;
+		}
 	}
 }
 
@@ -164,7 +174,10 @@ void ModReader::readNextCell(BYTE *track, CellInfo &cellInfo, RunningCellInfo &r
 		{
 			int opCode = track[rowDataOffset++];
 			if (opCode == UNI_NOTE)
+			{
 				cellInfo.note = track[rowDataOffset++] + 1;
+				runningCellInfo.note = cellInfo.note;
+			}
 			else if (opCode == UNI_INSTRUMENT)
 				cellInfo.ins = track[rowDataOffset++] + 1;
 			else
@@ -192,7 +205,7 @@ void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 		int eff = cellInfo.eff[i];
 		for (int j = 0; j < MAX_EFFECT_VALUES; j++)
 		{
-			//If effect value is not zero or effect type does note have memory of its last value, update the running value
+			//If effect value is not zero or effect type does not have memory of its last value, update the running value
 			if (cellInfo.effValues[eff][j] != 0 || eff != UNI_XMEFFECTA && eff != UNI_XMEFFECTEA && eff != UNI_XMEFFECTEB && eff != UNI_S3MEFFECTD && eff != UNI_PTEFFECT9)
 				runningCellInfo.effValues[cellInfo.eff[i]][j] = cellInfo.effValues[cellInfo.eff[i]][j];
 			effValues[j] = runningCellInfo.effValues[cellInfo.eff[i]][j];
@@ -218,6 +231,19 @@ void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 			if (runningCellInfo.volEnvEnd == 0) //Volume envelope disabled, just set volume to 0
 				firstTick.vol = 0;
 			//TODO: if volume envelope is active, a note off should let it pass beyond sustain point.
+		}
+		else if (cellInfo.eff[i] == UNI_PTEFFECT0)
+		{
+			int value = effValues[0];
+			int value1 = (value >> 4) & 0xf;
+			int value2 = value & 0xf;
+			if (value1 > 0 || value2 > 0)
+			{
+				cellInfo.retriggerOffset = 1;
+				cellInfo.arpPitches[0] = runningCellInfo.note;
+				cellInfo.arpPitches[1] = runningCellInfo.note + value1;
+				cellInfo.arpPitches[2] = runningCellInfo.note + value2;
+			}
 		}
 		else if (cellInfo.eff[i] == UNI_PTEFFECT9)
 		{

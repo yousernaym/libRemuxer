@@ -105,6 +105,7 @@ struct CellInfo
 	int noteStartOffset = 0;
 	int noteEndOffset = -1;
 	int retriggerOffset = -1;
+	int arpPitches[3] = { 0, 0, 0 };
 	int volSlideVel = 0;
 	int volSlideVelScale = 0;
 	unsigned sampleOffset = 0;
