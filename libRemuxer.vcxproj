@@ -81,7 +81,7 @@
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(VC_ProjectDir)libsidplayfp\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp;$(VC_ProjectDir)libsidplayfp\sidplayfp;$(VC_ProjectDir)libmikmod\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer;$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
   </PropertyGroup>
@@ -95,7 +95,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(VC_ProjectDir)libsidplayfp\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp;$(VC_ProjectDir)libsidplayfp\sidplayfp;$(VC_ProjectDir)libmikmod\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
