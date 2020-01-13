@@ -91,7 +91,7 @@
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\..\win32;..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;MIKMOD_BUILD;DLL_EXPORT;DRV_DS;DRV_WIN;DRV_AIFF;DRV_WAV;DRV_RAW;HAVE_LIMITS_H;HAVE_FCNTL_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <MinimalRebuild>true</MinimalRebuild>
+      <MinimalRebuild>false</MinimalRebuild>
       <ExceptionHandling />
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -137,7 +137,7 @@
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\..\win32;..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;MIKMOD_BUILD;DLL_EXPORT;DRV_DS;DRV_WIN;DRV_AIFF;DRV_WAV;DRV_RAW;HAVE_LIMITS_H;HAVE_FCNTL_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <MinimalRebuild>true</MinimalRebuild>
+      <MinimalRebuild>false</MinimalRebuild>
       <ExceptionHandling />
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
