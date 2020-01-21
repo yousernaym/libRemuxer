@@ -15,7 +15,7 @@
 #include <sidplayfp/SidTune.h>
 #include <sidplayfp/SidInfo.h>
 #include <sidplayfp/SidConfig.h>
-#include <sidplayfp/sidemu.h>
+#include <sidemu.h>
 #include <sidplayfp/SidtuneInfo.h>
 
 #define KERNAL_PATH  "roms\\kernal.901227-03.bin"
