@@ -249,7 +249,7 @@ class Integrator8580;
  *
  *
  *
- * Crystal stabilized precision swithced capacitor voltage divider
+ * Crystal stabilized precision switched capacitor voltage divider
  * ---------------------------------------------------------------
  * There is a FET working as a temperature sensor close to the DACs which changes the gate voltage
  * of the frequency control DACs according to the temperature of the DACs,
@@ -341,8 +341,7 @@ public:
     /**
      * Set filter curve type based on single parameter.
      *
-     * FIXME find a reasonable range of values
-     * @param curvePosition
+     * @param curvePosition 0 .. 1, where 0 sets center frequency high ("light") and 1 sets it low ("dark"), default is 0.5
      */
     void setFilterCurve(double curvePosition);
 };
