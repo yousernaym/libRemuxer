@@ -30,6 +30,17 @@ public:
 
 	void saveFile(const std::string &path)
 	{
+		//Normalize
+		short peak = 0;
+		for (short sample : samples)
+		{
+			if (peak < abs(sample))
+				peak = abs(sample);
+		}
+		float normalizingScale = SHRT_MAX * 0.89125f / peak; //Leave 1 dB headroom for any lossy compression that might occur
+		for (short& sample : samples)
+			sample = (short)(sample * normalizingScale);
+
 		int blockAlign = sizeof(SampleType) * channelCount;
 		int dataSize = (int)samples.size() * sizeof(SampleType);
 		createFile(path);
