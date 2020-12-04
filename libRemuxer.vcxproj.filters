@@ -518,5 +518,6 @@
     <None Include="libsidplayfp\src\psiddrv.bin">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="README.md" />
   </ItemGroup>
 </Project>
