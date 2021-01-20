@@ -21,13 +21,13 @@
 #define KERNAL_PATH  "roms\\kernal.901227-03.bin"
 #define BASIC_PATH   "roms\\basic.901226-01.bin"
 #define CHARGEN_PATH "roms\\characters.901225-01.bin"
-#define SAMPLERATE 44100
+#define SAMPLERATE 48000
 
 std::map<int, string> waveformNames = { {1, "Triangle"}, {2, "Sawtooth"}, {4, "Pulse"}, {8, "Noise"} };
 std::set<int> usedWaveformCombos;
 
 
-SidReader::SidReader(Song &_song) : SongReader(_song), buffer(500)
+SidReader::SidReader(Song &_song) : SongReader(_song), buffer(500), wav(SAMPLERATE)
 {
 	// Load ROM files
 	auto kernal = loadRom(KERNAL_PATH, 8192);

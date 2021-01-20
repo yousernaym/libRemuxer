@@ -6,12 +6,13 @@ template <class SampleType>
 class Wav : FileFormat
 {
 private:
-	const int sampleRate = 44100;
+	int sampleRate;
 	const int channelCount = 1;
 	std::vector<SampleType> samples;
 public:
-	Wav()
+	Wav(int sampleRate = 48000)
 	{
+		Wav::sampleRate = sampleRate;
 		samples.reserve(channelCount * 500 * sampleRate); //Reserve space for 500 seconds
 	}
 	~Wav()

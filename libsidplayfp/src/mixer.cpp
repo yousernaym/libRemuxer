@@ -96,7 +96,7 @@ void Mixer::doMix(bool disableAudio)
 
         // This is a crude boxcar low-pass filter to
         // reduce aliasing during fast forward.
-        	if (!disableAudio)
+        if (!disableAudio)
 		{
 		   	for (size_t k = 0; k < m_buffers.size(); k++)
 	        {
