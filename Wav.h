@@ -1,6 +1,7 @@
 #pragma once
 #include <fstream>
 #include <vector>
+#include "FileFormat.h"
 
 template <class SampleType>
 class Wav : FileFormat
@@ -10,9 +11,8 @@ private:
 	const int channelCount = 1;
 	std::vector<SampleType> samples;
 public:
-	Wav(int sampleRate = 48000)
+	Wav(int sampleRate = 48000) : sampleRate(sampleRate)
 	{
-		Wav::sampleRate = sampleRate;
 		samples.reserve(channelCount * 500 * sampleRate); //Reserve space for 500 seconds
 	}
 	~Wav()

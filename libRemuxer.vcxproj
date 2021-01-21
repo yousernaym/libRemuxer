@@ -70,8 +70,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(VC_ProjectDir)libsidplayfp\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp;$(VC_ProjectDir)libsidplayfp\sidplayfp;$(VC_ProjectDir)libmikmod\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp\src\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp\src\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp\src\sidplayfp;$(VC_ProjectDir)libsidplayfp\src;$(VC_ProjectDir)libmikmod\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(VC_ProjectDir)openmpt\build\lib\vs2019win10\x86_64\$(Configuration);$(SolutionDir)$(Platform)\$(Configuration)\Remuxer;$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
@@ -80,22 +80,22 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(VC_ProjectDir)libsidplayfp\src\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp\src\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp\src\sidplayfp;$(VC_ProjectDir)libsidplayfp\src;$(VC_ProjectDir)libmikmod\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp\src\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp\src\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp\src\sidplayfp;$(VC_ProjectDir)libsidplayfp\src;$(VC_ProjectDir)libmikmod\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(VC_ProjectDir)openmpt\build\lib\vs2019win10\x86_64\$(Configuration);$(SolutionDir)$(Platform)\$(Configuration)\Remuxer;$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(VC_ProjectDir)libsidplayfp\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp;$(VC_ProjectDir)libsidplayfp\sidplayfp;$(VC_ProjectDir)libmikmod\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp\src\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp\src\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp\src\sidplayfp;$(VC_ProjectDir)libsidplayfp\src;$(VC_ProjectDir)libmikmod\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(VC_ProjectDir)openmpt\build\lib\vs2019win10\x86_64\$(Configuration);$(SolutionDir)$(Platform)\$(Configuration)\Remuxer;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(VC_ProjectDir)libsidplayfp\src\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp\src\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp\src\sidplayfp;$(VC_ProjectDir)libsidplayfp\src;$(VC_ProjectDir)libmikmod\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp\src\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp\src\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp\src\sidplayfp;$(VC_ProjectDir)libsidplayfp\src;$(VC_ProjectDir)libmikmod\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(VC_ProjectDir)openmpt\build\lib\vs2019win10\x86_64\$(Configuration);$(SolutionDir)$(Platform)\$(Configuration)\Remuxer;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -107,11 +107,12 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;MIKMODWRAPPER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libopenmpt.lib;libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -123,11 +124,12 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;MIKMODWRAPPER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libopenmpt.lib;libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)roms" "$(SolutionDir)$(Platform)\$(ConfigurationName)\remuxer\roms" /D /Y /I /E /S</Command>
@@ -143,13 +145,14 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MIKMODWRAPPER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libopenmpt.lib;libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
     </Link>
@@ -164,13 +167,14 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MIKMODWRAPPER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libopenmpt.lib;libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
     </Link>
@@ -194,7 +198,6 @@
     <ClCompile Include="libsidplayfp\src\builders\residfp-builder\residfp\Integrator8580.cpp" />
     <ClCompile Include="libsidplayfp\src\builders\residfp-builder\residfp\OpAmp.cpp" />
     <ClCompile Include="libsidplayfp\src\builders\residfp-builder\residfp\resample\SincResampler.cpp" />
-    <ClCompile Include="libsidplayfp\src\builders\residfp-builder\residfp\resample\test.cpp" />
     <ClCompile Include="libsidplayfp\src\builders\residfp-builder\residfp\SID.cpp" />
     <ClCompile Include="libsidplayfp\src\builders\residfp-builder\residfp\Spline.cpp" />
     <ClCompile Include="libsidplayfp\src\builders\residfp-builder\residfp\WaveformCalculator.cpp" />
@@ -231,6 +234,7 @@
     <ClCompile Include="libsidplayfp\src\utils\MD5\MD5.cpp" />
     <ClCompile Include="libsidplayfp\src\utils\SidDatabase.cpp" />
     <ClCompile Include="libsidplayfp\src\utils\STILview\stil.cpp" />
+    <ClCompile Include="mpt_example.cpp" />
     <ClCompile Include="Remuxer.cpp" />
     <ClCompile Include="ModReader.cpp" />
     <ClCompile Include="SidReader.cpp" />

@@ -36,9 +36,6 @@
     <ClCompile Include="libsidplayfp\src\builders\residfp-builder\residfp\resample\SincResampler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="libsidplayfp\src\builders\residfp-builder\residfp\resample\test.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="libsidplayfp\src\builders\residfp-builder\residfp\Dac.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -184,6 +181,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="libsidplayfp\src\utils\SidDatabase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="mpt_example.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
