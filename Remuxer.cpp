@@ -52,7 +52,7 @@ void closeLib()
 }
 
 //const int MAX_EFFECTS_PER_CELL = 10;
-
+int ompt();
 BOOL beginProcessing(Args &a)
 {
 	args.insTrack = a.insTrack;
@@ -71,7 +71,7 @@ BOOL beginProcessing(Args &a)
 		strcpy_s(args.midiPath, MAX_PATH_LENGTH, a.midiPath);
 	else
 		args.midiPath[0] = NULL;
-	
+	ompt();
 	try 
 	{
 		modReader.beginProcessing(args);
