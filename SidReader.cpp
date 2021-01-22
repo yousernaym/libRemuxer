@@ -27,7 +27,7 @@ std::map<int, string> waveformNames = { {1, "Triangle"}, {2, "Sawtooth"}, {4, "P
 std::set<int> usedWaveformCombos;
 
 
-SidReader::SidReader(Song &_song) : SongReader(_song), buffer(500), wav(SAMPLERATE)
+SidReader::SidReader(Song &_song) : SongReader(_song), buffer(500), wav(false, SAMPLERATE)
 {
 	// Load ROM files
 	auto kernal = loadRom(KERNAL_PATH, 8192);
@@ -191,7 +191,7 @@ float SidReader::process()
 		{
 			float scale = (float)(samplesToPorcess - samplesProcessed) / (samplesToPorcess - samplesBeforeFadeout);
 			for (int i = 0; i < buffer.size(); i++)
-				buffer[i] = (int)(buffer[i] * scale);
+				buffer[i] = (short)(buffer[i] * scale);
 		}
 		wav.addSamples(buffer);
 	}
