@@ -1,0 +1,4 @@
+[submodule "libsidplayfp-readNotes"]
+	path = libsidplayfp-readNotes
+	url = https://github.com/yousernaym/libsidplayfp-readNotes.git
+	branch = master
