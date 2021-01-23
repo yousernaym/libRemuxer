@@ -6,7 +6,8 @@
 #include <vector>
 #include "FileFormat.h"
 
-template <class SampleType>
+typedef float SampleType;
+
 class Wav : FileFormat
 {
 private:

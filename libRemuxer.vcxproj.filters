@@ -30,9 +30,6 @@
     <ClCompile Include="FileFormat.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SongReader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\resample\SincResampler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

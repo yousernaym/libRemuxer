@@ -25,6 +25,8 @@ unsigned FileFormat::swapBytes(size_t size, unsigned value)
 		return (bytes[0] << 16) | bytes[1] | (bytes[2] >> 16);
 	else if (size == 4)
 		return (bytes[0] << 24) | (bytes[1] << 8) | (bytes[2] >> 8) | (bytes[3] >> 24);
+	else 
+		return 0;
 }
 
 

@@ -135,7 +135,6 @@ struct RunningCellInfo
 class ModReader : public SongReader
 {
 	Args args;
-	const int sampleRate = 44100;
 	const double semitone = 1.0594630943593; //12th root of 2
 	vector<RunningCellInfo> runningRowInfo;
 	vector<CellInfo> curRowInfo;
@@ -151,7 +150,7 @@ class ModReader : public SongReader
 	//Loop loop;
 	Marshal_Song *marSong;
 public:
-	ModReader(Song &_song);
+	ModReader(Song &song);
 	~ModReader();
 	static void sInit();
 	void getCellRepLen(BYTE replen, int &repeat, int &length);

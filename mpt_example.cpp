@@ -32,7 +32,7 @@ int ompt()
 		std::vector<float> right(buffersize);
 		std::vector<float> interleaved_buffer(buffersize * 2);
 		bool is_interleaved = true;
-		Wav<float> wav(true, 48000);
+		Wav wav(true, 48000);
 
 		while (true) 
 		{

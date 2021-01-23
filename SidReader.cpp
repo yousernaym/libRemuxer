@@ -21,13 +21,12 @@
 #define KERNAL_PATH  "roms\\kernal.901227-03.bin"
 #define BASIC_PATH   "roms\\basic.901226-01.bin"
 #define CHARGEN_PATH "roms\\characters.901225-01.bin"
-#define SAMPLERATE 48000
 
 std::map<int, string> waveformNames = { {1, "Triangle"}, {2, "Sawtooth"}, {4, "Pulse"}, {8, "Noise"} };
 std::set<int> usedWaveformCombos;
 
 
-SidReader::SidReader(Song &_song) : SongReader(_song), buffer(500), wav(false, SAMPLERATE)
+SidReader::SidReader(Song &song) : SongReader(song, false)
 {
 	// Load ROM files
 	auto kernal = loadRom(KERNAL_PATH, 8192);
@@ -72,6 +71,7 @@ vector<char> SidReader::loadRom(const char* path, size_t romSize)
 }
 void SidReader::beginProcess(Args &_args)
 {
+	SongReader::beginProcessing();
 	args = _args;
 	//args.songLengthS = 3;
 	if (args.songLengthS == 0)
@@ -88,7 +88,7 @@ void SidReader::beginProcess(Args &_args)
 	song.tracks.resize(3);
 	for (int i = 0; i < 3; i++)
 	{
-		song.tracks[i].ticks.resize(int((args.songLengthS + (float)buffer.size() / SAMPLERATE) * ticksPerSeconds) + 1);
+		song.tracks[i].ticks.resize(int((args.songLengthS + (float)sampleBuffer.size() / sampleRate) * ticksPerSeconds) + 1);
 		if (!args.insTrack)
 			sprintf_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
 	}
@@ -118,7 +118,7 @@ void SidReader::beginProcess(Args &_args)
 	
 	// Configure the engine
 	SidConfig cfg;
-	cfg.frequency = SAMPLERATE;
+	cfg.frequency = sampleRate;
 	//cfg.samplingMethod = SidConfig::INTERPOLATE;
 	cfg.samplingMethod = SidConfig::RESAMPLE_INTERPOLATE;
 	cfg.fastSampling = false;
@@ -142,14 +142,14 @@ void SidReader::beginProcess(Args &_args)
 	timeS = 0;
 	oldTimeT = 0;
 	samplesProcessed = 0;
-	samplesToPorcess = (int)(SAMPLERATE * args.songLengthS);
-	samplesBeforeFadeout = samplesToPorcess - (int)(fadeOutS * SAMPLERATE);
+	samplesToProcess = (int)(sampleRate * args.songLengthS);
+	samplesBeforeFadeout = samplesToProcess - (int)(fadeOutS * sampleRate);
 }
 
 float SidReader::process()
 {
-	samplesProcessed += engine.play(&buffer.front(), (uint_least32_t)buffer.size());
-	timeS = (float)samplesProcessed / SAMPLERATE;
+	samplesProcessed += engine.play(&sampleBuffer.front(), (uint_least32_t)sampleBuffer.size());
+	timeS = (float)samplesProcessed / sampleRate;
 	int timeT = (int)(timeS * ticksPerSeconds);
 	if (timeT > oldTimeT)
 	{
@@ -187,17 +187,19 @@ float SidReader::process()
 	oldTimeT = timeT;
 	if (args.audioPath[0] != 0)
 	{
+		//Fade out
 		if (samplesProcessed > samplesBeforeFadeout)
 		{
-			float scale = (float)(samplesToPorcess - samplesProcessed) / (samplesToPorcess - samplesBeforeFadeout);
-			for (int i = 0; i < buffer.size(); i++)
-				buffer[i] = (short)(buffer[i] * scale);
+			float scale = (float)(samplesToProcess - samplesProcessed) / (samplesToProcess - samplesBeforeFadeout);
+			for (int i = 0; i < sampleBuffer.size(); i++)
+				sampleBuffer[i] *= scale;
 		}
-		wav.addSamples(buffer);
+
+		wav.addSamples(sampleBuffer);
 	}
 
-	if (samplesProcessed < samplesToPorcess)
-		return (float)samplesProcessed / samplesToPorcess;
+	if (samplesProcessed < samplesToProcess)
+		return (float)samplesProcessed / samplesToProcess;
 	else
 	{
 		return -1;

@@ -11,8 +11,6 @@ class SidReader : public SongReader
 	sidplayfp engine;
 	Args args;
 	std::unique_ptr<ReSIDfpBuilder> rs;
-	Wav<short> wav;
-	std::vector<short> buffer;
 	NoteState noteState;
 	int minFreq;
 	int maxFreq;
@@ -20,7 +18,7 @@ class SidReader : public SongReader
 	float ticksPerSeconds;
 	int oldTimeT;
 	int samplesProcessed;
-	int samplesToPorcess;
+	int samplesToProcess;
 	int samplesBeforeFadeout;
 public:
 	SidReader(Song &song);

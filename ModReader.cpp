@@ -20,7 +20,7 @@ void ModReader::sInit()
 	/* initialize the library */
 }
 
-ModReader::ModReader(Song &_song) : SongReader(_song)
+ModReader::ModReader(Song &song) : SongReader(song, true)
 {
 	marSong = song.marSong;
 }
@@ -361,6 +361,7 @@ double ModReader::getRowDur(double tempo, double speed)
 
 void ModReader::beginProcessing(const Args &_args)
 {
+	SongReader::beginProcessing();
 	args = _args;
 	string cmdLine;
 	BOOL mixdown = args.audioPath[0] > 0;
