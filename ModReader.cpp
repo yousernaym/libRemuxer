@@ -20,7 +20,7 @@ void ModReader::sInit()
 	/* initialize the library */
 }
 
-ModReader::ModReader(Song &song) : SongReader(song, true)
+ModReader::ModReader(Song &song) : SongReader(song, true, 480)
 {
 	marSong = song.marSong;
 }
@@ -222,7 +222,7 @@ void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 				marSong->tempoEvents[marSong->numTempoEvents].tempo = value;
 				marSong->tempoEvents[marSong->numTempoEvents].time = timeT;
 				if (++marSong->numTempoEvents >= MAX_TEMPOEVENTS)
-					throw (string)"Too many tempo events.";
+					throw (std::string)"Too many tempo events.";
 			}
 			rowDur = getRowDur(marSong->tempoEvents[marSong->numTempoEvents - 1].tempo, curSongSpeed);
 		}
@@ -362,20 +362,23 @@ double ModReader::getRowDur(double tempo, double speed)
 void ModReader::beginProcessing(const UserArgs &args)
 {
 	SongReader::beginProcessing(args);
-	string cmdLine;
+	std::string cmdLine;
 	BOOL mixdown = userArgs.audioPath[0] > 0;
 
 	md_device = 2; //nosound driver
 	if (mixdown)
 	{
+		std::ifstream file(userArgs.inputPath, std::ios::binary);
+		omptModule = std::make_unique<openmpt::module>(file);
+		file.close();
 		
 		md_device = 1; //wav writer
-		cmdLine = "file=" + string(userArgs.audioPath);
+		cmdLine = "file=" + std::string("libmikmod.wav");
 	}
 
 	if (MikMod_Init(cmdLine.c_str()))
 	{
-		string err = (string)"Could not initialize Mikmod, reason: " + (string)MikMod_strerror(MikMod_errno);
+		std::string err = (std::string)"Could not initialize Mikmod, reason: " + (std::string)MikMod_strerror(MikMod_errno);
 		OutputDebugStringA(err.c_str());
 		assert(false);
 	}
@@ -435,7 +438,7 @@ void ModReader::beginProcessing(const UserArgs &args)
 		{
 			for (int i = 0; i < module->numchn; i++)
 			{
-				ostringstream s;
+				std::ostringstream s;
 				s << "Channel " << i + 1;
 				strcpy_s(marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, s.str().c_str());
 			}
@@ -516,7 +519,7 @@ void ModReader::beginProcessing(const UserArgs &args)
 	else
 	{
 		MikMod_Exit();
-		ostringstream err;
+		std::ostringstream err;
 		err << "Could not load module, reason: " << MikMod_strerror(MikMod_errno);
 		OutputDebugStringA(err.str().c_str());
 		throw err.str();
@@ -527,10 +530,20 @@ void ModReader::beginProcessing(const UserArgs &args)
 
 float ModReader::process()
 {
-	if (userArgs.audioPath[0] && Player_Active() && module->sngtime < timeS * 1024) //break if last pattern has a pattern-break
+//	if (userArgs.audioPath[0] && Player_Active() && module->sngtime < timeS * 1024) //break if last pattern has a pattern-break
+//	{
+//		MikMod_Update();
+//		return (float)module->sngpos / module->numpos;
+//	}
+	if (userArgs.audioPath[0])
 	{
-		MikMod_Update();
-		return (float)module->sngpos / module->numpos;
+		float songPosS = (float)omptModule->get_position_seconds();
+		std::size_t count = omptModule->read_interleaved_stereo(sampleRate, audioBuffer.size() / 2, audioBuffer.data());
+		wav.addSamples(audioBuffer);
+		if (count == 0)
+			return -1;
+		else
+			return songPosS / timeS;
 	}
 	else
 	{
@@ -541,6 +554,7 @@ float ModReader::process()
 void ModReader::finish()
 {
 	SongReader::finish();
+	omptModule.reset();
 	Player_Stop();
 	Player_Free(module);
 	module = 0;

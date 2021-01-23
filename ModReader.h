@@ -4,8 +4,8 @@
 #include "song.h"
 #include "libRemuxer.h"
 #include "SongReader.h"
+#include <libopenmpt/libopenmpt.hpp>
 
-using namespace std;
 //------------------------------------
 //from mikmod_internal.h:
 
@@ -135,9 +135,10 @@ struct RunningCellInfo
 class ModReader : public SongReader
 {
 	const double semitone = 1.0594630943593; //12th root of 2
-	vector<RunningCellInfo> runningRowInfo;
-	vector<CellInfo> curRowInfo;
+	std::vector<RunningCellInfo> runningRowInfo;
+	std::vector<CellInfo> curRowInfo;
 	MODULE *module = 0;
+	std::unique_ptr<openmpt::module> omptModule;
 	int curSongSpeed;
 	int ptnDelay;
 	int timeT = 0;

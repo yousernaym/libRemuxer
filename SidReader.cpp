@@ -86,7 +86,7 @@ void SidReader::beginProcess(UserArgs &args)
 	song.tracks.resize(3);
 	for (int i = 0; i < 3; i++)
 	{
-		song.tracks[i].ticks.resize(int((userArgs.songLengthS + (float)sampleBuffer.size() / sampleRate) * ticksPerSeconds) + 1);
+		song.tracks[i].ticks.resize(int((userArgs.songLengthS + (float)audioBuffer.size() / sampleRate) * ticksPerSeconds) + 1);
 		if (!userArgs.insTrack)
 			sprintf_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
 	}
@@ -144,7 +144,7 @@ void SidReader::beginProcess(UserArgs &args)
 
 float SidReader::process()
 {
-	samplesProcessed += engine.play(&sampleBuffer.front(), (uint_least32_t)sampleBuffer.size());
+	samplesProcessed += engine.play(audioBuffer.data(), (uint_least32_t)audioBuffer.size());
 	timeS = (float)samplesProcessed / sampleRate;
 	int timeT = (int)(timeS * ticksPerSeconds);
 	if (timeT > oldTimeT)
@@ -187,11 +187,11 @@ float SidReader::process()
 		if (samplesProcessed > samplesBeforeFadeout)
 		{
 			float scale = (float)(samplesToProcess - samplesProcessed) / (samplesToProcess - samplesBeforeFadeout);
-			for (int i = 0; i < sampleBuffer.size(); i++)
-				sampleBuffer[i] *= scale;
+			for (int i = 0; i < audioBuffer.size(); i++)
+				audioBuffer[i] *= scale;
 		}
 
-		wav.addSamples(sampleBuffer);
+		wav.addSamples(audioBuffer);
 	}
 
 	if (samplesProcessed < samplesToProcess)

@@ -9,16 +9,16 @@ Song song(&marshalSong);
 SongReader *songReader;
 ModReader modReader(song);
 SidReader sidReader(song);
-UserArgs args;
+UserArgs userArgs;
 
 void initLib()
 {
 	ModReader::sInit();
 	
 	ZeroMemory(&marshalSong, sizeof(Marshal_Song));
-	args.inputPath = new char[MAX_PATH_LENGTH];
-	args.audioPath = new char[MAX_PATH_LENGTH];
-	args.midiPath = new char[MAX_PATH_LENGTH];
+	userArgs.inputPath = new char[MAX_PATH_LENGTH];
+	userArgs.audioPath = new char[MAX_PATH_LENGTH];
+	userArgs.midiPath = new char[MAX_PATH_LENGTH];
 
 	marshalSong.tempoEvents = new Marshal_TempoEvent[MAX_TEMPOEVENTS];
 	marshalSong.tracks = new Marshal_Track[MAX_MIDITRACKS];
@@ -46,35 +46,34 @@ void closeLib()
 		}
 		safeDeleteArray(marshalSong.tracks);
 	}
-	safeDeleteArray(args.inputPath);
-	safeDeleteArray(args.audioPath);
-	safeDeleteArray(args.midiPath);
+	safeDeleteArray(userArgs.inputPath);
+	safeDeleteArray(userArgs.audioPath);
+	safeDeleteArray(userArgs.midiPath);
 }
 
 //const int MAX_EFFECTS_PER_CELL = 10;
 
-BOOL beginProcessing(UserArgs &a)
+BOOL beginProcessing(UserArgs &args)
 {
-	args.insTrack = a.insTrack;
-	//args.insTrack = true;
-	args.songLengthS = a.songLengthS;
-	args.subSong = a.subSong;
-	if (a.inputPath)
-		strcpy_s(args.inputPath, MAX_PATH_LENGTH, a.inputPath);
+	userArgs.insTrack = args.insTrack;
+	userArgs.songLengthS = args.songLengthS;
+	userArgs.subSong = args.subSong;
+	if (args.inputPath)
+		strcpy_s(userArgs.inputPath, MAX_PATH_LENGTH, args.inputPath);
 	else
-		args.inputPath[0] = NULL;
-	if (a.audioPath)
-		strcpy_s(args.audioPath, MAX_PATH_LENGTH, a.audioPath);
+		userArgs.inputPath[0] = NULL;
+	if (args.audioPath)
+		strcpy_s(userArgs.audioPath, MAX_PATH_LENGTH, args.audioPath);
 	else
-		args.audioPath[0] = NULL;
-	if (a.midiPath)
-		strcpy_s(args.midiPath, MAX_PATH_LENGTH, a.midiPath);
+		userArgs.audioPath[0] = NULL;
+	if (args.midiPath)
+		strcpy_s(userArgs.midiPath, MAX_PATH_LENGTH, args.midiPath);
 	else
-		args.midiPath[0] = NULL;
+		userArgs.midiPath[0] = NULL;
 	
 	try 
 	{
-		modReader.beginProcessing(args);
+		modReader.beginProcessing(userArgs);
 		song.marSong->songType = Marshal_SongType::Mod;
 		songReader = &modReader;
 	}
@@ -82,9 +81,9 @@ BOOL beginProcessing(UserArgs &a)
 	{
 		try
 		{
-			sidReader.beginProcess(args);
-			a.subSong = args.subSong;
-			a.numSubSongs = args.numSubSongs;
+			sidReader.beginProcess(userArgs);
+			args.subSong = userArgs.subSong;
+			args.numSubSongs = userArgs.numSubSongs;
 			song.marSong->songType = Marshal_SongType::Sid;
 			songReader = &sidReader;
 		}
