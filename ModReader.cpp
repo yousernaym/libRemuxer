@@ -253,8 +253,8 @@ void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 		else if (cellInfo.eff[i] == UNI_PTEFFECTB)
 		{
 			ptnJump = effValues[0];
-			if (ptnJump <= songPos)
-				ptnJump = -1;
+			//if (ptnJump <= songPos)
+				//ptnJump = -1;
 		}
 		else if (cellInfo.eff[i] == UNI_PTEFFECTD)
 		{
@@ -445,69 +445,8 @@ void ModReader::beginProcessing(const UserArgs &args)
 			}
 		}
 
-		//ZeroMemory(&loop, sizeof(loop));
-
-		//int timeT = 0;
-		//double timeS = 0;
-		//int ptnStart = 0;
-
-
-		//Loop through patterns
-		for (int p = 0; p < module->numpos; p++)
-		{
-			ptnJump = -1;
-			int pattern = module->patterns[module->positions[p]];
-			//Loop through rows
-			for (int t = 0; t < module->numchn; t++)
-				runningRowInfo[t].offset = runningRowInfo[t].repeatsLeft = 0;
-			for (int r = 0; r < module->pattrows[pattern]; r++)
-			{
-				ptnDelay = 0;
-				//Loop through channels/tracks
-				for (int t = 0; t < module->numchn; t++)
-				{
-					BYTE *track = module->tracks[pattern*module->numchn + t];
-					readNextCell(track, curRowInfo[t], runningRowInfo[t]);
-					if (ptnJump >= 0 || r >= ptnStart)
-						readCellFx(song.tracks[t].ticks[timeT], curRowInfo[t], runningRowInfo[t], p, r);
-				}
-				if (ptnJump == -1)
-				{
-					if (r < ptnStart)
-						continue;
-					else
-						ptnStart = 0;
-				}
-				tickDur = rowDur / curSongSpeed;
-				//Loop through channels/tracks
-				for (int t = 0; t < module->numchn; t++)
-				{
-					song.tracks[t].ticks.resize(song.tracks[t].ticks.size() + curSongSpeed * (ptnDelay + 1));
-					RunningTickInfo *curTick = &song.tracks[t].ticks[timeT];
-					updateCell(*curTick, curRowInfo[t], runningRowInfo[t]);
-					updateCellTicks(song.tracks[t], curRowInfo[t], runningRowInfo[t]);
-
-				}
-
-				/*if (!ptnStart || ptnJump >= 0)
-				{*/
-				timeT += curSongSpeed * (ptnDelay + 1);
-				timeS += rowDur * (ptnDelay + 1);
-				//}
-				if (ptnJump >= 0)
-				{
-					p = ptnJump - 1;
-					break;
-				}
-				/*if (loop.jump)
-				{
-				loop.jump = false;
-				p = loop.startP - 1;
-				ptnStart = loop.startR;
-				break;
-				}*/
-			}
-		}
+		extractNotes();
+		
 		marSong->songLengthT = timeT;
 
 		if (userArgs.audioPath[0])
@@ -527,6 +466,59 @@ void ModReader::beginProcessing(const UserArgs &args)
 	}
 	marSong->ticksPerBeat = 24;
 	song.createNoteList(userArgs);
+}
+
+void ModReader::extractNotes()
+{
+	//Loop through patterns
+	for (int p = 0; p < module->numpos; p++)
+	{
+		ptnJump = -1;
+		int pattern = module->patterns[module->positions[p]];
+		//Loop through rows
+		for (int t = 0; t < module->numchn; t++)
+			runningRowInfo[t].offset = runningRowInfo[t].repeatsLeft = 0;
+		for (int r = 0; r < module->pattrows[pattern]; r++)
+		{
+			ptnDelay = 0;
+			//Loop through channels/tracks
+			for (int t = 0; t < module->numchn; t++)
+			{
+				BYTE* track = module->tracks[pattern * module->numchn + t];
+				readNextCell(track, curRowInfo[t], runningRowInfo[t]);
+				if (ptnJump >= 0 || r >= ptnStart)
+					readCellFx(song.tracks[t].ticks[timeT], curRowInfo[t], runningRowInfo[t], p, r);
+			}
+			if (ptnJump == -1)
+			{
+				if (r < ptnStart)
+					continue;
+				else
+					ptnStart = 0;
+			}
+			else if (ptnJump <= p)
+				return;
+			tickDur = rowDur / curSongSpeed;
+			//Loop through channels/tracks
+			for (int t = 0; t < module->numchn; t++)
+			{
+				song.tracks[t].ticks.resize(song.tracks[t].ticks.size() + curSongSpeed * (ptnDelay + 1));
+				RunningTickInfo* curTick = &song.tracks[t].ticks[timeT];
+				updateCell(*curTick, curRowInfo[t], runningRowInfo[t]);
+				updateCellTicks(song.tracks[t], curRowInfo[t], runningRowInfo[t]);
+
+			}
+
+			timeT += curSongSpeed * (ptnDelay + 1);
+			timeS += rowDur * (ptnDelay + 1);
+		
+			if (ptnJump >= 0)
+			{
+				p = ptnJump - 1;
+				break;
+			}
+		}
+	}
 }
 
 float ModReader::process()
@@ -550,6 +542,7 @@ float ModReader::process()
 
 	if (count == 0) //end of song
 	{	//If there is audio at song end, loop and fade out
+		//return -1;
 		if (std::any_of(audioBuffer.begin(), audioBuffer.end(), [](SampleType sample) {return sample != 0; }))
 		{
 			isFadingOut = true;

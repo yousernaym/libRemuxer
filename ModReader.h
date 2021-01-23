@@ -161,6 +161,7 @@ public:
 	void readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, RunningCellInfo &runningCellInfo, int songPos, int row);
 	void updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo);
 	void updateCellTicks(Song::Track &track, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo);
+	void extractNotes();
 	void beginProcessing(const UserArgs &args);
 	float process() override;
 	void finish() override;
