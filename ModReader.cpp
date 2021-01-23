@@ -198,7 +198,7 @@ void ModReader::readNextCell(BYTE *track, CellInfo &cellInfo, RunningCellInfo &r
 		runningCellInfo.repeatsLeft--;
 }
 
-void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, RunningCellInfo &runningCellInfo, int songPos, int row)
+void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, RunningCellInfo &runningCellInfo, int pattern, int row)
 {
 	for (int i = 0; i < cellInfo.numEffs; i++)
 	{
@@ -253,13 +253,13 @@ void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 		else if (cellInfo.eff[i] == UNI_PTEFFECTB)
 		{
 			ptnJump = effValues[0];
-			//if (ptnJump <= songPos)
+			//if (ptnJump <= pattern)
 				//ptnJump = -1;
 		}
 		else if (cellInfo.eff[i] == UNI_PTEFFECTD)
 		{
 			if (ptnJump == -1)
-				ptnJump = songPos + 1;
+				ptnJump = pattern + 1;
 			ptnStart = effValues[0];
 		}
 		else if (cellInfo.eff[i] == UNI_PTEFFECTC)
@@ -293,7 +293,7 @@ void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 						runningCellInfo.loop.loops--;
 					if (runningCellInfo.loop.loops > 0)
 					{
-						ptnJump = songPos;
+						ptnJump = pattern;
 						ptnStart = runningCellInfo.loop.startR;
 					}
 				}
@@ -373,8 +373,7 @@ void ModReader::beginProcessing(const UserArgs &args)
 		std::ifstream file(userArgs.inputPath, std::ios::binary);
 		omptModule = std::make_unique<openmpt::module>(file);
 		file.close();
-		omptModule->ctl_set("play.at_end", "continue");
-		omptModule->ctl_get_text("play.at_end");
+		omptModule->ctl_set_text("play.at_end", "continue");
 	}		
 
 	if (MikMod_Init(cmdLine.c_str()))
@@ -471,32 +470,33 @@ void ModReader::beginProcessing(const UserArgs &args)
 void ModReader::extractNotes()
 {
 	//Loop through patterns
-	for (int p = 0; p < module->numpos; p++)
+	for (int sequenceIndex = 0; sequenceIndex < module->numpos; sequenceIndex++)
 	{
 		ptnJump = -1;
-		int pattern = module->patterns[module->positions[p]];
-		//Loop through rows
+		int pattern = module->patterns[module->positions[sequenceIndex]];
+		
 		for (int t = 0; t < module->numchn; t++)
 			runningRowInfo[t].offset = runningRowInfo[t].repeatsLeft = 0;
-		for (int r = 0; r < module->pattrows[pattern]; r++)
+		//Loop through rows
+		for (int rowIndex = 0; rowIndex < module->pattrows[pattern]; rowIndex++)
 		{
 			ptnDelay = 0;
 			//Loop through channels/tracks
-			for (int t = 0; t < module->numchn; t++)
+			for (int trackIndex = 0; trackIndex < module->numchn; trackIndex++)
 			{
-				BYTE* track = module->tracks[pattern * module->numchn + t];
-				readNextCell(track, curRowInfo[t], runningRowInfo[t]);
-				if (ptnJump >= 0 || r >= ptnStart)
-					readCellFx(song.tracks[t].ticks[timeT], curRowInfo[t], runningRowInfo[t], p, r);
+				BYTE* track = module->tracks[pattern * module->numchn + trackIndex];
+				readNextCell(track, curRowInfo[trackIndex], runningRowInfo[trackIndex]);
+				if (ptnJump >= 0 || rowIndex >= ptnStart)
+					readCellFx(song.tracks[trackIndex].ticks[timeT], curRowInfo[trackIndex], runningRowInfo[trackIndex], sequenceIndex, rowIndex);
 			}
 			if (ptnJump == -1)
 			{
-				if (r < ptnStart)
+				if (rowIndex < ptnStart)
 					continue;
 				else
 					ptnStart = 0;
 			}
-			else if (ptnJump <= p)
+			else if (ptnJump <= sequenceIndex)
 				return;
 			tickDur = rowDur / curSongSpeed;
 			//Loop through channels/tracks
@@ -514,7 +514,7 @@ void ModReader::extractNotes()
 		
 			if (ptnJump >= 0)
 			{
-				p = ptnJump - 1;
+				sequenceIndex = ptnJump - 1;
 				break;
 			}
 		}
@@ -531,11 +531,11 @@ float ModReader::process()
 	
 	if (isFadingOut)
 	{
-		float fadeFactor = (FadeOutTimeS + timeS - songPosS) / FadeOutTimeS;
+		float fadeFactor = (float)((FadeOutTimeS + timeS - songPosS) / FadeOutTimeS);
 		for (auto& sample : audioBuffer)
 			sample *= fadeFactor;
 		wav.addSamples(audioBuffer);
-		return songPosS > (FadeOutTimeS + timeS) ? -1 : 1;
+		return songPosS > (FadeOutTimeS + timeS) ? -1.f : 1.f;
 	}
 
 	wav.addSamples(audioBuffer);
@@ -552,7 +552,7 @@ float ModReader::process()
 			return -1;
 	}
 	else
-		return min(1, songPosS / timeS);
+		return (float)min(1, songPosS / timeS);
 }
 
 void ModReader::finish()
