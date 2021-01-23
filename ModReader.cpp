@@ -359,18 +359,18 @@ double ModReader::getRowDur(double tempo, double speed)
 	return spr * speed / 6;
 }
 
-void ModReader::beginProcessing(const Args &_args)
+void ModReader::beginProcessing(const UserArgs &args)
 {
-	SongReader::beginProcessing();
-	args = _args;
+	SongReader::beginProcessing(args);
 	string cmdLine;
-	BOOL mixdown = args.audioPath[0] > 0;
+	BOOL mixdown = userArgs.audioPath[0] > 0;
 
 	md_device = 2; //nosound driver
 	if (mixdown)
 	{
+		
 		md_device = 1; //wav writer
-		cmdLine = "file=" + string(args.audioPath);
+		cmdLine = "file=" + string(userArgs.audioPath);
 	}
 
 	if (MikMod_Init(cmdLine.c_str()))
@@ -379,7 +379,7 @@ void ModReader::beginProcessing(const Args &_args)
 		OutputDebugStringA(err.c_str());
 		assert(false);
 	}
-	module = Player_Load(args.inputPath, 64, 0);
+	module = Player_Load(userArgs.inputPath, 64, 0);
 
 	if (module)
 	{
@@ -408,7 +408,7 @@ void ModReader::beginProcessing(const Args &_args)
 			marSong->tracks[i].numNotes = 0;
 		//-----------------------------------
 
-		if (args.insTrack)	//One track per instrument/sample
+		if (userArgs.insTrack)	//One track per instrument/sample
 		{
 			if (module->instruments)
 			{
@@ -506,7 +506,7 @@ void ModReader::beginProcessing(const Args &_args)
 		}
 		marSong->songLengthT = timeT;
 
-		if (args.audioPath[0])
+		if (userArgs.audioPath[0])
 		{
 			module->loop = false; //Don't allow backwards loops
 			Player_Start(module);
@@ -522,12 +522,12 @@ void ModReader::beginProcessing(const Args &_args)
 		throw err.str();
 	}
 	marSong->ticksPerBeat = 24;
-	song.createNoteList(args);
+	song.createNoteList(userArgs);
 }
 
 float ModReader::process()
 {
-	if (args.audioPath[0] && Player_Active() && module->sngtime < timeS * 1024) //break if last pattern has a pattern-break
+	if (userArgs.audioPath[0] && Player_Active() && module->sngtime < timeS * 1024) //break if last pattern has a pattern-break
 	{
 		MikMod_Update();
 		return (float)module->sngpos / module->numpos;
@@ -540,6 +540,7 @@ float ModReader::process()
 
 void ModReader::finish()
 {
+	SongReader::finish();
 	Player_Stop();
 	Player_Free(module);
 	module = 0;

@@ -3,9 +3,6 @@
 #include <mikmod_internals.h>
 #include <cmath>
 
-using namespace std;
-
-
 const int MAX_PATH_LENGTH = 256;
 
 const int MAX_TEMPOEVENTS = 10000;
@@ -56,7 +53,7 @@ struct Marshal_Song
 	Marshal_SongType songType;
 };
 
-struct Args
+struct UserArgs
 {
 	char *inputPath;
 	char *audioPath;
@@ -72,7 +69,7 @@ extern "C"
 {
 	__declspec(dllexport) void initLib();
 	__declspec(dllexport) void closeLib();
-	__declspec(dllexport) BOOL beginProcessing(Args &a);
+	__declspec(dllexport) BOOL beginProcessing(UserArgs &a);
 	__declspec(dllexport) float process();
 	__declspec(dllexport) void finish();
 }

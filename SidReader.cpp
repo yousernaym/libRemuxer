@@ -1,4 +1,3 @@
-#include "Wav.h"
 #include "SidReader.h"
 
 #include <fcntl.h>
@@ -22,7 +21,7 @@
 #define BASIC_PATH   "roms\\basic.901226-01.bin"
 #define CHARGEN_PATH "roms\\characters.901225-01.bin"
 
-std::map<int, string> waveformNames = { {1, "Triangle"}, {2, "Sawtooth"}, {4, "Pulse"}, {8, "Noise"} };
+std::map<int, std::string> waveformNames = { {1, "Triangle"}, {2, "Sawtooth"}, {4, "Pulse"}, {8, "Noise"} };
 std::set<int> usedWaveformCombos;
 
 
@@ -57,9 +56,9 @@ SidReader::~SidReader()
  * Load ROM dump from file.
  * Allocate the buffer if file exists, otherwise return 0.
  */
-vector<char> SidReader::loadRom(const char* path, size_t romSize)
+std::vector<char> SidReader::loadRom(const char* path, size_t romSize)
 {
-	vector<char> buffer;
+	std::vector<char> buffer;
 	std::ifstream is(path, std::ios::binary);
 	if (is.good())
 	{
@@ -69,15 +68,14 @@ vector<char> SidReader::loadRom(const char* path, size_t romSize)
 	is.close();
 	return buffer;
 }
-void SidReader::beginProcess(Args &_args)
+void SidReader::beginProcess(UserArgs &args)
 {
-	SongReader::beginProcessing();
-	args = _args;
+	SongReader::beginProcessing(args);
 	//args.songLengthS = 3;
-	if (args.songLengthS == 0)
-		args.songLengthS = 300;
+	if (userArgs.songLengthS == 0)
+		userArgs.songLengthS = 300;
 	float fadeOutS = 7;
-	args.songLengthS += fadeOutS;
+	userArgs.songLengthS += fadeOutS;
 
 	song.marSong->ticksPerBeat = 240; 
 	song.marSong->tempoEvents[0].tempo = 125;
@@ -88,13 +86,13 @@ void SidReader::beginProcess(Args &_args)
 	song.tracks.resize(3);
 	for (int i = 0; i < 3; i++)
 	{
-		song.tracks[i].ticks.resize(int((args.songLengthS + (float)sampleBuffer.size() / sampleRate) * ticksPerSeconds) + 1);
-		if (!args.insTrack)
+		song.tracks[i].ticks.resize(int((userArgs.songLengthS + (float)sampleBuffer.size() / sampleRate) * ticksPerSeconds) + 1);
+		if (!userArgs.insTrack)
 			sprintf_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
 	}
 		
 	// Load tune from file
-	std::unique_ptr<SidTune> tune(new SidTune(args.inputPath));
+	std::unique_ptr<SidTune> tune(new SidTune(userArgs.inputPath));
 	
 	// CHeck if the tune is valid
 	if (!tune->getStatus())
@@ -111,10 +109,10 @@ void SidReader::beginProcess(Args &_args)
 		minFreq = 279;
 		maxFreq = 65535;
 	}
-	_args.numSubSongs = tuneInfo->songs();
+	args.numSubSongs = tuneInfo->songs();
 	
 	// Select default song
-	_args.subSong = tune->selectSong(args.subSong);
+	args.subSong = tune->selectSong(userArgs.subSong);
 	
 	// Configure the engine
 	SidConfig cfg;
@@ -124,7 +122,7 @@ void SidReader::beginProcess(Args &_args)
 	cfg.fastSampling = false;
 	cfg.playback = SidConfig::MONO;
 	cfg.sidEmulation = rs.get();
-	cfg.disableAudio = args.audioPath[0] == 0;
+	cfg.disableAudio = userArgs.audioPath[0] == 0;
 	//cfg.forceSidModel = true;
 	//cfg.forceC64Model = true;
 	//cfg.defaultC64Model = SidConfig::c64_model_t::DREAN;
@@ -137,12 +135,10 @@ void SidReader::beginProcess(Args &_args)
 	if (!engine.load(tune.get()))
 		throw engine.error();
 
-	wav.clearSamples();
-	
 	timeS = 0;
 	oldTimeT = 0;
 	samplesProcessed = 0;
-	samplesToProcess = (int)(sampleRate * args.songLengthS);
+	samplesToProcess = (int)(sampleRate * userArgs.songLengthS);
 	samplesBeforeFadeout = samplesToProcess - (int)(fadeOutS * sampleRate);
 }
 
@@ -185,7 +181,7 @@ float SidReader::process()
 	}
 
 	oldTimeT = timeT;
-	if (args.audioPath[0] != 0)
+	if (userArgs.audioPath[0] != 0)
 	{
 		//Fade out
 		if (samplesProcessed > samplesBeforeFadeout)
@@ -208,10 +204,9 @@ float SidReader::process()
 
 void SidReader::finish()
 {
-	if (args.audioPath[0] != 0)
-		wav.saveFile(args.audioPath);
+	SongReader::finish();
 	
-	if (args.insTrack)
+	if (userArgs.insTrack)
 	{
 		//Use waveform names as track names
 		int t = 1;
@@ -231,7 +226,7 @@ void SidReader::finish()
 			t++;
 		}
 	}
-	song.createNoteList(args, &usedWaveformCombos);
+	song.createNoteList(userArgs, &usedWaveformCombos);
 }
 
 

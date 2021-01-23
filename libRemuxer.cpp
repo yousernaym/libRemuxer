@@ -1,5 +1,5 @@
 #include <string>
-#include "Remuxer.h"
+#include "libRemuxer.h"
 #include "Song.h"
 #include "ModReader.h"
 #include "sidreader.h"
@@ -9,7 +9,7 @@ Song song(&marshalSong);
 SongReader *songReader;
 ModReader modReader(song);
 SidReader sidReader(song);
-Args args;
+UserArgs args;
 
 void initLib()
 {
@@ -53,7 +53,7 @@ void closeLib()
 
 //const int MAX_EFFECTS_PER_CELL = 10;
 
-BOOL beginProcessing(Args &a)
+BOOL beginProcessing(UserArgs &a)
 {
 	args.insTrack = a.insTrack;
 	//args.insTrack = true;

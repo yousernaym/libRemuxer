@@ -238,7 +238,7 @@
     <ClCompile Include="libsidplayfp-readNotes\src\utils\SidDatabase.cpp" />
     <ClCompile Include="libsidplayfp-readNotes\src\utils\STILview\stil.cpp" />
     <ClCompile Include="mpt_example.cpp" />
-    <ClCompile Include="Remuxer.cpp" />
+    <ClCompile Include="libRemuxer.cpp" />
     <ClCompile Include="ModReader.cpp" />
     <ClCompile Include="SidReader.cpp" />
     <ClCompile Include="Song.cpp" />
@@ -340,7 +340,7 @@
     <ClInclude Include="libsidplayfp-readNotes\src\utils\SidDatabase.h" />
     <ClInclude Include="libsidplayfp-readNotes\src\utils\STILview\stil.h" />
     <ClInclude Include="libsidplayfp-readNotes\src\utils\STILview\stildefs.h" />
-    <ClInclude Include="Remuxer.h" />
+    <ClInclude Include="libRemuxer.h" />
     <ClInclude Include="ModReader.h" />
     <ClInclude Include="SidReader.h" />
     <ClInclude Include="Song.h" />

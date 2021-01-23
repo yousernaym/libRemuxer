@@ -7,7 +7,7 @@ Song::Song(Marshal_Song *_marSong)
 	marSong = _marSong;
 }
 
-void Song::createNoteList(const Args &args, const std::set<int> *usedInstruments)
+void Song::createNoteList(const UserArgs &args, const std::set<int> *usedInstruments)
 {
 	int resolutionScale = 480 / marSong->ticksPerBeat;
 	marSong->ticksPerBeat = marSong->ticksPerBeat * resolutionScale;;
@@ -65,7 +65,7 @@ void Song::createNoteList(const Args &args, const std::set<int> *usedInstruments
 					notes.resize(track + 1);
 				notes[track].insert(note);
 				if (notes[track].size() >= MAX_TRACKNOTES)
-					throw (string)"Too many notes in track";
+					throw (std::string)"Too many notes in track";
 
 				if (marSong->maxPitch < note.pitch)
 					marSong->maxPitch = note.pitch;
@@ -93,7 +93,7 @@ void Song::createNoteList(const Args &args, const std::set<int> *usedInstruments
 		saveMidiFile(args.midiPath);
 }
 
-void Song::saveMidiFile(const string &path)
+void Song::saveMidiFile(const std::string &path)
 {
 	createFile(path);
 	outFile << "MThd";
@@ -131,7 +131,7 @@ void Song::saveMidiFile(const string &path)
 			writeBE(2, 0xff03); //Track name event type
 			writeVL((unsigned)strlen(track.name)); //Length of track name
 			outFile << track.name;
-			map<int, vector<MidiNoteEvent>> noteEvents;
+			std::map<int, std::vector<MidiNoteEvent>> noteEvents;
 			createNoteEvents(&noteEvents, track);
 			for each (const auto &eventsAtTime in noteEvents)
 			{
@@ -169,7 +169,7 @@ void Song::writeVL(unsigned value)
 	writeBE(numBytes, buffer);
 }
 
-void Song::createNoteEvents(map<int, vector<MidiNoteEvent>> *noteEvents, Marshal_Track track)
+void Song::createNoteEvents(std::map<int, std::vector<MidiNoteEvent>> *noteEvents, Marshal_Track track)
 {
 	for (int i = 0; i < track.numNotes; i++)
 	{

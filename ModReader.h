@@ -2,7 +2,7 @@
 #include <mikmod.h>
 #include <mikmod_internals.h>
 #include "song.h"
-#include "remuxer.h"
+#include "libRemuxer.h"
 #include "SongReader.h"
 
 using namespace std;
@@ -134,7 +134,6 @@ struct RunningCellInfo
 
 class ModReader : public SongReader
 {
-	Args args;
 	const double semitone = 1.0594630943593; //12th root of 2
 	vector<RunningCellInfo> runningRowInfo;
 	vector<CellInfo> curRowInfo;
@@ -159,8 +158,8 @@ public:
 	void readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, RunningCellInfo &runningCellInfo, int songPos, int row);
 	void updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo);
 	void updateCellTicks(Song::Track &track, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo);
-	void beginProcessing(const Args &_args);
-	float process();
-	void finish();
+	void beginProcessing(const UserArgs &args);
+	float process() override;
+	void finish() override;
 };
 

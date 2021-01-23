@@ -6,23 +6,29 @@
 class SongReader
 {
 protected:
+	UserArgs userArgs;
 	const int sampleRate = 48000;
 	Song &song;
-	Wav wav;
 	std::vector<SampleType> sampleBuffer;
+	Wav wav;
+	
+	void beginProcessing(const UserArgs& args)
+	{
+		userArgs = args;
+		wav.clearSamples();
+		std::fill(sampleBuffer.begin(), sampleBuffer.end(), 0);
+	}
 public:
 	SongReader(Song& song, bool stereo) :
 		song(song), wav(stereo, sampleRate), sampleBuffer(500)
 	{
-
 	}
 	virtual ~SongReader() {}
-	void beginProcessing()
-	{
-		wav.clearSamples();
-		sampleBuffer.clear();
-	}
 	virtual float process() = 0;
-	virtual void finish() = 0;
+	virtual void finish()
+	{
+		if (userArgs.audioPath[0] != 0)
+			wav.saveFile(userArgs.audioPath);
+	}
 };
 

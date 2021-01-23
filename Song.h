@@ -2,9 +2,9 @@
 #include <set>
 #include <vector>
 #include <map>
-#include "Remuxer.h"
+#include "libRemuxer.h"
 #include "FileFormat.h"
-typedef multiset<Marshal_Note> TrackNotes;
+typedef std::multiset<Marshal_Note> TrackNotes;
 //typedef vector<TrackNotes> Notes;
 
 struct RunningTickInfo
@@ -25,21 +25,21 @@ struct MidiNoteEvent
 class Song : FileFormat
 {
 private:
-	vector<TrackNotes> notes;
+	std::vector<TrackNotes> notes;
 	void writeVL(unsigned value); //Write variable length value to file
-	void createNoteEvents(map<int, vector<MidiNoteEvent>> *noteEvents, Marshal_Track track);
+	void createNoteEvents(std::map<int, std::vector<MidiNoteEvent>> *noteEvents, Marshal_Track track);
 public:
 	struct Track;
-	vector<Track> tracks;
+	std::vector<Track> tracks;
 	Marshal_Song *marSong;
 	Song(Marshal_Song *_marSong);
-	void createNoteList(const Args &args, const std::set<int> *usedInstruments = nullptr);
-	void saveMidiFile(const string &path);
+	void createNoteList(const UserArgs &args, const std::set<int> *usedInstruments = nullptr);
+	void saveMidiFile(const std::string &path);
 };
 
 struct Song::Track
 {
-	vector<RunningTickInfo> ticks;
+	std::vector<RunningTickInfo> ticks;
 	RunningTickInfo *getPrevTick(unsigned curTick)
 	{
 		return &ticks[curTick > 0 ? curTick - 1 : curTick];

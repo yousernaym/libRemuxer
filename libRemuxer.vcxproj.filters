@@ -24,9 +24,6 @@
     <ClCompile Include="SidReader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Remuxer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="FileFormat.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -189,6 +186,9 @@
     <ClCompile Include="mpt_example.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="libRemuxer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ModReader.h">
@@ -201,9 +201,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Wav.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Remuxer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FileFormat.h">
@@ -495,6 +492,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="libsidplayfp-readNotes\src\stringutils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="libRemuxer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
