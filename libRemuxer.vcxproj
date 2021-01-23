@@ -237,7 +237,6 @@
     <ClCompile Include="libsidplayfp-readNotes\src\utils\MD5\MD5.cpp" />
     <ClCompile Include="libsidplayfp-readNotes\src\utils\SidDatabase.cpp" />
     <ClCompile Include="libsidplayfp-readNotes\src\utils\STILview\stil.cpp" />
-    <ClCompile Include="mpt_example.cpp" />
     <ClCompile Include="libRemuxer.cpp" />
     <ClCompile Include="ModReader.cpp" />
     <ClCompile Include="SidReader.cpp" />

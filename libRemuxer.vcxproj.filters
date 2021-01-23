@@ -183,9 +183,6 @@
     <ClCompile Include="libsidplayfp-readNotes\src\sidemu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="mpt_example.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="libRemuxer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

@@ -135,6 +135,7 @@ struct RunningCellInfo
 class ModReader : public SongReader
 {
 	const double semitone = 1.0594630943593; //12th root of 2
+	const int FadeOutTimeS = 7;
 	std::vector<RunningCellInfo> runningRowInfo;
 	std::vector<CellInfo> curRowInfo;
 	MODULE *module = 0;
@@ -149,6 +150,7 @@ class ModReader : public SongReader
 	int ptnStart = 0;
 	//Loop loop;
 	Marshal_Song *marSong;
+	bool isFadingOut;
 public:
 	ModReader(Song &song);
 	~ModReader();

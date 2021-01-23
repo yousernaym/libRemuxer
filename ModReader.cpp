@@ -4,6 +4,7 @@
 #include <string>
 #include <iostream>
 #include <assert.h>
+#include <algorithm>
 
 void ModReader::sInit()
 {
@@ -362,19 +363,19 @@ double ModReader::getRowDur(double tempo, double speed)
 void ModReader::beginProcessing(const UserArgs &args)
 {
 	SongReader::beginProcessing(args);
+	isFadingOut = false;
 	std::string cmdLine;
 	BOOL mixdown = userArgs.audioPath[0] > 0;
+	md_device = 2; //nosound libmikmod driver
 
-	md_device = 2; //nosound driver
 	if (mixdown)
 	{
 		std::ifstream file(userArgs.inputPath, std::ios::binary);
 		omptModule = std::make_unique<openmpt::module>(file);
 		file.close();
-		
-		md_device = 1; //wav writer
-		cmdLine = "file=" + std::string("libmikmod.wav");
-	}
+		omptModule->ctl_set("play.at_end", "continue");
+		omptModule->ctl_get_text("play.at_end");
+	}		
 
 	if (MikMod_Init(cmdLine.c_str()))
 	{
@@ -530,25 +531,35 @@ void ModReader::beginProcessing(const UserArgs &args)
 
 float ModReader::process()
 {
-//	if (userArgs.audioPath[0] && Player_Active() && module->sngtime < timeS * 1024) //break if last pattern has a pattern-break
-//	{
-//		MikMod_Update();
-//		return (float)module->sngpos / module->numpos;
-//	}
-	if (userArgs.audioPath[0])
+	if (!userArgs.audioPath[0])
+		return -1;
+	
+	float songPosS = (float)omptModule->get_position_seconds();
+	std::size_t count = omptModule->read_interleaved_stereo(sampleRate, audioBuffer.size() / 2, audioBuffer.data());
+	
+	if (isFadingOut)
 	{
-		float songPosS = (float)omptModule->get_position_seconds();
-		std::size_t count = omptModule->read_interleaved_stereo(sampleRate, audioBuffer.size() / 2, audioBuffer.data());
+		float fadeFactor = (FadeOutTimeS + timeS - songPosS) / FadeOutTimeS;
+		for (auto& sample : audioBuffer)
+			sample *= fadeFactor;
 		wav.addSamples(audioBuffer);
-		if (count == 0)
-			return -1;
+		return songPosS > (FadeOutTimeS + timeS) ? -1 : 1;
+	}
+
+	wav.addSamples(audioBuffer);
+
+	if (count == 0) //end of song
+	{	//If there is audio at song end, loop and fade out
+		if (std::any_of(audioBuffer.begin(), audioBuffer.end(), [](SampleType sample) {return sample != 0; }))
+		{
+			isFadingOut = true;
+			return 1;
+		}
 		else
-			return songPosS / timeS;
+			return -1;
 	}
 	else
-	{
-		return -1;
-	}
+		return min(1, songPosS / timeS);
 }
 
 void ModReader::finish()
