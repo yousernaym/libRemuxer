@@ -158,7 +158,7 @@ public:
 	void getCellRepLen(BYTE replen, int &repeat, int &length);
 	double getRowDur(double tempo, double speed);
 	void readNextCell(BYTE *track, CellInfo &cellInfo, RunningCellInfo &runningCellInfo);
-	void readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, RunningCellInfo &runningCellInfo, int songPos, int row);
+	bool readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, RunningCellInfo &runningCellInfo, int songPos, int row);
 	void updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo);
 	void updateCellTicks(Song::Track &track, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo);
 	void extractNotes();

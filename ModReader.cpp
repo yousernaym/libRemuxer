@@ -198,7 +198,8 @@ void ModReader::readNextCell(BYTE *track, CellInfo &cellInfo, RunningCellInfo &r
 		runningCellInfo.repeatsLeft--;
 }
 
-void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, RunningCellInfo &runningCellInfo, int pattern, int row)
+//Returns false to indicate end of song if a BXX command jumps backwards, otherwise true
+bool ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, RunningCellInfo &runningCellInfo, int pattern, int row)
 {
 	for (int i = 0; i < cellInfo.numEffs; i++)
 	{
@@ -253,8 +254,8 @@ void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 		else if (cellInfo.eff[i] == UNI_PTEFFECTB)
 		{
 			ptnJump = effValues[0];
-			//if (ptnJump <= pattern)
-				//ptnJump = -1;
+			if (ptnJump <= pattern)
+				return false;
 		}
 		else if (cellInfo.eff[i] == UNI_PTEFFECTD)
 		{
@@ -345,6 +346,7 @@ void ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 			}
 		}
 	}
+	return true;
 }
 
 void ModReader::getCellRepLen(BYTE replen, int &repeat, int &length)
@@ -487,7 +489,10 @@ void ModReader::extractNotes()
 				BYTE* track = module->tracks[pattern * module->numchn + trackIndex];
 				readNextCell(track, curRowInfo[trackIndex], runningRowInfo[trackIndex]);
 				if (ptnJump >= 0 || rowIndex >= ptnStart)
-					readCellFx(song.tracks[trackIndex].ticks[timeT], curRowInfo[trackIndex], runningRowInfo[trackIndex], sequenceIndex, rowIndex);
+				{
+					if (!readCellFx(song.tracks[trackIndex].ticks[timeT], curRowInfo[trackIndex], runningRowInfo[trackIndex], sequenceIndex, rowIndex))
+						return;
+				}
 			}
 			if (ptnJump == -1)
 			{
@@ -496,8 +501,7 @@ void ModReader::extractNotes()
 				else
 					ptnStart = 0;
 			}
-			else if (ptnJump <= sequenceIndex)
-				return;
+
 			tickDur = rowDur / curSongSpeed;
 			//Loop through channels/tracks
 			for (int t = 0; t < module->numchn; t++)
@@ -506,7 +510,6 @@ void ModReader::extractNotes()
 				RunningTickInfo* curTick = &song.tracks[t].ticks[timeT];
 				updateCell(*curTick, curRowInfo[t], runningRowInfo[t]);
 				updateCellTicks(song.tracks[t], curRowInfo[t], runningRowInfo[t]);
-
 			}
 
 			timeT += curSongSpeed * (ptnDelay + 1);
