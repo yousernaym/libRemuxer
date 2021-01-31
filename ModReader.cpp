@@ -51,23 +51,28 @@ void ModReader::updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo,
 		firstTick.ins = ins;
 		if (module->instruments)
 		{
-			INSTRUMENT instrument = module->instruments[ins - 1];
-			smpIndex = instrument.samplenumber[note - 1];
-			if (smpIndex != UWORD(-1))
+			INSTRUMENT *instrument = nullptr;
+			if (ins < module->numins)
 			{
-				if (module->instruments[ins - 1].volflg == 1  //volenv on but not sustain or loop
-					&& instrument.volenv[instrument.volpts - 1].val == 0)  //last env point = 0
+				instrument = &module->instruments[ins - 1];
+				smpIndex = instrument->samplenumber[note - 1];
+			}
+			
+			if (instrument && smpIndex != UWORD(-1))
+			{
+				if (instrument->volflg == 1  //volenv on but not sustain or loop
+					&& instrument->volenv[instrument->volpts - 1].val == 0)  //last env point = 0
 				{
-					runningCellInfo.volEnvEnd = instrument.volenv[instrument.volpts - 1].pos;
+					runningCellInfo.volEnvEnd = instrument->volenv[instrument->volpts - 1].pos;
 				}
-				runningCellInfo.startVol = instrument.globvol;
+				runningCellInfo.startVol = instrument->globvol;
 			}
 			else
 				runningCellInfo.samplePlaying = false;
 		}
 		else
 			smpIndex = ins - 1;
-		if (smpIndex >= 0)
+		if (smpIndex >= 0 && smpIndex < module->numsmp)
 		{
 			SAMPLE sample = module->samples[smpIndex];
 			runningCellInfo.loopSample = (sample.flags & SF_LOOP) == SF_LOOP;
@@ -76,7 +81,9 @@ void ModReader::updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo,
 			if (runningCellInfo.sampleLength == 0 || runningCellInfo.loopSample && sample.loopend > 0 && sample.loopend <= cellInfo.sampleOffset)
 				runningCellInfo.samplePlaying = false;
 		}
-		
+		else
+			runningCellInfo.samplePlaying = false;
+
 		runningCellInfo.sampleStartS = timeS;
 		if (cellInfo.ins)
 			runningCellInfo.ins = cellInfo.ins;
@@ -480,7 +487,8 @@ void ModReader::extractNotes()
 		for (int t = 0; t < module->numchn; t++)
 			runningRowInfo[t].offset = runningRowInfo[t].repeatsLeft = 0;
 		//Loop through rows
-		for (int rowIndex = 0; rowIndex < module->pattrows[pattern]; rowIndex++)
+		int numRows = module->pattrows[pattern];
+		for (int rowIndex = 0; rowIndex < numRows; rowIndex++)
 		{
 			ptnDelay = 0;
 			//Loop through channels/tracks
