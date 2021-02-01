@@ -23,9 +23,9 @@
 
 std::map<int, std::string> waveformNames = { {1, "Triangle"}, {2, "Sawtooth"}, {4, "Pulse"}, {8, "Noise"} };
 std::set<int> usedWaveformCombos;
+const bool USE_STEREO = false;
 
-
-SidReader::SidReader(Song &song) : SongReader(song, false)
+SidReader::SidReader(Song &song) : SongReader(song, USE_STEREO)
 {
 	// Load ROM files
 	auto kernal = loadRom(KERNAL_PATH, 8192);
@@ -120,7 +120,7 @@ void SidReader::beginProcess(UserArgs &args)
 	//cfg.samplingMethod = SidConfig::INTERPOLATE;
 	cfg.samplingMethod = SidConfig::RESAMPLE_INTERPOLATE;
 	cfg.fastSampling = false;
-	cfg.playback = SidConfig::MONO;
+	cfg.playback = USE_STEREO ? SidConfig::STEREO : SidConfig::MONO;
 	cfg.sidEmulation = rs.get();
 	cfg.disableAudio = userArgs.audioPath[0] == 0;
 	//cfg.forceSidModel = true;
@@ -146,6 +146,8 @@ float SidReader::process()
 {
 	samplesProcessed += engine.play(audioBuffer.data(), (uint_least32_t)audioBuffer.size());
 	timeS = (float)samplesProcessed / sampleRate;
+	if (USE_STEREO)
+		timeS /= 2;
 	int timeT = (int)(timeS * ticksPerSeconds);
 	if (timeT > oldTimeT)
 	{
