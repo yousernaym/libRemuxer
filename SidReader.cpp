@@ -23,7 +23,7 @@
 
 std::map<int, std::string> waveformNames = { {1, "Triangle"}, {2, "Sawtooth"}, {4, "Pulse"}, {8, "Noise"} };
 std::set<int> usedWaveformCombos;
-const bool USE_STEREO = false;
+const bool USE_STEREO = true;
 
 SidReader::SidReader(Song &song) : SongReader(song, USE_STEREO)
 {
