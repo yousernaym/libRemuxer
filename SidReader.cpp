@@ -24,6 +24,7 @@
 std::map<int, std::string> waveformNames = { {1, "Triangle"}, {2, "Sawtooth"}, {4, "Pulse"}, {8, "Noise"} };
 std::set<int> usedWaveformCombos;
 const bool USE_STEREO = true;
+const int AUDIO_CHANNEL_COUNT = USE_STEREO ? 2 : 1;
 
 SidReader::SidReader(Song &song) : SongReader(song, USE_STEREO)
 {
@@ -138,7 +139,7 @@ void SidReader::beginProcess(UserArgs &args)
 	timeS = 0;
 	oldTimeT = 0;
 	samplesProcessed = 0;
-	samplesToProcess = (int)(sampleRate * userArgs.songLengthS);
+	samplesToProcess = (int)(sampleRate * userArgs.songLengthS) * AUDIO_CHANNEL_COUNT;
 	samplesBeforeFadeout = samplesToProcess - (int)(fadeOutS * sampleRate);
 }
 
@@ -146,8 +147,7 @@ float SidReader::process()
 {
 	samplesProcessed += engine.play(audioBuffer.data(), (uint_least32_t)audioBuffer.size());
 	timeS = (float)samplesProcessed / sampleRate;
-	if (USE_STEREO)
-		timeS /= 2;
+	timeS /= AUDIO_CHANNEL_COUNT;
 	int timeT = (int)(timeS * ticksPerSeconds);
 	if (timeT > oldTimeT)
 	{
