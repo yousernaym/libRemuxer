@@ -181,6 +181,9 @@ void ModReader::readNextCell(BYTE *track, CellInfo &cellInfo, RunningCellInfo &r
 		while (rowDataOffset < cellLen + runningCellInfo.offset)
 		{
 			int opCode = track[rowDataOffset++];
+			if (opCode >= UNI_LAST)
+				continue;
+			
 			if (opCode == UNI_NOTE)
 			{
 				cellInfo.note = track[rowDataOffset++] + 1;
@@ -191,11 +194,9 @@ void ModReader::readNextCell(BYTE *track, CellInfo &cellInfo, RunningCellInfo &r
 			else
 			{
 				cellInfo.eff[cellInfo.numEffs] = opCode;
+				assert(unioperands[opCode] < MAX_EFFECT_VALUES);
 				for (int i = 0; i < unioperands[opCode]; i++)
-				{
-					assert(opCode < UNI_LAST && i < MAX_EFFECT_VALUES);
 					cellInfo.effValues[opCode][i] = track[rowDataOffset++];
-				}
 				cellInfo.numEffs++;
 			}
 		}
@@ -219,7 +220,6 @@ bool ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 				runningCellInfo.effValues[cellInfo.eff[i]][j] = cellInfo.effValues[cellInfo.eff[i]][j];
 			effValues[j] = runningCellInfo.effValues[cellInfo.eff[i]][j];
 		}
-
 
 		if (cellInfo.eff[i] == UNI_PTEFFECTF || cellInfo.eff[i] == UNI_S3MEFFECTA || cellInfo.eff[i] == UNI_S3MEFFECTT)
 		{ //Speed/tempo changes
@@ -391,6 +391,7 @@ void ModReader::beginProcessing(const UserArgs &args)
 		OutputDebugStringA(err.c_str());
 		assert(false);
 	}
+
 	module = Player_Load(userArgs.inputPath, 64, 0);
 
 	if (module)
@@ -476,6 +477,7 @@ void ModReader::beginProcessing(const UserArgs &args)
 	song.createNoteList(userArgs);
 }
 
+
 void ModReader::extractNotes()
 {
 	//Loop through patterns
@@ -496,6 +498,7 @@ void ModReader::extractNotes()
 			{
 				BYTE* track = module->tracks[pattern * module->numchn + trackIndex];
 				readNextCell(track, curRowInfo[trackIndex], runningRowInfo[trackIndex]);
+		
 				if (ptnJump >= 0 || rowIndex >= ptnStart)
 				{
 					if (!readCellFx(song.tracks[trackIndex].ticks[timeT], curRowInfo[trackIndex], runningRowInfo[trackIndex], sequenceIndex, rowIndex))
