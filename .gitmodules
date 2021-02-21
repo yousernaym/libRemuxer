@@ -2,3 +2,7 @@
 	path = libsidplayfp-readNotes
 	url = https://github.com/yousernaym/libsidplayfp-readNotes.git
 	branch = master
+[submodule "mikmod"]
+	path = mikmod
+	url = https://github.com/yousernaym/mikmod.git
+	branch = ForkMaster
