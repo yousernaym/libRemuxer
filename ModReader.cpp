@@ -181,8 +181,8 @@ void ModReader::readNextCell(BYTE *track, CellInfo &cellInfo, RunningCellInfo &r
 		while (rowDataOffset < cellLen + runningCellInfo.offset)
 		{
 			int opCode = track[rowDataOffset++];
-			assert(opCode >= 0);
-			if (opCode >= UNI_LAST || opCode < 0)
+			assert(opCode > 0);
+			if (opCode >= UNI_LAST || opCode <= 0)
 				continue;
 						
 			if (opCode == UNI_NOTE)
