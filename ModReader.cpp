@@ -469,6 +469,8 @@ void ModReader::beginProcessing(const UserArgs &args)
 	}
 	MikMod_Exit();
 	marSong->ticksPerBeat = 24;
+	if (song.tracks.empty())
+		throw "Empty song";
 	song.createNoteList(userArgs);
 }
 

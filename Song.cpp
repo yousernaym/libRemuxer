@@ -14,7 +14,7 @@ void Song::createNoteList(const UserArgs &args, const std::set<int> *usedInstrum
 	marSong->minPitch = MAX_PITCHES;
 	marSong->maxPitch = 0;
 	notes.reserve(MAX_MIDITRACKS);
-	marSong->songLengthT = (int)tracks[1].ticks.size() * resolutionScale;
+	marSong->songLengthT = (int)tracks[0].ticks.size() * resolutionScale;
 	for (unsigned i = 0; i < tracks.size(); i++)
 	{
 		for (unsigned j = 0; j < tracks[i].ticks.size(); j++)
