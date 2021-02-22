@@ -181,9 +181,10 @@ void ModReader::readNextCell(BYTE *track, CellInfo &cellInfo, RunningCellInfo &r
 		while (rowDataOffset < cellLen + runningCellInfo.offset)
 		{
 			int opCode = track[rowDataOffset++];
-			if (opCode >= UNI_LAST)
+			assert(opCode >= 0);
+			if (opCode >= UNI_LAST || opCode < 0)
 				continue;
-			
+						
 			if (opCode == UNI_NOTE)
 			{
 				cellInfo.note = track[rowDataOffset++] + 1;
@@ -194,7 +195,6 @@ void ModReader::readNextCell(BYTE *track, CellInfo &cellInfo, RunningCellInfo &r
 			else
 			{
 				cellInfo.eff[cellInfo.numEffs] = opCode;
-				assert(unioperands[opCode] < MAX_EFFECT_VALUES);
 				for (int i = 0; i < unioperands[opCode]; i++)
 					cellInfo.effValues[opCode][i] = track[rowDataOffset++];
 				cellInfo.numEffs++;
@@ -456,23 +456,18 @@ void ModReader::beginProcessing(const UserArgs &args)
 
 		extractNotes();
 		
+		Player_Free(module);
+		module = 0;
 		marSong->songLengthT = timeT;
-
-		if (userArgs.audioPath[0])
-		{
-			module->loop = false; //Don't allow backwards loops
-			Player_Start(module);
-		}
-
 	}
 	else
 	{
-		MikMod_Exit();
 		std::ostringstream err;
 		err << "Could not load module, reason: " << MikMod_strerror(MikMod_errno);
 		OutputDebugStringA(err.str().c_str());
 		throw err.str();
 	}
+	MikMod_Exit();
 	marSong->ticksPerBeat = 24;
 	song.createNoteList(userArgs);
 }
@@ -573,10 +568,6 @@ void ModReader::finish()
 {
 	SongReader::finish();
 	omptModule.reset();
-	Player_Stop();
-	Player_Free(module);
-	module = 0;
-	MikMod_Exit();
 }
 
 //----------------------------------------
