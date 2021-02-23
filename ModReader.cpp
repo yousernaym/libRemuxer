@@ -52,7 +52,7 @@ void ModReader::updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo,
 		if (module->instruments)
 		{
 			INSTRUMENT *instrument = nullptr;
-			if (ins < module->numins)
+			if (ins > 0 > && ins - 1 < module->numins)
 			{
 				instrument = &module->instruments[ins - 1];
 				smpIndex = instrument->samplenumber[note - 1];
