@@ -36,7 +36,7 @@ public:
 	}
 	virtual ~SongReader() {}
 	virtual float process() = 0;
-	virtual void finish()
+	virtual void endProcessing()
 	{
 		if (userArgs.audioPath[0] != 0)
 			wav.saveFile(userArgs.audioPath);

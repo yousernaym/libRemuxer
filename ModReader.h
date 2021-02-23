@@ -74,7 +74,6 @@ class ModReader : public SongReader
 public:
 	ModReader(Song &song);
 	~ModReader();
-	static void sInit();
 	void getCellRepLen(BYTE replen, int &repeat, int &length);
 	double getRowDur(double tempo, double speed);
 	void readNextCell(BYTE *track, CellInfo &cellInfo, RunningCellInfo &runningCellInfo);
@@ -84,6 +83,6 @@ public:
 	void extractNotes();
 	void beginProcessing(const UserArgs &args);
 	float process() override;
-	void finish() override;
+	void endProcessing() override;
 };
 

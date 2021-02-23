@@ -204,9 +204,9 @@ float SidReader::process()
 	}
 }
 
-void SidReader::finish()
+void SidReader::endProcessing()
 {
-	SongReader::finish();
+	SongReader::endProcessing();
 	
 	if (userArgs.insTrack)
 	{

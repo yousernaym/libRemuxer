@@ -5,29 +5,29 @@
 #include <iostream>
 #include <assert.h>
 #include <algorithm>
+#include <fstream>
 
-void ModReader::sInit()
-{
-	MikMod_RegisterDriver(&drv_wav);
-	MikMod_RegisterDriver(&drv_nos);
-	MikMod_RegisterAllLoaders();
-	md_mode |= DMODE_SOFT_MUSIC | DMODE_HQMIXER | DMODE_16BITS | DMODE_INTERP;
-	//MikMod_RegisterDriver(&drv_win);
-	/*MikMod_RegisterLoader(&load_xm);
-	MikMod_RegisterLoader(&load_mod);
-	MikMod_RegisterLoader(&load_it);
-	MikMod_RegisterLoader(&load_s3m);
-	MikMod_RegisterLoader(&load_stm);*/
-	/* initialize the library */
-}
-
-ModReader::ModReader(Song &song) : SongReader(song, true, 480)
+ModReader::ModReader(Song& song) : SongReader(song, true, 480)
 {
 	marSong = song.marSong;
+	MikMod_RegisterDriver(&drv_nos);
+	MikMod_RegisterAllLoaders();
+	if (MikMod_Init(""))
+	{
+		std::string err = (std::string)"Could not initialize Mikmod, reason: " + (std::string)MikMod_strerror(MikMod_errno);
+		OutputDebugStringA(err.c_str());
+		throw "MikMod_Init failed";
+	}
 }
 
 ModReader::~ModReader()
 {
+	if (module)
+	{
+		Player_Free(module);
+		module = 0;
+	}
+	MikMod_Exit();
 }
 
 
@@ -52,7 +52,7 @@ void ModReader::updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo,
 		if (module->instruments)
 		{
 			INSTRUMENT *instrument = nullptr;
-			if (ins > 0 > && ins - 1 < module->numins)
+			if (ins > 0 && ins - 1 < module->numins)
 			{
 				instrument = &module->instruments[ins - 1];
 				smpIndex = instrument->samplenumber[note - 1];
@@ -383,14 +383,7 @@ void ModReader::beginProcessing(const UserArgs &args)
 		file.close();
 		omptModule->ctl_set_text("play.at_end", "continue");
 	}		
-
-	if (MikMod_Init(cmdLine.c_str()))
-	{
-		std::string err = (std::string)"Could not initialize Mikmod, reason: " + (std::string)MikMod_strerror(MikMod_errno);
-		OutputDebugStringA(err.c_str());
-		assert(false);
-	}
-
+	
 	module = Player_Load(userArgs.inputPath, 64, 0);
 
 	if (module)
@@ -466,7 +459,6 @@ void ModReader::beginProcessing(const UserArgs &args)
 		OutputDebugStringA(err.str().c_str());
 		throw err.str();
 	}
-	MikMod_Exit();
 	marSong->ticksPerBeat = 24;
 	if (song.tracks.empty())
 		throw "Empty song";
@@ -565,8 +557,8 @@ float ModReader::process()
 		return (float)min(1, songPosS / timeS);
 }
 
-void ModReader::finish()
+void ModReader::endProcessing()
 {
-	SongReader::finish();
+	SongReader::endProcessing();
 	omptModule.reset();
 }

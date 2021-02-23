@@ -13,8 +13,6 @@ UserArgs userArgs;
 
 void initLib()
 {
-	ModReader::sInit();
-	
 	ZeroMemory(&marshalSong, sizeof(Marshal_Song));
 	userArgs.inputPath = new char[MAX_PATH_LENGTH];
 	userArgs.audioPath = new char[MAX_PATH_LENGTH];
@@ -101,9 +99,9 @@ float process()
 	return songReader->process();
 }
 
-void finish()
+void endProcessing()
 {
-	songReader->finish();
+	songReader->endProcessing();
 }
 
 

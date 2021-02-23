@@ -25,6 +25,6 @@ public:
 	std::vector<char> loadRom(const char* path, size_t romSize);
 	void beginProcess(UserArgs &_args);
 	float process() override;
-	void finish() override;
+	void endProcessing() override;
 };
 
