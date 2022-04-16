@@ -571,6 +571,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalOptions>/wd4018 /wd4244 /wd4267 /wd4334 /wd6011 /wd6285 /wd6297 /wd6305 /wd6385 /wd6386 %(AdditionalOptions)</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -668,6 +669,7 @@
       <AdditionalOptions>/wd4018 /wd4244 /wd4267 /wd4334 /wd6011 /wd6285 /wd6297 /wd6305 /wd6385 /wd6386 %(AdditionalOptions)</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

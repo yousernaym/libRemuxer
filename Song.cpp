@@ -43,7 +43,7 @@ void Song::createNoteList(const UserArgs &args, const std::set<int> *usedInstrum
 					{
 						//Only create tracks for instruments that were actually used
 						int t = 1;
-						for each (int ins in *usedInstruments)
+						for (int ins : *usedInstruments)
 						{
 							if (ins == noteIns)
 								track = t;
@@ -133,9 +133,9 @@ void Song::saveMidiFile(const std::string &path)
 			outFile << track.name;
 			std::map<int, std::vector<MidiNoteEvent>> noteEvents;
 			createNoteEvents(&noteEvents, track);
-			for each (const auto &eventsAtTime in noteEvents)
+			for (const auto &eventsAtTime : noteEvents)
 			{
-				for each (const auto &noteEvent in eventsAtTime.second)
+				for (const auto &noteEvent : eventsAtTime.second)
 				{
 					writeVL(eventsAtTime.first - absoluteTime);
 					absoluteTime = eventsAtTime.first;

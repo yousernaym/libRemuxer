@@ -212,7 +212,7 @@ void SidReader::endProcessing()
 	{
 		//Use waveform names as track names
 		int t = 1;
-		for each(int waveformCombo in usedWaveformCombos)
+		for (int waveformCombo : usedWaveformCombos)
 		{
 			//First waveform
 			std::string trackName = waveformNames[waveformCombo & 1];
