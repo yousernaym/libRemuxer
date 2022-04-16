@@ -4,5 +4,5 @@
 	branch = ForkMaster
 [submodule "libsidplayfp"]
 	path = libsidplayfp
-	url = git@github.com:yousernaym/libsidplayfp.git
+	url = https://github.com/yousernaym/libsidplayfp.git
 	branch = master
