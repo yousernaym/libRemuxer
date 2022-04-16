@@ -81,8 +81,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp-readNotes\src\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp-readNotes\src\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp-readNotes\src\sidplayfp;$(VC_ProjectDir)libsidplayfp-readNotes\src;$(VC_ProjectDir)mikmod\libmikmod\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp\src;$(VC_ProjectDir)mikmod\libmikmod\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer;$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
   </PropertyGroup>
@@ -95,9 +95,10 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp-readNotes\src\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp-readNotes\src\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp-readNotes\src\sidplayfp;$(VC_ProjectDir)libsidplayfp-readNotes\src;$(VC_ProjectDir)mikmod\libmikmod\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp\src;$(VC_ProjectDir)mikmod\libmikmod\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer;$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
+    <ExecutablePath>$(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -130,7 +131,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>openmpt-ogg.lib;openmpt-vorbis.lib;libopenmpt.lib;openmpt-mpg123.lib;libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libsidplayfp.lib;openmpt-ogg.lib;openmpt-vorbis.lib;libopenmpt.lib;openmpt-mpg123.lib;libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)roms" "$(SolutionDir)$(Platform)\$(ConfigurationName)\remuxer\roms" /D /Y /I /E /S</Command>
@@ -176,7 +177,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>openmpt-ogg.lib;openmpt-vorbis.lib;libopenmpt.lib;openmpt-mpg123.lib;libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libsidplayfp.lib;openmpt-ogg.lib;openmpt-vorbis.lib;libopenmpt.lib;openmpt-mpg123.lib;libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
     </Link>
@@ -186,58 +187,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="FileFormat.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp-builder.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp-emu.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\Dac.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\EnvelopeGenerator.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\ExternalFilter.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\Filter.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\Filter6581.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\Filter8580.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\FilterModelConfig.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\FilterModelConfig8580.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\Integrator.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\Integrator8580.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\OpAmp.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\resample\SincResampler.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\SID.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\Spline.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\version.cc" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\WaveformCalculator.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\WaveformGenerator.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\c64\c64.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\c64\CIA\interrupt.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\c64\CIA\mos6526.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\c64\CIA\SerialPort.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\c64\CIA\timer.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\c64\CIA\tod.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\c64\CPU\mos6510.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\c64\CPU\mos6510debug.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\c64\mmu.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\c64\VIC_II\mos656x.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\EventScheduler.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\mixer.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\player.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\psiddrv.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\reloc65.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\sidemu.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\sidplayfp\sidbuilder.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\sidplayfp\SidConfig.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\sidplayfp\SidInfo.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\sidplayfp\sidplayfp.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\sidplayfp\SidTune.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\sidplayfp\SidTuneInfo.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\sidtune\MUS.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\sidtune\p00.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\sidtune\prg.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\sidtune\PSID.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\sidtune\SidTuneBase.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\sidtune\SidTuneTools.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\utils\iniParser.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\utils\md5Factory.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\utils\MD5\MD5.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\utils\SidDatabase.cpp" />
-    <ClCompile Include="libsidplayfp-readNotes\src\utils\STILview\stil.cpp" />
     <ClCompile Include="libRemuxer.cpp" />
     <ClCompile Include="ModReader.cpp" />
     <ClCompile Include="SidReader.cpp" />

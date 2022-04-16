@@ -1,4 +1,9 @@
 #pragma once
+
+//Needed for sidplayfp
+#define HAVE_CXX14
+#define HAVE_CXX11
+
 #include "song.h"
 #include "libRemuxer.h"
 #include "SongReader.h"
