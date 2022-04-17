@@ -10,10 +10,14 @@
 #include "stdafx.h"
 #include "Loaders.h"
 
-#ifndef NO_VST
+#ifdef MPT_WITH_VST
 #include "../mptrack/Vstplug.h"
 #include "plugins/PluginManager.h"
-#endif
+#endif  // MPT_WITH_VST
+#include "mpt/io/base.hpp"
+#include "mpt/io/io.hpp"
+#include "mpt/io/io_span.hpp"
+#include "mpt/io/io_stdstream.hpp"
 
 #include <map>
 
@@ -375,8 +379,9 @@ static TEMPO MMDTempoToBPM(uint32 tempo, bool is8Ch, bool bpmMode, uint8 rowsPer
 	if(is8Ch && tempo > 0)
 	{
 		LimitMax(tempo, 10u);
-		static constexpr uint8 tempos[10] = { 47, 43, 40, 37, 35, 32, 30, 29, 27, 26 };
-		tempo = tempos[tempo - 1];
+		// MED Soundstudio uses these tempos when importing old files
+		static constexpr uint8 tempos[10] = {179, 164, 152, 141, 131, 123, 116, 110, 104, 99};
+		return TEMPO(tempos[tempo - 1], 0);
 	} else if(tempo > 0 && tempo <= 10)
 	{
 		// SoundTracker compatible tempo
@@ -543,8 +548,11 @@ static void ConvertMEDEffect(ModCommand &m, bool is8ch, bool bpmMode, uint8 rows
 	case 0x20:  // Reverse sample + skip samples
 		if(m.param == 0 && m.vol == 0)
 		{
-			m.command = CMD_S3MCMDEX;
-			m.param = 0x9F;
+			if(m.IsNote())
+			{
+				m.command = CMD_S3MCMDEX;
+				m.param = 0x9F;
+			}
 		} else
 		{
 			// Skip given number of samples
@@ -580,10 +588,10 @@ static void ConvertMEDEffect(ModCommand &m, bool is8ch, bool bpmMode, uint8 rows
 	}
 }
 
-#ifndef NO_VST
+#ifdef MPT_WITH_VST
 static std::wstring ReadMEDStringUTF16BE(FileReader &file)
 {
-	auto chunk = file.ReadChunk(file.ReadUint32BE());
+	FileReader chunk = file.ReadChunk(file.ReadUint32BE());
 	std::wstring s(chunk.GetLength() / 2u, L'\0');
 	for(auto &c : s)
 	{
@@ -591,7 +599,7 @@ static std::wstring ReadMEDStringUTF16BE(FileReader &file)
 	}
 	return s;
 }
-#endif
+#endif  // MPT_WITH_VST
 
 
 static void MEDReadNextSong(FileReader &file, MMD0FileHeader &fileHeader, MMD0Exp &expData, MMDSong &songHeader)
@@ -742,9 +750,9 @@ bool CSoundFile::ReadMED(FileReader &file, ModLoadingFlags loadFlags)
 
 	bool needInstruments = false;
 	bool anySynthInstrs = false;
-#ifndef NO_VST
+#ifdef MPT_WITH_VST
 	PLUGINDEX numPlugins = 0;
-#endif
+#endif  // MPT_WITH_VST
 	for(SAMPLEINDEX ins = 1, smp = 1; ins <= m_nInstruments; ins++)
 	{
 		if(!AllocateInstrument(ins, smp))
@@ -761,7 +769,7 @@ bool CSoundFile::ReadMED(FileReader &file, ModLoadingFlags loadFlags)
 		const bool isSynth = instrHeader.type < 0;
 		const size_t maskedType = static_cast<size_t>(instrHeader.type & MMDInstrHeader::TYPEMASK);
 
-#ifndef NO_VST
+#ifdef MPT_WITH_VST
 		if(instrHeader.type == MMDInstrHeader::VSTI)
 		{
 			needInstruments = true;
@@ -774,7 +782,7 @@ bool CSoundFile::ReadMED(FileReader &file, ModLoadingFlags loadFlags)
 				mixPlug = {};
 				mixPlug.Info.dwPluginId1 = Vst::kEffectMagic;
 				mixPlug.Info.gain = 10;
-				mixPlug.Info.szName = mpt::ToCharset(mpt::CharsetLocaleOrUTF8, name);
+				mixPlug.Info.szName = mpt::ToCharset(mpt::Charset::Locale, name);
 				mixPlug.Info.szLibraryName = mpt::ToCharset(mpt::Charset::UTF8, name);
 				instr.nMixPlug = numPlugins + 1;
 				instr.nMidiChannel = MidiFirstChannel;
@@ -785,7 +793,7 @@ bool CSoundFile::ReadMED(FileReader &file, ModLoadingFlags loadFlags)
 				numPlugins++;
 			}
 		} else
-#endif  // NO_VST
+#endif  // MPT_WITH_VST
 		if(isSynth)
 		{
 			// TODO: Figure out synth instruments
@@ -855,7 +863,7 @@ bool CSoundFile::ReadMED(FileReader &file, ModLoadingFlags loadFlags)
 			instr.nMidiChannel = sampleHeader.midiChannel - 1 + MidiFirstChannel;
 			needInstruments = true;
 
-#ifndef NO_VST
+#ifdef MPT_WITH_VST
 			if(!isSynth)
 			{
 				auto &mixPlug = m_MixPlugins[numPlugins];
@@ -871,7 +879,7 @@ bool CSoundFile::ReadMED(FileReader &file, ModLoadingFlags loadFlags)
 
 				numPlugins++;
 			}
-#endif  // NO_VST
+#endif  // MPT_WITH_VST
 		}
 		if(sampleHeader.midiPreset > 0 && sampleHeader.midiPreset <= 128)
 		{
@@ -970,7 +978,7 @@ bool CSoundFile::ReadMED(FileReader &file, ModLoadingFlags loadFlags)
 				ins.nGlobalVol = (instrExt.volume + 1u) / 2u;
 			if(size > offsetof(MMDInstrExt, midiBank))
 				ins.wMidiBank = instrExt.midiBank;
-#ifndef NO_VST
+#ifdef MPT_WITH_VST
 			if(ins.nMixPlug > 0)
 			{
 				PLUGINDEX plug = ins.nMixPlug - 1;
@@ -999,7 +1007,7 @@ bool CSoundFile::ReadMED(FileReader &file, ModLoadingFlags loadFlags)
 					}
 				}
 			}
-#endif  // NO_VST
+#endif  // MPT_WITH_VST
 
 			ModSample &sample = Samples[ins.Keyboard[NOTE_MIDDLEC]];
 			sample.nFineTune = MOD2XMFineTune(instrExt.finetune);
@@ -1011,10 +1019,8 @@ bool CSoundFile::ReadMED(FileReader &file, ModLoadingFlags loadFlags)
 			}
 			if(size > offsetof(MMDInstrExt, instrFlags))
 			{
-				if(instrExt.instrFlags & MMDInstrExt::SSFLG_LOOP)
-					sample.uFlags.set(CHN_LOOP);
-				if(instrExt.instrFlags & MMDInstrExt::SSFLG_PINGPONG)
-					sample.uFlags.set(CHN_LOOP | CHN_PINGPONGLOOP);
+				sample.uFlags.set(CHN_LOOP, (instrExt.instrFlags & MMDInstrExt::SSFLG_LOOP) != 0);
+				sample.uFlags.set(CHN_PINGPONGLOOP, (instrExt.instrFlags & MMDInstrExt::SSFLG_PINGPONG) != 0);
 				if(instrExt.instrFlags & MMDInstrExt::SSFLG_DISABLED)
 					sample.nGlobalVol = 0;
 			}
@@ -1038,7 +1044,7 @@ bool CSoundFile::ReadMED(FileReader &file, ModLoadingFlags loadFlags)
 
 	// Setup a program change macro for command 1C (even if MIDI plugin is disabled, as otherwise these commands may act as filter commands)
 	m_MidiCfg.ClearZxxMacros();
-	strcpy(m_MidiCfg.szMidiSFXExt[0], "Cc z");
+	m_MidiCfg.SFx[0] = "Cc z";
 
 	file.Rewind();
 	PATTERNINDEX basePattern = 0;
@@ -1139,7 +1145,7 @@ bool CSoundFile::ReadMED(FileReader &file, ModLoadingFlags loadFlags)
 					}
 				}
 				if(playSeq.name[0])
-					order.SetName(mpt::ToUnicode(mpt::Charset::ISO8859_1, playSeq.name));
+					order.SetName(mpt::ToUnicode(mpt::Charset::Amiga_no_C1, mpt::String::ReadAutoBuf(playSeq.name)));
 
 				// Play commands (jump / stop)
 				if(playSeq.commandTableOffset > 0 && file.Seek(playSeq.commandTableOffset))
@@ -1187,18 +1193,18 @@ bool CSoundFile::ReadMED(FileReader &file, ModLoadingFlags loadFlags)
 		{
 			file.ReadString<mpt::String::maybeNullTerminated>(m_songName, expData.songNameLength);
 			if(numSongs > 1)
-				order.SetName(mpt::ToUnicode(mpt::Charset::ISO8859_1, m_songName));
+				order.SetName(mpt::ToUnicode(mpt::Charset::Amiga_no_C1, m_songName));
 		}
 		if(expData.annoLength > 1 && file.Seek(expData.annoText))
 		{
 			m_songMessage.Read(file, expData.annoLength - 1, SongMessage::leAutodetect);
 		}
 
-#ifndef NO_VST
+#ifdef MPT_WITH_VST
 		// Read MIDI messages
 		if(expData.midiDumpOffset && file.Seek(expData.midiDumpOffset) && file.CanRead(8))
 		{
-			uint16 numDumps = std::min(file.ReadUint16BE(), static_cast<uint16>(std::size(m_MidiCfg.szMidiZXXExt)));
+			uint16 numDumps = std::min(file.ReadUint16BE(), static_cast<uint16>(m_MidiCfg.Zxx.size()));
 			file.Skip(6);
 			if(file.CanRead(numDumps * 4))
 			{
@@ -1212,18 +1218,19 @@ bool CSoundFile::ReadMED(FileReader &file, ModLoadingFlags loadFlags)
 					file.ReadStruct(dumpHeader);
 					if(!file.Seek(dumpHeader.dataPointer) || !file.CanRead(dumpHeader.length))
 						continue;
-					auto &macro = m_MidiCfg.szMidiZXXExt[dump];
-					auto length = std::min(static_cast<size_t>(dumpHeader.length), std::size(macro) / 2u);
+					std::array<char, kMacroLength> macro{};
+					auto length = std::min(static_cast<size_t>(dumpHeader.length), macro.size() / 2u);
 					for(size_t i = 0; i < length; i++)
 					{
 						const uint8 byte = file.ReadUint8(), high = byte >> 4, low = byte & 0x0F;
 						macro[i * 2] = high + (high < 0x0A ? '0' : 'A' - 0x0A);
 						macro[i * 2 + 1] = low + (low < 0x0A ? '0' : 'A' - 0x0A);
 					}
+					m_MidiCfg.Zxx[dump] = std::string_view{macro.data(), length * 2};
 				}
 			}
 		}
-#endif
+#endif  // MPT_WITH_VST
 
 		if(expData.mmdInfoOffset && file.Seek(expData.mmdInfoOffset) && file.CanRead(12))
 		{
@@ -1422,10 +1429,10 @@ bool CSoundFile::ReadMED(FileReader &file, ModLoadingFlags loadFlags)
 	case 3: madeWithTracker = MPT_ULITERAL("OctaMED Soundstudio (MMD3)"); break;
 	}
 
-	m_modFormat.formatName = mpt::format(MPT_USTRING("OctaMED (MMD%1)"))(version);
+	m_modFormat.formatName = MPT_UFORMAT("OctaMED (MMD{})")(version);
 	m_modFormat.type = MPT_USTRING("med");
 	m_modFormat.madeWithTracker = madeWithTracker;
-	m_modFormat.charset = mpt::Charset::ISO8859_1;
+	m_modFormat.charset = mpt::Charset::Amiga_no_C1;
 
 	return true;
 }

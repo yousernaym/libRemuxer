@@ -11,7 +11,8 @@
 #include "stdafx.h"
 
 #include "tuning.h"
-#include "../common/mptIO.h"
+#include "mpt/io/io.hpp"
+#include "mpt/io/io_stdstream.hpp"
 #include "../common/serialization_utils.h"
 #include "../common/misc_util.h"
 #include <string>
@@ -23,6 +24,10 @@ OPENMPT_NAMESPACE_BEGIN
 
 namespace Tuning {
 
+static RATIOTYPE SanitizeGroupRatio(RATIOTYPE ratio)
+{
+	return std::clamp(std::abs(ratio), 1e-15f, 1e+07f);
+}
 
 namespace CTuningS11n
 {
@@ -234,12 +239,13 @@ mpt::ustring CTuning::GetNoteName(const NOTEINDEXTYPE &x, bool addOctave) const
 
 void CTuning::SetNoteName(const NOTEINDEXTYPE &n, const mpt::ustring &str)
 {
+	const NOTEINDEXTYPE pos = (GetGroupSize() < 1) ? n : static_cast<NOTEINDEXTYPE>(mpt::wrapping_modulo(n, m_GroupSize));
 	if(!str.empty())
 	{
-		m_NoteNameMap[n] = str;
+		m_NoteNameMap[pos] = str;
 	} else
 	{
-		const auto iter = m_NoteNameMap.find(n);
+		const auto iter = m_NoteNameMap.find(pos);
 		if(iter != m_NoteNameMap.end())
 		{
 			m_NoteNameMap.erase(iter);
@@ -255,7 +261,12 @@ RATIOTYPE CTuning::GetRatio(const NOTEINDEXTYPE note) const
 	{
 		return s_DefaultFallbackRatio;
 	}
-	return m_RatioTable[note - m_NoteMin];
+	const auto ratio = m_RatioTable[note - m_NoteMin];
+	if(ratio <= 1e-15f)
+	{
+		return s_DefaultFallbackRatio;
+	}
+	return ratio;
 }
 
 
@@ -478,6 +489,17 @@ SerializationResult CTuning::InitDeserialize(std::istream &iStrm, mpt::Charset d
 	UNOTEINDEXTYPE ratiotableSize = 0;
 	ssb.ReadItem(ratiotableSize, "RTI4");
 
+	m_GroupRatio = SanitizeGroupRatio(m_GroupRatio);
+	if(!std::isfinite(m_GroupRatio))
+	{
+		return SerializationResult::Failure;
+	}
+	for(auto ratio : m_RatioTable)
+	{
+		if(!std::isfinite(ratio))
+			return SerializationResult::Failure;
+	}
+
 	// If reader status is ok and m_NoteMin is somewhat reasonable, process data.
 	if(!((ssb.GetStatus() & srlztn::SNT_FAILURE) == 0 && m_NoteMin >= -300 && m_NoteMin <= 300))
 	{
@@ -681,6 +703,11 @@ SerializationResult CTuning::InitDeserializeOLD(std::istream &inStrm, mpt::Chars
 			return SerializationResult::Failure;
 		}
 	}
+	for(auto ratio : m_RatioTable)
+	{
+		if(!std::isfinite(ratio))
+			return SerializationResult::Failure;
+	}
 
 	//Fineratios
 	if(version <= 2)
@@ -695,6 +722,11 @@ SerializationResult CTuning::InitDeserializeOLD(std::istream &inStrm, mpt::Chars
 		{
 			return SerializationResult::Failure;
 		}
+	}
+	for(auto ratio : m_RatioTableFine)
+	{
+		if(!std::isfinite(ratio))
+			return SerializationResult::Failure;
 	}
 	m_FineStepCount = mpt::saturate_cast<USTEPINDEXTYPE>(m_RatioTableFine.size());
 
@@ -719,8 +751,8 @@ SerializationResult CTuning::InitDeserializeOLD(std::istream &inStrm, mpt::Chars
 	//m_GroupRatio
 	IEEE754binary32LE groupratio = IEEE754binary32LE(0.0f);
 	mpt::IO::Read(inStrm, groupratio);
-	m_GroupRatio = groupratio;
-	if(m_GroupRatio < 0)
+	m_GroupRatio = SanitizeGroupRatio(groupratio);
+	if(!std::isfinite(m_GroupRatio))
 	{
 		return SerializationResult::Failure;
 	}
@@ -789,7 +821,7 @@ Tuning::SerializationResult CTuning::Serialize(std::ostream& outStrm) const
 		ssb.WriteItem(m_TuningName, "0", WriteStr);
 	uint16 dummyEditMask = 0xffff;
 	ssb.WriteItem(dummyEditMask, "1");
-	ssb.WriteItem(static_cast<std::underlying_type<Type>::type>(m_TuningType), "2");
+	ssb.WriteItem(mpt::to_underlying(m_TuningType), "2");
 	if (m_NoteNameMap.size() > 0)
 		ssb.WriteItem(m_NoteNameMap, "3", WriteNoteMap);
 	if (GetFineStepCount() > 0)
@@ -824,7 +856,7 @@ Tuning::SerializationResult CTuning::Serialize(std::ostream& outStrm) const
 
 bool CTuning::WriteSCL(std::ostream &f, const mpt::PathString &filename) const
 {
-	mpt::IO::WriteTextCRLF(f, mpt::format("! %1")(mpt::ToCharset(mpt::Charset::ISO8859_1, (filename.GetFileName() + filename.GetFileExt()).ToUnicode())));
+	mpt::IO::WriteTextCRLF(f, MPT_AFORMAT("! {}")(mpt::ToCharset(mpt::Charset::ISO8859_1, (filename.GetFileName() + filename.GetFileExt()).ToUnicode())));
 	mpt::IO::WriteTextCRLF(f, "!");
 	std::string name = mpt::ToCharset(mpt::Charset::ISO8859_1, GetName());
 	for(auto & c : name) { if(static_cast<uint8>(c) < 32) c = ' '; } // remove control characters
@@ -832,20 +864,20 @@ bool CTuning::WriteSCL(std::ostream &f, const mpt::PathString &filename) const
 	mpt::IO::WriteTextCRLF(f, name);
 	if(GetType() == Type::GEOMETRIC)
 	{
-		mpt::IO::WriteTextCRLF(f, mpt::format(" %1")(m_GroupSize));
+		mpt::IO::WriteTextCRLF(f, MPT_AFORMAT(" {}")(m_GroupSize));
 		mpt::IO::WriteTextCRLF(f, "!");
 		for(NOTEINDEXTYPE n = 0; n < m_GroupSize; ++n)
 		{
 			double ratio = std::pow(static_cast<double>(m_GroupRatio), static_cast<double>(n + 1) / static_cast<double>(m_GroupSize));
 			double cents = std::log2(ratio) * 1200.0;
-			mpt::IO::WriteTextCRLF(f, mpt::format(" %1 ! %2")(
-				mpt::fmt::fix(cents),
+			mpt::IO::WriteTextCRLF(f, MPT_AFORMAT(" {} ! {}")(
+				mpt::afmt::fix(cents),
 				mpt::ToCharset(mpt::Charset::ISO8859_1, GetNoteName((n + 1) % m_GroupSize, false))
 				));
 		}
 	} else if(GetType() == Type::GROUPGEOMETRIC)
 	{
-		mpt::IO::WriteTextCRLF(f, mpt::format(" %1")(m_GroupSize));
+		mpt::IO::WriteTextCRLF(f, MPT_AFORMAT(" {}")(m_GroupSize));
 		mpt::IO::WriteTextCRLF(f, "!");
 		for(NOTEINDEXTYPE n = 0; n < m_GroupSize; ++n)
 		{
@@ -853,14 +885,14 @@ bool CTuning::WriteSCL(std::ostream &f, const mpt::PathString &filename) const
 			double baseratio = static_cast<double>(GetRatio(0));
 			double ratio = static_cast<double>(last ? m_GroupRatio : GetRatio(n + 1)) / baseratio;
 			double cents = std::log2(ratio) * 1200.0;
-			mpt::IO::WriteTextCRLF(f, mpt::format(" %1 ! %2")(
-				mpt::fmt::fix(cents),
+			mpt::IO::WriteTextCRLF(f, MPT_AFORMAT(" {} ! {}")(
+				mpt::afmt::fix(cents),
 				mpt::ToCharset(mpt::Charset::ISO8859_1, GetNoteName((n + 1) % m_GroupSize, false))
 				));
 		}
 	} else if(GetType() == Type::GENERAL)
 	{
-		mpt::IO::WriteTextCRLF(f, mpt::format(" %1")(m_RatioTable.size() + 1));
+		mpt::IO::WriteTextCRLF(f, MPT_AFORMAT(" {}")(m_RatioTable.size() + 1));
 		mpt::IO::WriteTextCRLF(f, "!");
 		double baseratio = 1.0;
 		for(NOTEINDEXTYPE n = 0; n < mpt::saturate_cast<NOTEINDEXTYPE>(m_RatioTable.size()); ++n)
@@ -871,13 +903,13 @@ bool CTuning::WriteSCL(std::ostream &f, const mpt::PathString &filename) const
 		{
 			double ratio = static_cast<double>(m_RatioTable[n]) / baseratio;
 			double cents = std::log2(ratio) * 1200.0;
-			mpt::IO::WriteTextCRLF(f, mpt::format(" %1 ! %2")(
-				mpt::fmt::fix(cents),
+			mpt::IO::WriteTextCRLF(f, MPT_AFORMAT(" {} ! {}")(
+				mpt::afmt::fix(cents),
 				mpt::ToCharset(mpt::Charset::ISO8859_1, GetNoteName(n + m_NoteMin, false))
 				));
 		}
-		mpt::IO::WriteTextCRLF(f, mpt::format(" %1 ! %2")(
-			mpt::fmt::val(1),
+		mpt::IO::WriteTextCRLF(f, MPT_AFORMAT(" {} ! {}")(
+			mpt::afmt::val(1),
 			std::string()
 			));
 	} else

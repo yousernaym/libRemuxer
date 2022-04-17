@@ -106,7 +106,7 @@ int32 InstrumentEnvelope::GetValueFromPosition(int position, int32 rangeOut, int
 		{
 			// Linear approximation between the points;
 			// f(x + d) ~ f(x) + f'(x) * d, where f'(x) = (y2 - y1) / (x2 - x1)
-			value += ((position - x1) * (at(pt).value * ENV_PRECISION / rangeIn - value)) / (x2 - x1);
+			value += Util::muldiv(position - x1, (at(pt).value * ENV_PRECISION / rangeIn - value), x2 - x1);
 		}
 	}
 
@@ -171,9 +171,9 @@ void ModInstrument::Convert(MODTYPE fromType, MODTYPE toType)
 		nPPC = NOTE_MIDDLEC - 1;
 		nPPS = 0;
 
-		nNNA = NNA_NOTECUT;
-		nDCT = DCT_NONE;
-		nDNA = DNA_NOTECUT;
+		nNNA = NewNoteAction::NoteCut;
+		nDCT = DuplicateCheckType::None;
+		nDNA = DuplicateNoteAction::NoteCut;
 
 		if(nMidiChannel == MidiMappedChannel)
 		{
@@ -269,9 +269,9 @@ void ModInstrument::Sanitize(MODTYPE modType)
 	LimitMax(nMidiProgram, uint8(128));
 	LimitMax(nMidiChannel, uint8(17));
 
-	if(nNNA > NNA_NOTEFADE) nNNA = NNA_NOTECUT;
-	if(nDCT > DCT_PLUGIN) nDCT = DCT_NONE;
-	if(nDNA > DNA_NOTEFADE) nDNA = DNA_NOTECUT;
+	if(nNNA > NewNoteAction::NoteFade) nNNA = NewNoteAction::NoteCut;
+	if(nDCT > DuplicateCheckType::Plugin) nDCT = DuplicateCheckType::None;
+	if(nDNA > DuplicateNoteAction::NoteFade) nDNA = DuplicateNoteAction::NoteCut;
 
 	LimitMax(nPanSwing, uint8(64));
 	LimitMax(nVolSwing, uint8(100));
@@ -299,6 +299,9 @@ void ModInstrument::Sanitize(MODTYPE modType)
 
 	if(!Resampling::IsKnownMode(resampling))
 		resampling = SRCMODE_DEFAULT;
+
+	if(nMixPlug > MAX_MIXPLUGINS)
+		nMixPlug = 0;
 }
 
 
@@ -311,13 +314,9 @@ void ModInstrument::Transpose(int8 amount)
 }
 
 
-uint8 ModInstrument::GetMIDIChannel(const CSoundFile &sndFile, CHANNELINDEX chn) const
+uint8 ModInstrument::GetMIDIChannel(const ModChannel &channel, CHANNELINDEX chn) const
 {
-	if(chn >= std::size(sndFile.m_PlayState.Chn))
-		return 0;
-
 	// For mapped channels, return their pattern channel, modulo 16 (because there are only 16 MIDI channels)
-	const ModChannel &channel = sndFile.m_PlayState.Chn[chn];
 	if(nMidiChannel == MidiMappedChannel)
 		return static_cast<uint8>((channel.nMasterChn ? (channel.nMasterChn - 1u) : chn) % 16u);
 	else if(HasValidMIDIChannel())

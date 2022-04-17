@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "BuildSettings.h"
+#include "openmpt/all/BuildSettings.hpp"
 
 #ifndef NO_PLUGINS
 
@@ -63,7 +63,7 @@ protected:
 		float Get() const;
 	};
 
-	float m_param[kI3DL2ReverbNumParameters];
+	std::array<float, kI3DL2ReverbNumParameters> m_param;
 	int32 m_program = 0;
 
 	// Calculated parameters

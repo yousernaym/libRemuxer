@@ -8,6 +8,7 @@
 #define pnts INT123_pnts
 #define catchsignal INT123_catchsignal
 #define safe_realloc INT123_safe_realloc
+#define safer_realloc INT123_safer_realloc
 #define compat_strdup INT123_compat_strdup
 #define compat_getenv INT123_compat_getenv
 #define compat_open INT123_compat_open
@@ -163,7 +164,7 @@
 #define init_layer12 INT123_init_layer12
 #define init_layer12_table INT123_init_layer12_table
 #define init_layer12_stuff INT123_init_layer12_stuff
-#define prepare_decode_tables INT123_prepare_decode_tables
+#define init_costabs INT123_init_costabs
 #define make_decode_tables INT123_make_decode_tables
 #define make_decode_tables_mmx INT123_make_decode_tables_mmx
 #define init_layer3_gainpow2_mmx INT123_init_layer3_gainpow2_mmx
@@ -233,7 +234,6 @@
 #define dectype INT123_dectype
 #define defdec INT123_defdec
 #define decclass INT123_decclass
-#define check_decoders INT123_check_decoders
 #define read_frame_init INT123_read_frame_init
 #define frame_bitrate INT123_frame_bitrate
 #define frame_freq INT123_frame_freq

@@ -1,7 +1,7 @@
 /*
 	mpg123lib_intern: Common non-public stuff for libmpg123
 
-	copyright 1995-2008 by the mpg123 project - free software under the terms of the LGPL 2.1
+	copyright 1995-2021 by the mpg123 project - free software under the terms of the LGPL 2.1
 	see COPYING and AUTHORS files in distribution or http://mpg123.org
 
 	derived from the old mpg123.h
@@ -23,6 +23,7 @@
 #define BUILD_MPG123_DLL
 #endif
 #include "compat.h"
+#define MPG123_ENUM_API
 #include "mpg123.h"
 
 #define SKIP_JUNK 1
@@ -38,12 +39,37 @@
 #define memmove(dst,src,size) bcopy(src,dst,size)
 #endif
 
-/* We don't really do long double... there are 3 options for REAL:
-   float, long and double. */
+// The real type is either 32 bit float or integer. We do not attempt
+// double precision for MPEG audio decoding (or any audio storage/compression
+// format, even).
+// The calctables tool works in double precision float, but converts to fixed
+// point 'real' on output in addition to floating point.
 
-#ifdef REAL_IS_FLOAT
-#  define real float
-#elif defined(REAL_IS_FIXED)
+// The base type used in the computation code.
+// With C11 we  could rely on tgmath for sin() to use the right precision.
+#ifdef CALCTABLES
+#	define clreal double
+#	define COS    cos
+#	define SIN    sin
+#	define TAN    tan
+#	define POW    pow
+#else
+#	define clreal float
+#	define COS    cosf
+#	define SIN    sinf
+#	define TAN    tanf
+#	define POW    powf
+#endif
+
+#if defined(REAL_IS_FLOAT) && !defined(CALCTABLES)
+
+#define real float
+
+#elif defined(REAL_IS_FIXED) || defined(CALCTABLES)
+
+#ifdef RUNTIME_TABLES
+#error "Runtime tables are only for floating point decoders."
+#endif
 
 # define real  int32_t
 # define dreal int64_t
@@ -52,7 +78,6 @@
   for fixed-point decoders, use pre-calculated tables to avoid expensive floating-point maths
   undef this macro for run-time calculation
 */
-#define PRECALC_TABLES
 
 # define REAL_RADIX				24
 # define REAL_FACTOR			16777216.0
@@ -166,9 +191,12 @@ static inline int32_t scale_rounded(int32_t x, int shift)
 
 /* I just changed the (int) to (real) there... seemed right. */
 # define DOUBLE_TO_REAL(x)					(double_to_long_rounded(x, REAL_FACTOR))
-# define DOUBLE_TO_REAL_15(x)				(double_to_long_rounded(x, 32768.0))
-# define DOUBLE_TO_REAL_POW43(x)			(double_to_long_rounded(x, 8192.0))
-# define DOUBLE_TO_REAL_SCALE_LAYER12(x)	(double_to_long_rounded(x, 1073741824.0))
+# define SCALE_15								32768.0
+# define DOUBLE_TO_REAL_15(x)				(double_to_long_rounded(x, SCALE_15))
+# define SCALE_POW43							8192.0
+# define DOUBLE_TO_REAL_POW43(x)			(double_to_long_rounded(x, SCALE_POW43))
+# define SCALE_LAYER12                  1073741824.0
+# define DOUBLE_TO_REAL_SCALE_LAYER12(x)	(double_to_long_rounded(x, SCALE_LAYER12))
 # define DOUBLE_TO_REAL_SCALE_LAYER3(x, y)	(double_to_long_rounded(x, pow(2.0,gainpow2_scale[y])))
 # define REAL_TO_DOUBLE(x)					((double)(x) / REAL_FACTOR)
 # ifdef REAL_MUL_ASM
@@ -198,10 +226,9 @@ static inline int32_t scale_rounded(int32_t x, int shift)
 # endif
 
 #else
-/* Just define a symbol to make things clear.
-   Existing code still uses (not (float or fixed)) for that. */
-#  define REAL_IS_DOUBLE
-#  define real double
+
+#error "Simple float or fixed-point, nothing else makes sense."
+
 #endif
 
 #ifndef REAL_IS_FIXED

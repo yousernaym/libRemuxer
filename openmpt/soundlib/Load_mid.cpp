@@ -305,9 +305,9 @@ uint32 CSoundFile::MapMidiInstrument(uint8 program, uint16 bank, uint8 midiChann
 	pIns->wMidiBank = bank + 1;
 	pIns->nMidiProgram = program + 1;
 	pIns->nFadeOut = 1024;
-	pIns->nNNA = NNA_NOTEOFF;
-	pIns->nDCT = isDrum ? DCT_SAMPLE : DCT_NOTE;
-	pIns->nDNA = DNA_NOTEFADE;
+	pIns->nNNA = NewNoteAction::NoteOff;
+	pIns->nDCT = isDrum ? DuplicateCheckType::Sample : DuplicateCheckType::Note;
+	pIns->nDNA = DuplicateNoteAction::NoteFade;
 	if(isDrum)
 	{
 		pIns->nMidiChannel = MIDI_DRUMCHANNEL;
@@ -460,10 +460,10 @@ static CHANNELINDEX FindUnusedChannel(uint8 midiCh, ModCommand::NOTE note, const
 	CHANNELINDEX anyFreeChannel = CHANNELINDEX_INVALID;
 
 	CHANNELINDEX oldsetMidiCh = CHANNELINDEX_INVALID;
-	tick_t oldestMidiChAge = Util::MaxValueOfType(oldestMidiChAge);
+	tick_t oldestMidiChAge = std::numeric_limits<decltype(oldestMidiChAge)>::max();
 
 	CHANNELINDEX oldestAnyCh = 0;
-	tick_t oldestAnyChAge = Util::MaxValueOfType(oldestAnyChAge);
+	tick_t oldestAnyChAge = std::numeric_limits<decltype(oldestAnyChAge)>::max();
 
 	for(size_t i = 0; i < channels.size(); i++)
 	{
@@ -642,8 +642,8 @@ bool CSoundFile::ReadMID(FileReader &file, ModLoadingFlags loadFlags)
 	m_modFormat.madeWithTracker = U_("Standard MIDI File");
 	m_modFormat.charset = mpt::Charset::ISO8859_1;
 
-	SetMixLevels(mixLevels1_17RC3);
-	m_nTempoMode = tempoModeModern;
+	SetMixLevels(MixLevels::v1_17RC3);
+	m_nTempoMode = TempoMode::Modern;
 	m_SongFlags = SONG_LINEARSLIDES;
 	m_nDefaultTempo.Set(120);
 	m_nDefaultSpeed = ticksPerRow;
@@ -697,18 +697,30 @@ bool CSoundFile::ReadMID(FileReader &file, ModLoadingFlags loadFlags)
 
 	uint16 finishedTracks = 0;
 	PATTERNINDEX emptyPattern = PATTERNINDEX_INVALID;
-	ORDERINDEX lastOrd = 0;
-	ROWINDEX lastRow = 0;
+	ORDERINDEX lastOrd = 0, loopEndOrd = ORDERINDEX_INVALID;
+	ROWINDEX lastRow = 0, loopEndRow = ROWINDEX_INVALID;
 	ROWINDEX restartRow = ROWINDEX_INVALID;
 	int8 masterTranspose = 0;
 	bool isXG = false;
 	bool isEMIDI = false;
+	bool isEMIDILoop = false;
 	const bool isType2 = (fileHeader.format == 2);
+
+	const auto ModPositionFromTick = [&](const tick_t tick, const tick_t offset = 0)
+	{
+		tick_t modTicks = Util::muldivr_unsigned(tick, quantize * ticksPerRow, ppqn * 4u) - offset;
+
+		ORDERINDEX ord = static_cast<ORDERINDEX>((modTicks / ticksPerRow) / patternLen);
+		ROWINDEX row = (modTicks / ticksPerRow) % patternLen;
+		uint8 delay = static_cast<uint8>(modTicks % ticksPerRow);
+
+		return std::make_tuple(ord, row, delay);
+	};
 
 	while(finishedTracks < numTracks)
 	{
 		uint16 t = 0;
-		tick_t tick = Util::MaxValueOfType(tick);
+		tick_t tick = std::numeric_limits<decltype(tick)>::max();
 		for(uint16 track = 0; track < numTracks; track++)
 		{
 			if(!tracks[track].finished && tracks[track].nextEvent < tick)
@@ -721,11 +733,7 @@ bool CSoundFile::ReadMID(FileReader &file, ModLoadingFlags loadFlags)
 		}
 		FileReader &track = tracks[t].track;
 
-		tick_t modTicks = Util::muldivr_unsigned(tick, quantize * ticksPerRow, ppqn * 4u);
-
-		ORDERINDEX ord = static_cast<ORDERINDEX>((modTicks / ticksPerRow) / patternLen);
-		ROWINDEX row = (modTicks / ticksPerRow) % patternLen;
-		uint8 delay = static_cast<uint8>(modTicks % ticksPerRow);
+		const auto [ord, row, delay] = ModPositionFromTick(tick);
 
 		if(ord >= Order().GetLength())
 		{
@@ -800,6 +808,9 @@ bool CSoundFile::ReadMID(FileReader &file, ModLoadingFlags loadFlags)
 					{
 						Order().SetRestartPos(ord);
 						restartRow = row;
+					} else if(!mpt::CompareNoCaseAscii(s, "loopEnd"))
+					{
+						std::tie(loopEndOrd, loopEndRow, std::ignore) = ModPositionFromTick(tick, 1);
 					}
 				}
 				break;
@@ -811,9 +822,7 @@ bool CSoundFile::ReadMID(FileReader &file, ModLoadingFlags loadFlags)
 				break;
 			case 0x51: // Tempo
 				{
-					uint8 tempoRaw[3];
-					chunk.ReadArray(tempoRaw);
-					uint32 tempoInt = (tempoRaw[0] << 16) | (tempoRaw[1] << 8) | tempoRaw[2];
+					uint32 tempoInt = chunk.ReadUint24BE();
 					if(tempoInt == 0)
 						break;
 					TEMPO newTempo(60000000.0 / tempoInt);
@@ -1003,10 +1012,28 @@ bool CSoundFile::ReadMID(FileReader &file, ModLoadingFlags loadFlags)
 
 					case 111:
 						// Non-standard MIDI loop point. May conflict with Apogee EMIDI CCs (110/111), which is why we also check if CC 110 is ever used.
-						if(data2 == 0)
+						if(data2 == 0 && !isEMIDI)
 						{
 							Order().SetRestartPos(ord);
 							restartRow = row;
+						}
+						break;
+
+					case 118:
+						// EMIDI Global Loop Start
+						isEMIDI = true;
+						isEMIDILoop = false;
+						Order().SetRestartPos(ord);
+						restartRow = row;
+						break;
+
+					case 119:
+						// EMIDI Global Loop End
+						if(data2 == 0x7F)
+						{
+							isEMIDILoop = true;
+							isEMIDI = true;
+							std::tie(loopEndOrd, loopEndRow, std::ignore) = ModPositionFromTick(tick, 1);
 						}
 						break;
 
@@ -1188,7 +1215,7 @@ bool CSoundFile::ReadMID(FileReader &file, ModLoadingFlags loadFlags)
 				m.param = static_cast<uint8>(absDiff);
 				realDiff = absDiff * 4 * (ticksPerRow - 1);
 			}
-			chnState.porta += realDiff * sgn(diff);
+			chnState.porta += realDiff * mpt::signum(diff);
 		}
 
 		tick_t delta = 0;
@@ -1210,18 +1237,29 @@ bool CSoundFile::ReadMID(FileReader &file, ModLoadingFlags loadFlags)
 		}
 	}
 
+	if(isEMIDILoop)
+		isEMIDI = false;
+
 	if(isEMIDI)
 	{
 		Order().SetRestartPos(0);
 	}
 
-	if(Order().IsValidPat(lastOrd))
+	if(loopEndOrd == ORDERINDEX_INVALID)
+		loopEndOrd = lastOrd;
+	if(loopEndRow == ROWINDEX_INVALID)
+		loopEndRow = lastRow;
+
+	if(Order().IsValidPat(loopEndOrd))
 	{
-		PATTERNINDEX lastPat = Order()[lastOrd];
-		Patterns[lastPat].Resize(lastRow + 1);
+		PATTERNINDEX lastPat = Order()[loopEndOrd];
+		if(loopEndOrd == lastOrd)
+			Patterns[lastPat].Resize(loopEndRow + 1);
 		if(restartRow != ROWINDEX_INVALID && !isEMIDI)
 		{
-			Patterns[lastPat].WriteEffect(EffectWriter(CMD_PATTERNBREAK, mpt::saturate_cast<ModCommand::PARAM>(restartRow)).Row(lastRow));
+			Patterns[lastPat].WriteEffect(EffectWriter(CMD_PATTERNBREAK, mpt::saturate_cast<ModCommand::PARAM>(restartRow)).Row(loopEndRow));
+			if(ORDERINDEX restartPos = Order().GetRestartPos(); loopEndOrd != lastOrd || restartPos <= std::numeric_limits<ModCommand::PARAM>::max())
+				Patterns[lastPat].WriteEffect(EffectWriter(CMD_POSITIONJUMP, mpt::saturate_cast<ModCommand::PARAM>(restartPos)).Row(loopEndRow));
 		}
 	}
 	Order.SetSequence(0);
@@ -1238,7 +1276,7 @@ bool CSoundFile::ReadMID(FileReader &file, ModLoadingFlags loadFlags)
 		{
 			channels.push_back(i);
 			if(modChnStatus[i].midiCh != ModChannelState::NOMIDI)
-				ChnSettings[i].szName = mpt::format("MIDI Ch %1")(1 + modChnStatus[i].midiCh);
+				ChnSettings[i].szName = MPT_AFORMAT("MIDI Ch {}")(1 + modChnStatus[i].midiCh);
 			else if(i == tempoChannel)
 				ChnSettings[i].szName = "Tempo";
 			else if(i == globalVolChannel)
@@ -1264,17 +1302,17 @@ bool CSoundFile::ReadMID(FileReader &file, ModLoadingFlags loadFlags)
 
 	std::unique_ptr<CDLSBank> cachedBank, embeddedBank;
 
-	if(CDLSBank::IsDLSBank(file.GetFileName()))
+	if(CDLSBank::IsDLSBank(file.GetOptionalFileName().value_or(P_(""))))
 	{
 		// Soundfont embedded in MIDI file
 		embeddedBank = std::make_unique<CDLSBank>();
-		embeddedBank->Open(file.GetFileName());
+		embeddedBank->Open(file.GetOptionalFileName().value_or(P_("")));
 	} else
 	{
 		// Soundfont with same name as MIDI file
-		for(const auto &ext : { P_(".sf2"), P_(".sbk"), P_(".dls") })
+		for(const auto &ext : { P_(".sf2"), P_(".sf3"), P_(".sf4"), P_(".sbk"), P_(".dls") })
 		{
-			mpt::PathString filename = file.GetFileName().ReplaceExt(ext);
+			mpt::PathString filename = file.GetOptionalFileName().value_or(P_("")).ReplaceExt(ext);
 			if(filename.IsFile())
 			{
 				embeddedBank = std::make_unique<CDLSBank>();
@@ -1324,8 +1362,8 @@ bool CSoundFile::ReadMID(FileReader &file, ModLoadingFlags loadFlags)
 			} else
 			{
 				// Load from Instrument or Sample file
-				InputFile f;
-				if(f.Open(midiMapName, SettingCacheCompleteFileBeforeLoading()))
+				InputFile f(midiMapName, SettingCacheCompleteFileBeforeLoading());
+				if(f.IsValid())
 				{
 					FileReader insFile = GetFileReader(f);
 					if(ReadInstrumentFromFile(ins, insFile, false))

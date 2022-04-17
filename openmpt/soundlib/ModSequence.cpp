@@ -14,10 +14,10 @@
 #include "mod_specifications.h"
 #include "../common/version.h"
 #include "../common/serialization_utils.h"
+#include "mpt/io/io.hpp"
+#include "mpt/io/io_stdstream.hpp"
 
 OPENMPT_NAMESPACE_BEGIN
-
-#define str_SequenceTruncationNote ("Module has sequence of length %1; it will be truncated to maximum supported length, %2.")
 
 
 ModSequence::ModSequence(CSoundFile &sndFile)
@@ -79,7 +79,7 @@ void ModSequence::AdjustToNewModType(const MODTYPE oldtype)
 			erase(std::remove_if(begin(), end(), [&] (PATTERNINDEX pat) { return !m_sndFile.Patterns.IsValidPat(pat); }), end());
 			if(GetLengthTailTrimmed() > specs.ordersMax)
 			{
-				m_sndFile.AddToLog("WARNING: Order list has been trimmed!");
+				m_sndFile.AddToLog(LogWarning, U_("WARNING: Order list has been trimmed!"));
 			}
 		}
 		resize(specs.ordersMax);
@@ -180,18 +180,19 @@ void ModSequence::assign(ORDERINDEX newSize, PATTERNINDEX pat)
 
 ORDERINDEX ModSequence::insert(ORDERINDEX pos, ORDERINDEX count, PATTERNINDEX fill)
 {
-	if (pos >= m_sndFile.GetModSpecifications().ordersMax || count == 0)
+	const auto ordersMax = m_sndFile.GetModSpecifications().ordersMax;
+	if(pos >= ordersMax || GetLengthTailTrimmed() >= ordersMax || count == 0)
 		return 0;
 	// Limit number of orders to be inserted so that we don't exceed the format limit.
-	LimitMax(count, ORDERINDEX(m_sndFile.GetModSpecifications().ordersMax - pos));
-	reserve(pos + count);
+	LimitMax(count, static_cast<ORDERINDEX>(ordersMax - pos));
+	reserve(std::max(pos, GetLength()) + count);
 	// Inserting past the end of the container?
 	if(pos > size())
 		resize(pos);
 	std::vector<PATTERNINDEX>::insert(begin() + pos, count, fill);
 	// Did we overgrow? Remove patterns at end.
-	if(size() > m_sndFile.GetModSpecifications().ordersMax)
-		resize(m_sndFile.GetModSpecifications().ordersMax);
+	if(size() > ordersMax)
+		resize(ordersMax);
 	return count;
 }
 
@@ -201,6 +202,14 @@ bool ModSequence::IsValidPat(ORDERINDEX ord) const
 	if(ord < size())
 		return m_sndFile.Patterns.IsValidPat(at(ord));
 	return false;
+}
+
+
+CPattern *ModSequence::PatternAt(ORDERINDEX ord) const
+{
+	if(!IsValidPat(ord))
+		return nullptr;
+	return &m_sndFile.Patterns[at(ord)];
 }
 
 
@@ -411,7 +420,7 @@ bool ModSequenceSet::RestartPosToPattern(SEQUENCEINDEX seq)
 	{
 		if(subSong.endOrder != ORDERINDEX_INVALID && subSong.endRow != ROWINDEX_INVALID)
 		{
-			if(Util::TypeCanHoldValue<ModCommand::PARAM>(order.GetRestartPos()))
+			if(mpt::in_range<ModCommand::PARAM>(order.GetRestartPos()))
 			{
 				PATTERNINDEX writePat = order.EnsureUnique(subSong.endOrder);
 				result = m_sndFile.Patterns[writePat].WriteEffect(
@@ -449,7 +458,7 @@ bool ModSequenceSet::MergeSequences()
 		const ORDERINDEX lengthTrimmed = seq.GetLengthTailTrimmed();
 		if(firstOrder + lengthTrimmed > m_sndFile.GetModSpecifications().ordersMax)
 		{
-			m_sndFile.AddToLog(mpt::format("WARNING: Cannot merge Sequence %1 (too long!)")(seqNum + 1));
+			m_sndFile.AddToLog(LogWarning, MPT_UFORMAT("WARNING: Cannot merge Sequence {} (too long!)")(seqNum + 1));
 			continue;
 		}
 		firstSeq.reserve(firstOrder + lengthTrimmed);
@@ -483,7 +492,7 @@ bool ModSequenceSet::MergeSequences()
 						} else
 						{
 							// Cannot create new pattern: notify the user
-							m_sndFile.AddToLog(mpt::format("CONFLICT: Pattern break commands in Pattern %1 might be broken since it has been used in several sequences!")(pat));
+							m_sndFile.AddToLog(LogWarning, MPT_UFORMAT("CONFLICT: Pattern break commands in Pattern {} might be broken since it has been used in several sequences!")(pat));
 						}
 					}
 					m->param = static_cast<ModCommand::PARAM>(m->param + firstOrder);
@@ -549,7 +558,7 @@ void ReadModSequenceOld(std::istream& iStrm, ModSequenceSet& seq, const size_t)
 	mpt::IO::ReadIntLE<uint16>(iStrm, size);
 	if(size > ModSpecs::mptm.ordersMax)
 	{
-		seq.m_sndFile.AddToLog(mpt::format(str_SequenceTruncationNote)(size, ModSpecs::mptm.ordersMax));
+		seq.m_sndFile.AddToLog(LogWarning, MPT_UFORMAT("Module has sequence of length {}; it will be truncated to maximum supported length, {}.")(size, ModSpecs::mptm.ordersMax));
 		size = ModSpecs::mptm.ordersMax;
 	}
 	seq(0).resize(size);
