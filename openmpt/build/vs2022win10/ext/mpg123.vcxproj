@@ -104,7 +104,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>mpg123</RootNamespace>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
-    <WindowsTargetPlatformVersion>10.0.20348.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -380,7 +380,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
     <IntDir>..\..\obj\vs2022win10\mpg123\x86_64\Debug\</IntDir>
     <TargetName>openmpt-mpg123</TargetName>
     <TargetExt>.dll</TargetExt>
@@ -408,7 +408,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
     <IntDir>..\..\obj\vs2022win10\mpg123\x86_64\Release\</IntDir>
     <TargetName>openmpt-mpg123</TargetName>
     <TargetExt>.dll</TargetExt>
@@ -436,7 +436,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
     <IntDir>..\..\obj\vs2022win10\mpg123\x86_64\Checked\</IntDir>
     <TargetName>openmpt-mpg123</TargetName>
     <TargetExt>.dll</TargetExt>
@@ -464,7 +464,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugShared|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
     <IntDir>..\..\obj\vs2022win10\mpg123\x86_64\DebugShared\</IntDir>
     <TargetName>openmpt-mpg123</TargetName>
     <TargetExt>.dll</TargetExt>
@@ -492,7 +492,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
     <IntDir>..\..\obj\vs2022win10\mpg123\x86_64\ReleaseShared\</IntDir>
     <TargetName>openmpt-mpg123</TargetName>
     <TargetExt>.dll</TargetExt>
@@ -520,7 +520,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CheckedShared|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
     <IntDir>..\..\obj\vs2022win10\mpg123\x86_64\CheckedShared\</IntDir>
     <TargetName>openmpt-mpg123</TargetName>
     <TargetExt>.dll</TargetExt>
