@@ -6,3 +6,7 @@
 	path = libsidplayfp
 	url = https://github.com/yousernaym/libsidplayfp.git
 	branch = master
+[submodule "openmpt"]
+	path = openmpt
+	url = git@github.com:yousernaym/openmpt.git
+	branch = master
