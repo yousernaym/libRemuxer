@@ -82,9 +82,10 @@
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp\src;$(VC_ProjectDir)mikmod\libmikmod\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer;$(SolutionDir)$(Platform)\$(Configuration);$(ProjectDir)openmpt\bin\$(Configuration)\vs2022-win10-static\amd64;$(ProjectDir)openmpt\build\lib\vs2022win10\x86_64\$(Configuration)\;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(ProjectDir)\mikmod\libmikmod\win32\vs2005\x64\$(Configuration)\;$(SolutionDir)$(Platform)\$(Configuration);$(ProjectDir)openmpt\bin\$(Configuration)\vs2022-win10-static\amd64;$(ProjectDir)openmpt\build\lib\vs2022win10\x86_64\$(Configuration)\;$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -96,9 +97,10 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp\src;$(VC_ProjectDir)mikmod\libmikmod\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer;$(SolutionDir)$(Platform)\$(Configuration);$(ProjectDir)openmpt\bin\$(Configuration)\vs2022-win10-static\amd64;$(ProjectDir)openmpt\build\lib\vs2022win10\x86_64\$(Configuration)\;$(LibraryPath)</LibraryPath>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
+    <LibraryPath>$(ProjectDir)\mikmod\libmikmod\win32\vs2005\x64\$(Configuration)\;$(SolutionDir)$(Platform)\$(Configuration);$(ProjectDir)openmpt\bin\$(Configuration)\vs2022-win10-static\amd64;$(ProjectDir)openmpt\build\lib\vs2022win10\x86_64\$(Configuration)\;$(LibraryPath)</LibraryPath>
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
+    <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
