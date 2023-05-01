@@ -186,8 +186,14 @@ void ModReader::readNextCell(BYTE *track, CellInfo &cellInfo, RunningCellInfo &r
 						
 			if (opCode == UNI_NOTE)
 			{
-				cellInfo.note = track[rowDataOffset++] + 1;
-				runningCellInfo.note = cellInfo.note;
+				int note = track[rowDataOffset++] + 1;
+				
+				// Midi only supports < 128 as pitch, so treat higher values as note off.
+				// .it seems to use 247 as some sort of fadeout-ish note off.
+				if (note >= 128) 
+					note = 0;
+				cellInfo.note = note;
+				runningCellInfo.note = note;
 			}
 			else if (opCode == UNI_INSTRUMENT)
 				cellInfo.ins = track[rowDataOffset++] + 1;
