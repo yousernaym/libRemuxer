@@ -189,6 +189,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="FileFormat.cpp" />
+    <ClCompile Include="hvl\hvl_replay.c" />
+    <ClCompile Include="hvl\hvl_tables.c" />
+    <ClCompile Include="HvlReader.cpp" />
     <ClCompile Include="libRemuxer.cpp" />
     <ClCompile Include="ModReader.cpp" />
     <ClCompile Include="SidReader.cpp" />
@@ -196,6 +199,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FileFormat.h" />
+    <ClInclude Include="hvl\hvl_replay.h" />
+    <ClInclude Include="hvl\hvl_tables.h" />
+    <ClInclude Include="HvlReader.h" />
     <ClInclude Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp-emu.h" />
     <ClInclude Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp.h" />
     <ClInclude Include="libsidplayfp-readNotes\src\builders\residfp-builder\residfp\array.h" />

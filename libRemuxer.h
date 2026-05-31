@@ -38,7 +38,7 @@ struct Marshal_Track
 	int numNotes;
 };
 
-enum class Marshal_SongType {Mod, Sid};
+enum class Marshal_SongType {Mod, Sid, Hvl};
 
 struct Marshal_Song
 {

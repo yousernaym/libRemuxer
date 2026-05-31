@@ -3,12 +3,14 @@
 #include "Song.h"
 #include "ModReader.h"
 #include "sidreader.h"
+#include "HvlReader.h"
 
 Marshal_Song marshalSong;
 Song song(&marshalSong);
 SongReader *songReader;
 ModReader modReader(song);
 SidReader sidReader(song);
+HvlReader hvlReader(song);
 UserArgs userArgs;
 
 void initLib()
@@ -79,15 +81,26 @@ BOOL beginProcessing(UserArgs &args)
 	{
 		try
 		{
-			sidReader.beginProcess(userArgs);
-			args.subSong = userArgs.subSong;
+			hvlReader.beginProcess(userArgs);
+			args.subSong     = userArgs.subSong;
 			args.numSubSongs = userArgs.numSubSongs;
-			song.marSong->songType = Marshal_SongType::Sid;
-			songReader = &sidReader;
+			song.marSong->songType = Marshal_SongType::Hvl;
+			songReader = &hvlReader;
 		}
 		catch (...)
 		{
-			return FALSE;
+			try
+			{
+				sidReader.beginProcess(userArgs);
+				args.subSong = userArgs.subSong;
+				args.numSubSongs = userArgs.numSubSongs;
+				song.marSong->songType = Marshal_SongType::Sid;
+				songReader = &sidReader;
+			}
+			catch (...)
+			{
+				return FALSE;
+			}
 		}
 	}
 			
