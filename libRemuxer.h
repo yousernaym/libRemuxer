@@ -8,51 +8,44 @@ const int MAX_PATH_LENGTH = 256;
 const int MAX_TEMPOEVENTS = 10000;
 const int MAX_TRACKNOTES = 150000;
 const int MAX_MIDITRACKS = 129; //128 (0x80) + global track. (Ft2 has a limit of 0x80 insturments, it should be enough for most mods even if other trackers allow more.
-const int MAX_PITCHES = 128;
 const int MAX_MODTRACKS = 64;
 const int MAX_TRACKNAME_LENGTH = 100;
 
-#pragma pack(push, 8)
-struct Marshal_TempoEvent
+struct TempoEvent
 {
 	int time;
 	double tempo;
 };
 
-struct Marshal_Note
+struct SongNote
 {
 	int start;
 	int stop;
 	int pitch;
 	int chn;
-	bool operator<(const Marshal_Note &right) const
+	bool operator<(const SongNote &right) const
 	{
 		return start < right.start;
 	}
 };
 
-struct Marshal_Track
+struct SongTrack
 {
 	char *name;
-	Marshal_Note *notes;
+	SongNote *notes;
 	int numNotes;
 };
 
-enum class Marshal_SongType {Mod, Sid, Hvl};
-
-struct Marshal_Song
+struct SongData
 {
-	Marshal_TempoEvent *tempoEvents;
+	TempoEvent *tempoEvents;
 	int numTempoEvents;
 	int ticksPerBeat; 
-	int songLengthT;
-	int minPitch;
-	int maxPitch;
-	Marshal_Track *tracks;
+	SongTrack *tracks;
 	int numTracks;
-	Marshal_SongType songType;
 };
 
+#pragma pack(push, 8)
 struct UserArgs
 {
 	char *inputPath;

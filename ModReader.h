@@ -69,7 +69,7 @@ class ModReader : public SongReader
 	int ptnJump = -1;
 	int ptnStart = 0;
 	//Loop loop;
-	Marshal_Song *marSong;
+	SongData *songData;
 	bool isFadingOut;
 public:
 	ModReader(Song &song);

@@ -9,7 +9,7 @@
 
 ModReader::ModReader(Song& song) : SongReader(song, true, 480)
 {
-	marSong = song.marSong;
+	songData = song.songData;
 	MikMod_RegisterDriver(&drv_nos);
 	MikMod_RegisterAllLoaders();
 	if (MikMod_Init(""))
@@ -233,12 +233,12 @@ bool ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 				curSongSpeed = value;
 			else
 			{
-				marSong->tempoEvents[marSong->numTempoEvents].tempo = value;
-				marSong->tempoEvents[marSong->numTempoEvents].time = timeT;
-				if (++marSong->numTempoEvents >= MAX_TEMPOEVENTS)
+				songData->tempoEvents[songData->numTempoEvents].tempo = value;
+				songData->tempoEvents[songData->numTempoEvents].time = timeT;
+				if (++songData->numTempoEvents >= MAX_TEMPOEVENTS)
 					throw (std::string)"Too many tempo events.";
 			}
-			rowDur = getRowDur(marSong->tempoEvents[marSong->numTempoEvents - 1].tempo, curSongSpeed);
+			rowDur = getRowDur(songData->tempoEvents[songData->numTempoEvents - 1].tempo, curSongSpeed);
 		}
 		else if (cellInfo.eff[i] == UNI_KEYOFF || cellInfo.eff[i] == UNI_KEYFADE)
 		{
@@ -403,20 +403,20 @@ void ModReader::beginProcessing(const UserArgs &args)
 		curRowInfo.resize(module->numchn);
 		runningRowInfo.resize(module->numchn);
 
-		//Marshall data--------------------------
-		//marSong->ticksPerMeasure = module->sngspd * 16; //assuming 4 rows per beat
+		//MIDI output data-----------------------
+		//songData->ticksPerMeasure = module->sngspd * 16; //assuming 4 rows per beat
 		curSongSpeed = module->initspeed;
 
 		//int curSongBpm = module->inittempo;
 		rowDur = getRowDur(module->inittempo, module->initspeed);
 
-		marSong->tempoEvents[0].tempo = module->inittempo;
-		marSong->tempoEvents[0].time = 0;
-		marSong->numTempoEvents = 1;
+		songData->tempoEvents[0].tempo = module->inittempo;
+		songData->tempoEvents[0].time = 0;
+		songData->numTempoEvents = 1;
 
-		marSong->numTracks = 0;//module->numins;
+		songData->numTracks = 0;//module->numins;
 		for (int i = 0; i < MAX_MIDITRACKS; i++)
-			marSong->tracks[i].numNotes = 0;
+			songData->tracks[i].numNotes = 0;
 		//-----------------------------------
 
 		if (userArgs.insTrack)	//One track per instrument/sample
@@ -426,9 +426,9 @@ void ModReader::beginProcessing(const UserArgs &args)
 				for (int i = 0; i < module->numins; i++)
 				{
 					if (module->instruments[i].insname != NULL)
-						strcpy_s(marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, module->instruments[i].insname);
+						strcpy_s(songData->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, module->instruments[i].insname);
 					else
-						marSong->tracks[i + 1].name[0] = NULL;
+						songData->tracks[i + 1].name[0] = NULL;
 				}
 			}
 			else
@@ -436,9 +436,9 @@ void ModReader::beginProcessing(const UserArgs &args)
 				for (int i = 0; i < module->numsmp; i++)
 				{
 					if (module->samples[i].samplename != NULL)
-						strcpy_s(marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, module->samples[i].samplename);
+						strcpy_s(songData->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, module->samples[i].samplename);
 					else
-						marSong->tracks[i + 1].name[0] = NULL;
+						songData->tracks[i + 1].name[0] = NULL;
 				}
 			}
 		}
@@ -448,7 +448,7 @@ void ModReader::beginProcessing(const UserArgs &args)
 			{
 				std::ostringstream s;
 				s << "Channel " << i + 1;
-				strcpy_s(marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, s.str().c_str());
+				strcpy_s(songData->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, s.str().c_str());
 			}
 		}
 
@@ -456,7 +456,6 @@ void ModReader::beginProcessing(const UserArgs &args)
 		
 		Player_Free(module);
 		module = 0;
-		marSong->songLengthT = timeT;
 	}
 	else
 	{
@@ -465,7 +464,7 @@ void ModReader::beginProcessing(const UserArgs &args)
 		OutputDebugStringA(err.str().c_str());
 		throw err.str();
 	}
-	marSong->ticksPerBeat = 24;
+	songData->ticksPerBeat = 24;
 	if (song.tracks.empty())
 		throw "Empty song";
 	song.createNoteList(userArgs);

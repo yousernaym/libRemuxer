@@ -91,10 +91,10 @@ void HvlReader::beginProcess(UserArgs &args)
 
     // Synthetic tempo that gives exactly 50 ticks/second:
     //   tempo=125 BPM × ticksPerBeat=24 / 60 = 50 ticks/s
-    song.marSong->ticksPerBeat           = 24;
-    song.marSong->tempoEvents[0].time    = 0;
-    song.marSong->tempoEvents[0].tempo   = 125.0;
-    song.marSong->numTempoEvents         = 1;
+    song.songData->ticksPerBeat          = 24;
+    song.songData->tempoEvents[0].time   = 0;
+    song.songData->tempoEvents[0].tempo  = 125.0;
+    song.songData->numTempoEvents        = 1;
     // resolutionScale in createNoteList = 480 / ticksPerBeat = 20
 
     // Attempt to load the tune.  hvl_LoadTune validates the "THX" / "HVL"
@@ -126,7 +126,7 @@ void HvlReader::beginProcess(UserArgs &args)
         song.tracks[c].ticks.clear();
 
         if (!userArgs.insTrack)
-            sprintf_s(song.marSong->tracks[c + 1].name,
+            sprintf_s(song.songData->tracks[c + 1].name,
                       MAX_TRACKNAME_LENGTH, "Channel %i", c + 1);
     }
 
@@ -264,10 +264,10 @@ void HvlReader::endProcessing()
                 // ins_Name is TEXT[] = char[], guaranteed null-terminated by the loader.
                 const char *name = ht->ht_Instruments[ins].ins_Name;
                 if (name[0] != '\0')
-                    sprintf_s(song.marSong->tracks[t].name,
+                    sprintf_s(song.songData->tracks[t].name,
                               MAX_TRACKNAME_LENGTH, "%s", name);
                 else
-                    sprintf_s(song.marSong->tracks[t].name,
+                    sprintf_s(song.songData->tracks[t].name,
                               MAX_TRACKNAME_LENGTH, "Instrument %i", ins);
             }
             t++;

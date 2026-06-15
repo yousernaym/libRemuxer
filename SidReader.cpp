@@ -78,18 +78,18 @@ void SidReader::beginProcess(UserArgs &args)
 	float fadeOutS = 7;
 	userArgs.songLengthS += fadeOutS;
 
-	song.marSong->ticksPerBeat = 240; 
-	song.marSong->tempoEvents[0].tempo = 125;
-	song.marSong->numTempoEvents = 1;
-	ticksPerSeconds = (float)(song.marSong->tempoEvents[0].tempo * song.marSong->ticksPerBeat / 60.);
-	song.marSong->tempoEvents[0].time = 0;
+	song.songData->ticksPerBeat = 240; 
+	song.songData->tempoEvents[0].tempo = 125;
+	song.songData->numTempoEvents = 1;
+	ticksPerSeconds = (float)(song.songData->tempoEvents[0].tempo * song.songData->ticksPerBeat / 60.);
+	song.songData->tempoEvents[0].time = 0;
 
 	song.tracks.resize(3);
 	for (int i = 0; i < 3; i++)
 	{
 		song.tracks[i].ticks.resize(int((userArgs.songLengthS + (float)audioBuffer.size() / sampleRate) * ticksPerSeconds) + 1);
 		if (!userArgs.insTrack)
-			sprintf_s(song.marSong->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
+			sprintf_s(song.songData->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
 	}
 		
 	// Load tune from file
@@ -224,7 +224,7 @@ void SidReader::endProcessing()
 				if (maskedWaveform)
 					trackName += (trackName.empty() ? "" : " + ") + waveformNames[maskedWaveform];
 			}
-			strcpy_s(song.marSong->tracks[t].name, MAX_TRACKNAME_LENGTH, trackName.c_str());
+			strcpy_s(song.songData->tracks[t].name, MAX_TRACKNAME_LENGTH, trackName.c_str());
 			t++;
 		}
 	}

@@ -4,7 +4,7 @@
 #include <map>
 #include "libRemuxer.h"
 #include "FileFormat.h"
-typedef std::multiset<Marshal_Note> TrackNotes;
+typedef std::multiset<SongNote> TrackNotes;
 //typedef vector<TrackNotes> Notes;
 
 struct RunningTickInfo
@@ -27,12 +27,12 @@ class Song : FileFormat
 private:
 	std::vector<TrackNotes> notes;
 	void writeVL(unsigned value); //Write variable length value to file
-	void createNoteEvents(std::map<int, std::vector<MidiNoteEvent>> *noteEvents, Marshal_Track track);
+	void createNoteEvents(std::map<int, std::vector<MidiNoteEvent>> *noteEvents, SongTrack track);
 public:
 	struct Track;
 	std::vector<Track> tracks;
-	Marshal_Song *marSong;
-	Song(Marshal_Song *_marSong);
+	SongData *songData;
+	Song(SongData *_songData);
 	void createNoteList(const UserArgs &args, const std::set<int> *usedInstruments = nullptr);
 	void saveMidiFile(const std::string &path);
 };

@@ -5,8 +5,8 @@
 #include "sidreader.h"
 #include "HvlReader.h"
 
-Marshal_Song marshalSong;
-Song song(&marshalSong);
+SongData songData;
+Song song(&songData);
 SongReader *songReader;
 ModReader modReader(song);
 SidReader sidReader(song);
@@ -15,36 +15,34 @@ UserArgs userArgs;
 
 void initLib()
 {
-	ZeroMemory(&marshalSong, sizeof(Marshal_Song));
+	ZeroMemory(&songData, sizeof(SongData));
 	userArgs.inputPath = new char[MAX_PATH_LENGTH];
 	userArgs.audioPath = new char[MAX_PATH_LENGTH];
 	userArgs.midiPath = new char[MAX_PATH_LENGTH];
 
-	marshalSong.tempoEvents = new Marshal_TempoEvent[MAX_TEMPOEVENTS];
-	marshalSong.tracks = new Marshal_Track[MAX_MIDITRACKS];
+	songData.tempoEvents = new TempoEvent[MAX_TEMPOEVENTS];
+	songData.tracks = new SongTrack[MAX_MIDITRACKS];
 	for (int t = 0; t < MAX_MIDITRACKS; t++)
 	{
-		ZeroMemory(&marshalSong.tracks[t], sizeof(Marshal_Track));
-		marshalSong.tracks[t].name = new char[MAX_TRACKNAME_LENGTH];
-		marshalSong.tracks[t].name[0] = 0;
-		marshalSong.tracks[t].notes = new Marshal_Note[MAX_TRACKNOTES];
-		//for (int n = 0; n < MAX_MIDITRACKS; n++)
-			//ZeroMemory(&marshalModule.tracks[t].notes[n], sizeof(Marshal_Note));
+		ZeroMemory(&songData.tracks[t], sizeof(SongTrack));
+		songData.tracks[t].name = new char[MAX_TRACKNAME_LENGTH];
+		songData.tracks[t].name[0] = 0;
+		songData.tracks[t].notes = new SongNote[MAX_TRACKNOTES];
 	}
 }
 
 #define safeDeleteArray(x) {if (x) delete[] x;}
 void closeLib()
 {
-	safeDeleteArray(marshalSong.tempoEvents);
-	if (marshalSong.tracks)
+	safeDeleteArray(songData.tempoEvents);
+	if (songData.tracks)
 	{
 		for (int t = 0; t < MAX_MIDITRACKS; t++)
 		{
-			safeDeleteArray(marshalSong.tracks[t].name);
-			safeDeleteArray(marshalSong.tracks[t].notes);
+			safeDeleteArray(songData.tracks[t].name);
+			safeDeleteArray(songData.tracks[t].notes);
 		}
-		safeDeleteArray(marshalSong.tracks);
+		safeDeleteArray(songData.tracks);
 	}
 	safeDeleteArray(userArgs.inputPath);
 	safeDeleteArray(userArgs.audioPath);
@@ -74,7 +72,6 @@ BOOL beginProcessing(UserArgs &args)
 	try 
 	{
 		modReader.beginProcessing(userArgs);
-		song.marSong->songType = Marshal_SongType::Mod;
 		songReader = &modReader;
 	}
 	catch (...)
@@ -84,7 +81,6 @@ BOOL beginProcessing(UserArgs &args)
 			hvlReader.beginProcess(userArgs);
 			args.subSong     = userArgs.subSong;
 			args.numSubSongs = userArgs.numSubSongs;
-			song.marSong->songType = Marshal_SongType::Hvl;
 			songReader = &hvlReader;
 		}
 		catch (...)
@@ -94,7 +90,6 @@ BOOL beginProcessing(UserArgs &args)
 				sidReader.beginProcess(userArgs);
 				args.subSong = userArgs.subSong;
 				args.numSubSongs = userArgs.numSubSongs;
-				song.marSong->songType = Marshal_SongType::Sid;
 				songReader = &sidReader;
 			}
 			catch (...)
