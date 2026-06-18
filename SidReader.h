@@ -1,8 +1,7 @@
 #pragma once
 
-//Needed for sidplayfp
-#define HAVE_CXX14
-#define HAVE_CXX11
+// HAVE_CXX11/14/17 (needed by libsidplayfp's sidcxx11.h, since MSVC does not set
+// __cplusplus reliably) are defined centrally in libRemuxer.vcxproj.
 
 #include "song.h"
 #include "libRemuxer.h"

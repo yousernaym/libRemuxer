@@ -135,18 +135,10 @@ SidReader::SidReader(Song &song) : SongReader(song, USE_STEREO)
 
 	engine.setRoms((const uint8_t*)&kernal[0], (const uint8_t*)&basic[0], (const uint8_t*)&chargen[0]);
 
-	// Set up a SID builder
+	// Set up a SID builder. In libsidplayfp 3.x the engine locks the SID
+	// emulators it needs internally during config(), so the builder no longer
+	// exposes create(count)/getStatus(); any failure surfaces via engine.config().
 	rs = std::make_unique<ReSIDfpBuilder>("ResidflBuilder");
-
-	// Get the number of SIDs supported by the engine
-	unsigned int maxsids = (engine.info()).maxsids();
-
-	// Create SID emulators
-	rs->create(maxsids);
-
-	// Check if builder is ok
-	if (!rs->getStatus())
-		throw rs->error();
 }
 
 SidReader::~SidReader()

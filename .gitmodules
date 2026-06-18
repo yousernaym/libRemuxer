@@ -2,6 +2,10 @@
 	path = libsidplayfp
 	url = https://github.com/yousernaym/libsidplayfp.git
 	branch = master
+[submodule "libresidfp"]
+	path = libresidfp
+	url = https://github.com/yousernaym/libresidfp.git
+	branch = master
 [submodule "openmpt"]
 	path = openmpt
 	url = git@github.com:yousernaym/openmpt.git
