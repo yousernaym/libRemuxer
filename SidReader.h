@@ -8,6 +8,10 @@
 #include "libRemuxer.h"
 #include "SongReader.h"
 #include "Wav.h"
+#include <array>
+#include <cstdint>
+#include <memory>
+#include <vector>
 #include <sidplayfp/sidplayfp.h>
 #include <builders/residfp-builder/residfp.h> 
 
@@ -15,7 +19,9 @@ class SidReader : public SongReader
 {
 	sidplayfp engine;
 	std::unique_ptr<ReSIDfpBuilder> rs;
-	NoteState noteState;
+	std::array<uint8_t, 32> sidRegs;
+	std::array<bool, 3> gateState;
+	std::vector<short> sidAudioBuffer;
 	int minFreq;
 	int maxFreq;
 	float timeS;

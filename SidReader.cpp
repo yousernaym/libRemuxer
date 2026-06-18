@@ -8,6 +8,9 @@
 #include <vector>
 #include <iostream>
 #include <array>
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
 #include <map>
 
 #include <sidplayfp/sidplayfp.h>
@@ -25,6 +28,103 @@ std::map<int, std::string> waveformNames = { {1, "Triangle"}, {2, "Sawtooth"}, {
 std::set<int> usedWaveformCombos;
 const bool USE_STEREO = true;
 const int AUDIO_CHANNEL_COUNT = USE_STEREO ? 2 : 1;
+
+namespace
+{
+	constexpr int SidVoiceRegisterStride = 7;
+	constexpr int SidControlRegisterOffset = 4;
+	constexpr int SidWaveformShift = 4;
+	constexpr int MaxSidPlayCycles = 20000;
+	constexpr float ShortSampleScale = 1.0f / 32768.0f;
+
+	template<typename Config>
+	void setPlayback(Config& cfg)
+	{
+		if constexpr (requires(Config& c) { Config::STEREO; Config::MONO; c.playback; })
+			cfg.playback = USE_STEREO ? Config::STEREO : Config::MONO;
+	}
+
+	template<typename Config>
+	void setFastSampling(Config& cfg, bool enabled)
+	{
+		if constexpr (requires(Config& c) { c.fastSampling; })
+			cfg.fastSampling = enabled;
+	}
+
+	template<typename Engine>
+	void initMixer(Engine& engine)
+	{
+		if constexpr (requires(Engine& e) { e.initMixer(true); })
+			engine.initMixer(USE_STEREO);
+	}
+
+	template<typename Engine>
+	uint_least32_t playSid(Engine& engine, std::vector<SampleType>& audioBuffer, std::vector<short>& sidAudioBuffer)
+	{
+		if constexpr (requires(Engine& e, short* buffer, uint_least32_t count) { e.play(buffer, count); })
+		{
+			if (sidAudioBuffer.size() != audioBuffer.size())
+				sidAudioBuffer.resize(audioBuffer.size());
+
+			uint_least32_t sampleCount = engine.play(sidAudioBuffer.data(), (uint_least32_t)sidAudioBuffer.size());
+			for (uint_least32_t i = 0; i < sampleCount; i++)
+				audioBuffer[i] = sidAudioBuffer[i] * ShortSampleScale;
+			return sampleCount;
+		}
+		else if constexpr (requires(Engine& e, SampleType* buffer, uint_least32_t count) { e.play(buffer, count); })
+		{
+			return engine.play(audioBuffer.data(), (uint_least32_t)audioBuffer.size());
+		}
+		else if constexpr (requires(Engine& e, unsigned int cycles) { e.play(cycles); } &&
+			requires(Engine& e, short* buffer, unsigned int samples) { e.mix(buffer, samples); })
+		{
+			int sampleFrames = engine.play(MaxSidPlayCycles);
+			if (sampleFrames < 0)
+				throw engine.error();
+
+			if (sampleFrames == 0)
+				return 0;
+
+			size_t outputSamples = (size_t)sampleFrames * AUDIO_CHANNEL_COUNT;
+			if constexpr (requires(Engine& e, unsigned int cycles) { e.getBufSize(cycles); })
+				outputSamples = (std::max)(outputSamples, (size_t)engine.getBufSize(MaxSidPlayCycles));
+
+			if (sidAudioBuffer.size() < outputSamples)
+				sidAudioBuffer.resize(outputSamples);
+			if (audioBuffer.size() < outputSamples)
+				audioBuffer.resize(outputSamples);
+
+			unsigned int mixedSamples = engine.mix(sidAudioBuffer.data(), (unsigned int)sampleFrames);
+			for (unsigned int i = 0; i < mixedSamples; i++)
+				audioBuffer[i] = sidAudioBuffer[i] * ShortSampleScale;
+			return mixedSamples;
+		}
+	}
+
+	struct SidVoiceRegisters
+	{
+		int frequency;
+		bool gate;
+		bool gateChanged;
+		int volume;
+		int waveform;
+	};
+
+	SidVoiceRegisters readVoiceRegisters(const std::array<uint8_t, 32>& regs, int channel, bool previousGate)
+	{
+		int offset = channel * SidVoiceRegisterStride;
+		uint8_t control = regs[offset + SidControlRegisterOffset];
+		bool gate = (control & 0x01) != 0;
+
+		SidVoiceRegisters voice;
+		voice.frequency = regs[offset] | (regs[offset + 1] << 8);
+		voice.gate = gate;
+		voice.gateChanged = gate != previousGate;
+		voice.volume = gate ? 255 : 0;
+		voice.waveform = (control >> SidWaveformShift) & 0x0f;
+		return voice;
+	}
+}
 
 SidReader::SidReader(Song &song) : SongReader(song, USE_STEREO)
 {
@@ -120,10 +220,9 @@ void SidReader::beginProcess(UserArgs &args)
 	cfg.frequency = sampleRate;
 	//cfg.samplingMethod = SidConfig::INTERPOLATE;
 	cfg.samplingMethod = SidConfig::RESAMPLE_INTERPOLATE;
-	cfg.fastSampling = false;
-	cfg.playback = USE_STEREO ? SidConfig::STEREO : SidConfig::MONO;
+	setFastSampling(cfg, false);
+	setPlayback(cfg);
 	cfg.sidEmulation = rs.get();
-	cfg.disableAudio = userArgs.audioPath[0] == 0;
 	//cfg.forceSidModel = true;
 	//cfg.forceC64Model = true;
 	//cfg.defaultC64Model = SidConfig::c64_model_t::DREAN;
@@ -135,22 +234,31 @@ void SidReader::beginProcess(UserArgs &args)
 	// Load tune into engine
 	if (!engine.load(tune.get()))
 		throw engine.error();
+	initMixer(engine);
 
 	timeS = 0;
 	oldTimeT = 0;
 	samplesProcessed = 0;
 	samplesToProcess = (int)(sampleRate * userArgs.songLengthS) * AUDIO_CHANNEL_COUNT;
 	samplesBeforeFadeout = samplesToProcess - (int)(fadeOutS * sampleRate);
+	sidRegs.fill(0);
+	gateState.fill(false);
+	sidAudioBuffer.resize(audioBuffer.size());
 }
 
 float SidReader::process()
 {
-	samplesProcessed += engine.play(audioBuffer.data(), (uint_least32_t)audioBuffer.size());
+	uint_least32_t generatedSamples = playSid(engine, audioBuffer, sidAudioBuffer);
+	if (generatedSamples == 0)
+		return -1;
+
+	samplesProcessed += generatedSamples;
 	timeS = (float)samplesProcessed / sampleRate;
 	timeS /= AUDIO_CHANNEL_COUNT;
 	int timeT = (int)(timeS * ticksPerSeconds);
 	if (timeT > oldTimeT)
 	{
+		bool gotSidRegisters = engine.getSidStatus(0, sidRegs.data());
 		for (int c = 0; c < 3; c++)
 		{
 			for (int t = oldTimeT + 1; t < timeT; t++)
@@ -160,22 +268,23 @@ float SidReader::process()
 			RunningTickInfo &prevTick = *song.tracks[c].getPrevTick(timeT);
 
 			curTick.noteStart = prevTick.noteStart;
-			engine.getNoteState(noteState, c);
-
-			int freq = noteState.frequency;
-
-			//noteState.isPlaying = true;
-			//noteState.gateChanged = false;
-			if (noteState.waveform > 0 && noteState.volume > 0 && freq >= minFreq && freq <= maxFreq)
+			if (!gotSidRegisters)
 			{
-				curTick.notePitch = (int)(log2((float)freq / minFreq) * 12 + 0.5f) + 1;
-				if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || noteState.gateChanged && noteState.gate)
+				curTick.vol = 0;
+				continue;
+			}
+
+			SidVoiceRegisters voice = readVoiceRegisters(sidRegs, c, gateState[c]);
+			gateState[c] = voice.gate;
+
+			if (voice.waveform > 0 && voice.volume > 0 && voice.frequency >= minFreq && voice.frequency <= maxFreq)
+			{
+				curTick.notePitch = (int)(log2((float)voice.frequency / minFreq) * 12 + 0.5f) + 1;
+				if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || (voice.gateChanged && voice.gate))
 					curTick.noteStart = timeT;
-				curTick.ins = noteState.waveform;
+				curTick.ins = voice.waveform;
 				usedWaveformCombos.insert(curTick.ins);
-				curTick.vol = noteState.volume;
-				//if (noteState.gateChanged && noteState.gate)
-					//prevTick.vol = 0;
+				curTick.vol = voice.volume;
 			}
 			else
 				curTick.vol = 0;
@@ -189,11 +298,12 @@ float SidReader::process()
 		if (samplesProcessed > samplesBeforeFadeout)
 		{
 			float scale = (float)(samplesToProcess - samplesProcessed) / (samplesToProcess - samplesBeforeFadeout);
-			for (int i = 0; i < audioBuffer.size(); i++)
+			for (uint_least32_t i = 0; i < generatedSamples; i++)
 				audioBuffer[i] *= scale;
 		}
 
-		wav.addSamples(audioBuffer);
+		for (uint_least32_t i = 0; i < generatedSamples; i++)
+			wav.addSample(audioBuffer[i]);
 	}
 
 	if (samplesProcessed < samplesToProcess)
