@@ -71,7 +71,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp-readNotes\src\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp-readNotes\src\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp-readNotes\src\sidplayfp;$(VC_ProjectDir)libsidplayfp-readNotes\src;$(VC_ProjectDir)mikmod\libmikmod\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp-readNotes\src\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp-readNotes\src\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp-readNotes\src\sidplayfp;$(VC_ProjectDir)libsidplayfp-readNotes\src;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer;$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
@@ -81,23 +81,23 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp\src;$(VC_ProjectDir)mikmod\libmikmod\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)\mikmod\libmikmod\win32\vs2005\x64\$(Configuration)\;$(SolutionDir)$(Platform)\$(Configuration);$(ProjectDir)openmpt\bin\$(Configuration)\vs2022-win10-static\amd64;$(ProjectDir)openmpt\build\lib\vs2022win10\x86_64\$(Configuration)\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp\src;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ProjectDir)openmpt\bin\$(Configuration)\vs2022-win10-static\amd64;$(ProjectDir)openmpt\build\lib\vs2022win10\x86_64\$(Configuration)\;$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
     <OutDir>$(Platform)\$(Configuration)\</OutDir>
     <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp-readNotes\src\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp-readNotes\src\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp-readNotes\src\sidplayfp;$(VC_ProjectDir)libsidplayfp-readNotes\src;$(VC_ProjectDir)mikmod\libmikmod\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp-readNotes\src\builders\residfp-builder\residfp;$(VC_ProjectDir)libsidplayfp-readNotes\src\builders\residfp-builder;$(VC_ProjectDir)libsidplayfp-readNotes\src\sidplayfp;$(VC_ProjectDir)libsidplayfp-readNotes\src;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Remuxer\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp\src;$(VC_ProjectDir)mikmod\libmikmod\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)\mikmod\libmikmod\win32\vs2005\x64\$(Configuration)\;$(SolutionDir)$(Platform)\$(Configuration);$(ProjectDir)openmpt\bin\$(Configuration)\vs2022-win10-static\amd64;$(ProjectDir)openmpt\build\lib\vs2022win10\x86_64\$(Configuration)\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(VC_ProjectDir)openmpt;$(VC_ProjectDir)libsidplayfp\src;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ProjectDir)openmpt\bin\$(Configuration)\vs2022-win10-static\amd64;$(ProjectDir)openmpt\build\lib\vs2022win10\x86_64\$(Configuration)\;$(LibraryPath)</LibraryPath>
     <OutDir>$(Platform)\$(Configuration)\</OutDir>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
@@ -108,7 +108,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;MIKMODWRAPPER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -116,7 +116,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>openmpt-ogg.lib;openmpt-vorbis.lib;libopenmpt.lib;libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>openmpt-ogg.lib;openmpt-vorbis.lib;libopenmpt.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -125,7 +125,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;MIKMODWRAPPER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -133,7 +133,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>openmpt-mpg123.lib;libsidplayfp.lib;openmpt-ogg.lib;openmpt-vorbis.lib;libopenmpt.lib;libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>openmpt-mpg123.lib;libsidplayfp.lib;openmpt-ogg.lib;openmpt-vorbis.lib;libopenmpt.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)roms" "$(SolutionDir)$(Platform)\$(ConfigurationName)\remuxer\roms" /D /Y /I /E /S</Command>
@@ -147,7 +147,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MIKMODWRAPPER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -156,7 +156,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>openmpt-ogg.lib;openmpt-vorbis.lib;libopenmpt.lib;libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>openmpt-ogg.lib;openmpt-vorbis.lib;libopenmpt.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
     </Link>
@@ -169,7 +169,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MIKMODWRAPPER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
@@ -179,7 +179,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>openmpt-mpg123.lib;libsidplayfp.lib;openmpt-ogg.lib;openmpt-vorbis.lib;libopenmpt.lib;libmikmod.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>openmpt-mpg123.lib;libsidplayfp.lib;openmpt-ogg.lib;openmpt-vorbis.lib;libopenmpt.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
     </Link>
@@ -305,7 +305,6 @@
     <ClInclude Include="Wav.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\..\c++\Libs\MUSIC\libmikmod-3.3.10\docs\mikmod.html" />
     <None Include="libsidplayfp-readNotes\src\poweron.bin" />
     <None Include="libsidplayfp-readNotes\src\psiddrv.bin" />
     <None Include="README.md" />

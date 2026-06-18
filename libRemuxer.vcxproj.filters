@@ -358,7 +358,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\..\c++\Libs\MUSIC\libmikmod-3.3.10\docs\mikmod.html" />
     <None Include="README.md" />
     <None Include="libsidplayfp-readNotes\src\poweron.bin">
       <Filter>Resource Files</Filter>

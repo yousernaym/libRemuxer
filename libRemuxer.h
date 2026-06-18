@@ -1,6 +1,5 @@
 #pragma once
-#include <mikmod.h>
-#include <mikmod_internals.h>
+#include <windows.h>
 #include <cmath>
 
 const int MAX_PATH_LENGTH = 256;

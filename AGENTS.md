@@ -56,7 +56,10 @@ Both readers fill `Song::tracks[ch].ticks[]` with `RunningTickInfo` (pitch/start
 `Song::createNoteList()` collapses runs of ticks into `SongNote`s (start/stop/pitch/channel), rescales to
 480 ticks/beat, and `saveMidiFile()` writes a standard MIDI format-1 file by hand.
 
-Modules use libmikmod for pattern/note extraction and libopenmpt for WAV rendering. SID uses libsidplayfp and
+Modules use libopenmpt for both pattern/note extraction and WAV rendering. Note extraction reads the public
+libopenmpt pattern API plus a small set of Visual-Music read-only accessors added to the openmpt fork
+(`module::vm_*` in `openmpt/libopenmpt/libopenmpt.hpp`) that expose the instrument/sample metadata
+(envelopes, sample length/loop/C5-speed, note maps) the note-cutter needs. SID uses libsidplayfp and
 samples SID chip note state during `process()`. HVL/AHX uses the HVL replay code.
 
 ## Vendored Third-Party Code
@@ -64,8 +67,8 @@ samples SID chip note state during `process()`. HVL/AHX uses the HVL replay code
 The subdirectories are large external libraries, all built as their own projects within the repo-root
 `VisualMusic.sln` and linked into this DLL. Change only what Visual Music requires:
 
-- `mikmod/` - libmikmod, note extraction.
-- `openmpt/` - libopenmpt, module audio rendering.
+- `openmpt/` - libopenmpt, module note extraction and audio rendering (a fork with additive `module::vm_*`
+  accessors; keep changes minimal so upstream merges stay clean).
 - `libsidplayfp/` - a fork modified to expose `NoteState` / `getNoteState()` so SID registers can be read per voice.
 
 ## Build & Output

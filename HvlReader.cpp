@@ -4,9 +4,8 @@
 #include <cmath>
 #include <string>
 
-// hvl_replay.h defines its own BOOL/TEXT types that conflict with <windows.h>
-// (pulled in via libRemuxer.h -> mikmod.h). Un-define the Windows macros first,
-// then include the hvl header in a C-linkage block.
+// hvl_replay.h defines its own BOOL/TEXT types that conflict with <windows.h>.
+// Un-define the Windows macros first, then include the hvl header in a C-linkage block.
 #ifdef TEXT
 #undef TEXT
 #endif
@@ -18,7 +17,7 @@ extern "C"
     #include "hvl/hvl_replay.h"
 }
 
-// <windows.h> (via libRemuxer.h -> mikmod.h) defines min/max as macros, which
+// <windows.h> defines min/max as macros, which
 // breaks std::min / std::max. Drop them — we use the std versions below.
 #ifdef min
 #undef min

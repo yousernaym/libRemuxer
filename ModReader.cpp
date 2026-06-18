@@ -10,24 +10,10 @@
 ModReader::ModReader(Song& song) : SongReader(song, true, 480)
 {
 	songData = song.songData;
-	MikMod_RegisterDriver(&drv_nos);
-	MikMod_RegisterAllLoaders();
-	if (MikMod_Init(""))
-	{
-		std::string err = (std::string)"Could not initialize Mikmod, reason: " + (std::string)MikMod_strerror(MikMod_errno);
-		OutputDebugStringA(err.c_str());
-		throw "MikMod_Init failed";
-	}
 }
 
 ModReader::~ModReader()
 {
-	if (module)
-	{
-		Player_Free(module);
-		module = 0;
-	}
-	MikMod_Exit();
 }
 
 
@@ -38,7 +24,7 @@ void ModReader::updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo,
 	if (note > 0)
 	{ //a new note was played
 		runningCellInfo.samplePlaying = true;
-		int smpIndex = -1;
+		int smpIndex = 0; //1-based libopenmpt sample index (0 = none)
 		int ins;
 		if (cellInfo.ins)
 		{  //ins + note was specified
@@ -49,36 +35,34 @@ void ModReader::updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo,
 		else
 			ins = runningCellInfo.ins;
 		firstTick.ins = ins;
-		if (module->instruments)
+		int openmptNote = note - PITCH_OFFSET; //back to 1..128
+
+		if (omptModule->vm_has_instruments())
 		{
-			INSTRUMENT *instrument = nullptr;
-			if (ins > 0 && ins - 1 < module->numins)
+			if (ins > 0)
+				smpIndex = omptModule->vm_get_note_sample(ins, openmptNote);
+
+			if (ins > 0 && smpIndex > 0)
 			{
-				instrument = &module->instruments[ins - 1];
-				smpIndex = instrument->samplenumber[note - 1];
-			}
-			
-			if (instrument && smpIndex != UWORD(-1))
-			{
-				if (instrument->volflg == 1  //volenv on but not sustain or loop
-					&& instrument->volenv[instrument->volpts - 1].val == 0)  //last env point = 0
-				{
-					runningCellInfo.volEnvEnd = instrument->volenv[instrument->volpts - 1].pos;
-				}
-				runningCellInfo.startVol = instrument->globvol;
+				if (omptModule->vm_get_vol_env_one_shot_zero_end(ins)) //volenv on but not sustain or loop, last point = 0
+					runningCellInfo.volEnvEnd = omptModule->vm_get_vol_env_end_tick(ins);
+				runningCellInfo.startVol = omptModule->vm_get_instrument_global_vol(ins);
 			}
 			else
 				runningCellInfo.samplePlaying = false;
 		}
 		else
-			smpIndex = ins - 1;
-		if (smpIndex >= 0 && smpIndex < module->numsmp)
-		{
-			SAMPLE sample = module->samples[smpIndex];
-			runningCellInfo.loopSample = (sample.flags & SF_LOOP) == SF_LOOP;
+			smpIndex = ins; //sample-based module: instrument number is the (1-based) sample number
 
-			runningCellInfo.sampleLength = sample.length < cellInfo.sampleOffset ? 0 : sample.length - cellInfo.sampleOffset;
-			if (runningCellInfo.sampleLength == 0 || runningCellInfo.loopSample && sample.loopend > 0 && sample.loopend <= cellInfo.sampleOffset)
+		if (smpIndex > 0)
+		{
+			double sampleLength = (double)omptModule->vm_get_sample_length(smpIndex);
+			runningCellInfo.loopSample = omptModule->vm_get_sample_loops(smpIndex);
+			runningCellInfo.sampleC5Speed = omptModule->vm_get_sample_c5speed(smpIndex);
+			long long loopEnd = omptModule->vm_get_sample_loop_end(smpIndex);
+
+			runningCellInfo.sampleLength = sampleLength < cellInfo.sampleOffset ? 0 : sampleLength - cellInfo.sampleOffset;
+			if (runningCellInfo.sampleLength == 0 || (runningCellInfo.loopSample && loopEnd > 0 && loopEnd <= (long long)cellInfo.sampleOffset))
 				runningCellInfo.samplePlaying = false;
 		}
 		else
@@ -95,7 +79,7 @@ void ModReader::updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo,
 		runningCellInfo.volEnvEnded = false;
 	}
 }
-					
+
 
 void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo)
 {
@@ -122,9 +106,11 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 		if (!runningCellInfo.loopSample && runningCellInfo.ins > 0)
 		{ //sample is not looping
 		  //check if sample has ended
-			int note = module->instruments != NULL ? module->instruments[runningCellInfo.ins - 1].samplenote[curTick.notePitch] : curTick.notePitch;
-			double freqRatio = 1 / pow(semitone, note - 48);
-			if (elapsedSampleS > runningCellInfo.sampleLength * freqRatio / 8363)
+			int openmptNote = curTick.notePitch - PITCH_OFFSET;
+			int playedNote = omptModule->vm_has_instruments() ? omptModule->vm_get_note_map(runningCellInfo.ins, openmptNote) : openmptNote;
+			double freqRatio = 1 / pow(semitone, playedNote - OMPT_NOTE_MIDDLEC);
+			double c5Speed = runningCellInfo.sampleC5Speed > 0 ? runningCellInfo.sampleC5Speed : 8363;
+			if (elapsedSampleS > runningCellInfo.sampleLength * freqRatio / c5Speed)
 			{
 				curTick.noteStart = -1;
 				runningCellInfo.samplePlaying = false;
@@ -132,14 +118,13 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 		}
 		if (runningCellInfo.volEnvEnd > 0)
 		{ //vol env is active, not looping and ends with 0
-		  //check if volenv has ended
-			if (elapsedVolEnvS > runningCellInfo.volEnvEnd / 47.647)
+		  //check if volenv has ended. OpenMPT envelope ticks == player ticks, so tickDur converts to seconds.
+			if (elapsedVolEnvS > runningCellInfo.volEnvEnd * tickDur)
 			{
 				curTick.noteStart = -1;
 				runningCellInfo.volEnvEnded = true;
 			}
 		}
-		int cellTick = t % curSongSpeed;
 
 		if ((cellInfo.noteStartOffset == t && cellInfo.note > 0 || //Note starts at current tick (first tick of cell or start is offset using edx command)
 			cellInfo.retriggerOffset > 0 && t % cellInfo.retriggerOffset == 0 ||  //Retrigger effect (e9x)
@@ -155,11 +140,11 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 
 		if (curTick.vol == 0)
 			curTick.noteStart = -1;
-		
+
 		//Copy current tick to next tick
 		auto nextTick = track.getNextTick(timeT + t);
 		*nextTick = curTick;
-		
+
 		//If this cell has an arpeggio effect, reset next tick with a new, unarpeggiated note
 		if (cellInfo.arpPitches[0] > 0)
 		{
@@ -169,202 +154,193 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 	}
 }
 
-void ModReader::readNextCell(BYTE *track, CellInfo &cellInfo, RunningCellInfo &runningCellInfo)
+void ModReader::readCell(int pattern, int row, int channel, CellInfo &cellInfo, RunningCellInfo &runningCellInfo)
 {
-	int cellRep, cellLen;
-	getCellRepLen(track[runningCellInfo.offset], cellRep, cellLen);
-	if (runningCellInfo.repeatsLeft == 0)
-	{  //Current cell should not be repeated, read cell at new row
-		runningCellInfo.repeatsLeft = cellRep;
-		cellInfo = CellInfo();
-		int rowDataOffset = 1 + runningCellInfo.offset;
-		while (rowDataOffset < cellLen + runningCellInfo.offset)
-		{
-			int opCode = track[rowDataOffset++];
-			if (opCode <= 0 || opCode >= UNI_LAST)
-				throw "Invalid opCode";
-						
-			if (opCode == UNI_NOTE)
-			{
-				int note = track[rowDataOffset++] + 1;
-				
-				// Midi only supports < 128 as pitch, so treat higher values as note off.
-				// .it seems to use 247 as some sort of fadeout-ish note off.
-				if (note >= 128) 
-					note = 0;
-				cellInfo.note = note;
-				runningCellInfo.note = note;
-			}
-			else if (opCode == UNI_INSTRUMENT)
-				cellInfo.ins = track[rowDataOffset++] + 1;
-			else
-			{
-				cellInfo.eff[cellInfo.numEffs] = opCode;
-				for (int i = 0; i < MikMod_GetOperandCount(opCode); i++)
-					cellInfo.effValues[opCode][i] = track[rowDataOffset++];
-				cellInfo.numEffs++;
-			}
-		}
-		runningCellInfo.offset += cellLen;
+	cellInfo = CellInfo();
+
+	int rawNote = omptModule->get_pattern_row_channel_command(pattern, row, channel, openmpt::module::command_note);
+	if (rawNote >= OMPT_NOTE_MIN && rawNote <= OMPT_NOTE_MAX)
+	{ //a real note
+		cellInfo.note = rawNote + PITCH_OFFSET;
+		runningCellInfo.note = cellInfo.note;
 	}
-	else
-		runningCellInfo.repeatsLeft--;
+	else if (rawNote == OMPT_NOTE_KEYOFF || rawNote == OMPT_NOTE_NOTECUT || rawNote == OMPT_NOTE_FADE)
+		cellInfo.keyOff = true;
+
+	cellInfo.ins = omptModule->get_pattern_row_channel_command(pattern, row, channel, openmpt::module::command_instrument);
+	cellInfo.volcmd = omptModule->get_pattern_row_channel_command(pattern, row, channel, openmpt::module::command_volumeffect);
+	cellInfo.vol = omptModule->get_pattern_row_channel_command(pattern, row, channel, openmpt::module::command_volume);
+	cellInfo.command = omptModule->get_pattern_row_channel_command(pattern, row, channel, openmpt::module::command_effect);
+	cellInfo.param = omptModule->get_pattern_row_channel_command(pattern, row, channel, openmpt::module::command_parameter);
 }
 
-//Returns false to indicate end of song if a BXX command jumps backwards, otherwise true
-bool ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, RunningCellInfo &runningCellInfo, int pattern, int row)
+//Returns false to indicate end of song if a position jump goes backwards, otherwise true
+bool ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, RunningCellInfo &runningCellInfo, int order, int row)
 {
-	for (int i = 0; i < cellInfo.numEffs; i++)
-	{
-		int effValues[MAX_EFFECT_VALUES];
-		int eff = cellInfo.eff[i];
-		for (int j = 0; j < MAX_EFFECT_VALUES; j++)
-		{
-			//If effect value is not zero or effect type does not have memory of its last value, update the running value
-			if (cellInfo.effValues[eff][j] != 0 || eff != UNI_XMEFFECTA && eff != UNI_XMEFFECTEA && eff != UNI_XMEFFECTEB && eff != UNI_S3MEFFECTD && eff != UNI_PTEFFECT9)
-				runningCellInfo.effValues[cellInfo.eff[i]][j] = cellInfo.effValues[cellInfo.eff[i]][j];
-			effValues[j] = runningCellInfo.effValues[cellInfo.eff[i]][j];
-		}
+	//Note-column note-off (=== / ^^^ / ~~~)
+	if (cellInfo.keyOff && runningCellInfo.volEnvEnd == 0) //Volume envelope disabled, just set volume to 0
+		firstTick.vol = 0;
+	//TODO: if volume envelope is active, a note off should let it pass beyond sustain point.
 
-		if (cellInfo.eff[i] == UNI_PTEFFECTF || cellInfo.eff[i] == UNI_S3MEFFECTA || cellInfo.eff[i] == UNI_S3MEFFECTT)
-		{ //Speed/tempo changes
-			int value = effValues[0];
-			if (value <= 0x1f || cellInfo.eff[i] == UNI_S3MEFFECTA)
-				curSongSpeed = value;
-			else
-			{
-				songData->tempoEvents[songData->numTempoEvents].tempo = value;
-				songData->tempoEvents[songData->numTempoEvents].time = timeT;
-				if (++songData->numTempoEvents >= MAX_TEMPOEVENTS)
-					throw (std::string)"Too many tempo events.";
-			}
-			rowDur = getRowDur(songData->tempoEvents[songData->numTempoEvents - 1].tempo, curSongSpeed);
-		}
-		else if (cellInfo.eff[i] == UNI_KEYOFF || cellInfo.eff[i] == UNI_KEYFADE)
+	//---- Effect column (CMD_*) ----
+	int command = cellInfo.command;
+	int param = cellInfo.param;
+	switch (command)
+	{
+	case CMD_SPEED_:
+		curSongSpeed = param;
+		rowDur = getRowDur(songData->tempoEvents[songData->numTempoEvents - 1].tempo, curSongSpeed);
+		break;
+	case CMD_TEMPO_:
+		songData->tempoEvents[songData->numTempoEvents].tempo = param;
+		songData->tempoEvents[songData->numTempoEvents].time = timeT;
+		if (++songData->numTempoEvents >= MAX_TEMPOEVENTS)
+			throw (std::string)"Too many tempo events.";
+		rowDur = getRowDur(songData->tempoEvents[songData->numTempoEvents - 1].tempo, curSongSpeed);
+		break;
+	case CMD_KEYOFF_:
+		if (runningCellInfo.volEnvEnd == 0) //Volume envelope disabled, just set volume to 0
+			firstTick.vol = 0;
+		break;
+	case CMD_ARPEGGIO_:
+	{
+		int value1 = (param >> 4) & 0xf;
+		int value2 = param & 0xf;
+		if (value1 > 0 || value2 > 0)
 		{
-			if (runningCellInfo.volEnvEnd == 0) //Volume envelope disabled, just set volume to 0
-				firstTick.vol = 0;
-			//TODO: if volume envelope is active, a note off should let it pass beyond sustain point.
+			cellInfo.retriggerOffset = 1;
+			cellInfo.arpPitches[0] = runningCellInfo.note;
+			cellInfo.arpPitches[1] = runningCellInfo.note + value1;
+			cellInfo.arpPitches[2] = runningCellInfo.note + value2;
 		}
-		else if (cellInfo.eff[i] == UNI_PTEFFECT0)
-		{
-			int value = effValues[0];
-			int value1 = (value >> 4) & 0xf;
-			int value2 = value & 0xf;
-			if (value1 > 0 || value2 > 0)
-			{
-				cellInfo.retriggerOffset = 1;
-				cellInfo.arpPitches[0] = runningCellInfo.note;
-				cellInfo.arpPitches[1] = runningCellInfo.note + value1;
-				cellInfo.arpPitches[2] = runningCellInfo.note + value2;
-			}
-		}
-		else if (cellInfo.eff[i] == UNI_PTEFFECT9)
-		{
-			cellInfo.sampleOffset = effValues[0] * 256;
-		}
-		else if (cellInfo.eff[i] == UNI_PTEFFECTB)
-		{
-			ptnJump = effValues[0];
-			if (ptnJump <= pattern)
-				return false;
-		}
-		else if (cellInfo.eff[i] == UNI_PTEFFECTD)
-		{
-			if (ptnJump == -1)
-				ptnJump = pattern + 1;
-			ptnStart = effValues[0];
-		}
-		else if (cellInfo.eff[i] == UNI_PTEFFECTC)
-			firstTick.vol = effValues[0];
-		else if (cellInfo.eff[i] == UNI_PTEFFECTE)
-		{
-			int subeff = (effValues[0] >> 4) & 0xf;
-			int value = effValues[0] & 0xf;
-			if (value < curSongSpeed)
-			{
-				if (subeff == 0x9)
-					cellInfo.retriggerOffset = value;
-				if (subeff == 0xc)
-					cellInfo.noteEndOffset = value;
-				else if (subeff == 0xd)
-					cellInfo.noteStartOffset = value;
-			}
-			if (subeff == 0xe)
-				ptnDelay = value;
-			if (subeff == 0x6)
-			{
-				if (value == 0)
-				{
-					runningCellInfo.loop.startR = row;
-				}
-				else
-				{
-					if (runningCellInfo.loop.loops == 0)
-						runningCellInfo.loop.loops = value;
-					else
-						runningCellInfo.loop.loops--;
-					if (runningCellInfo.loop.loops > 0)
-					{
-						ptnJump = pattern;
-						ptnStart = runningCellInfo.loop.startR;
-					}
-				}
-			}
-		}
-		if (cellInfo.eff[i] == UNI_XMEFFECTA || cellInfo.eff[i] == UNI_PTEFFECTA || cellInfo.eff[i] == UNI_S3MEFFECTD && (effValues[0] & 0xf) != 0xf && (effValues[0] & 0xf0) != 0xf0)
-		{
-			cellInfo.volSlideVelScale = curSongSpeed - 1;
-			int value = effValues[0];
-			//if (value > 0 || cellInfo.eff[i] <= UNI_PTEFFECTE)
-			cellInfo.volSlideVel = value > 0xf ? (value >> 4) : -value;
-		}
-		else if (cellInfo.eff[i] == UNI_XMEFFECTEA || cellInfo.eff[i] == UNI_XMEFFECTEB)
+		break;
+	}
+	case CMD_OFFSET_:
+	{
+		int value = param;
+		if (value == 0) //offset has memory
+			value = runningCellInfo.offsetMem;
+		else
+			runningCellInfo.offsetMem = value;
+		cellInfo.sampleOffset = value * 256;
+		break;
+	}
+	case CMD_POSITIONJUMP_:
+		ptnJump = param;
+		if (ptnJump <= order)
+			return false;
+		break;
+	case CMD_PATTERNBREAK_:
+		if (ptnJump == -1)
+			ptnJump = order + 1;
+		ptnStart = param;
+		break;
+	case CMD_VOLUME_:
+		firstTick.vol = param;
+		break;
+	case CMD_RETRIG_:
+	{
+		int interval = param & 0xf;
+		if (interval > 0 && interval < curSongSpeed)
+			cellInfo.retriggerOffset = interval;
+		break;
+	}
+	case CMD_VOLUMESLIDE_:
+	{
+		int value = param;
+		if (value == 0) //volume slide has memory
+			value = runningCellInfo.volSlideMem;
+		else
+			runningCellInfo.volSlideMem = value;
+		int hi = (value >> 4) & 0xf;
+		int lo = value & 0xf;
+		if (hi == 0xf && lo != 0) //fine slide down (DFx)
 		{
 			cellInfo.volSlideVelScale = 1;
-			if (cellInfo.eff[i] == UNI_XMEFFECTEA)
-				cellInfo.volSlideVel = effValues[0];
-			else //UNI_XMEFFECTEB
-				cellInfo.volSlideVel = -effValues[0];
+			cellInfo.volSlideVel = -lo;
 		}
-		else if (cellInfo.eff[i] == UNI_PTEFFECTE || cellInfo.eff[i] == UNI_S3MEFFECTD)
+		else if (lo == 0xf && hi != 0) //fine slide up (DxF)
 		{
-			int value = effValues[0];
-			if (cellInfo.eff[i] == UNI_PTEFFECTE)
+			cellInfo.volSlideVelScale = 1;
+			cellInfo.volSlideVel = hi;
+		}
+		else //normal slide, applied every tick after the first
+		{
+			cellInfo.volSlideVelScale = curSongSpeed - 1;
+			cellInfo.volSlideVel = hi > 0 ? hi : -lo;
+		}
+		break;
+	}
+	case CMD_MODCMDEX_:
+	case CMD_S3MCMDEX_:
+	{
+		int sub = (param >> 4) & 0xf;
+		int value = param & 0xf;
+		bool s3m = command == CMD_S3MCMDEX_;
+		int loopSub = s3m ? 0xB : 0x6; //pattern loop nibble differs between Exx (MOD/XM) and Sxx (S3M/IT)
+		if (!s3m && sub == 0x9 && value < curSongSpeed) //E9x retrigger (S3M/IT use Qxy = CMD_RETRIG)
+			cellInfo.retriggerOffset = value;
+		else if (sub == 0xC && value < curSongSpeed) //note cut (ECx / SCx)
+			cellInfo.noteEndOffset = value;
+		else if (sub == 0xD && value < curSongSpeed) //note delay (EDx / SDx)
+			cellInfo.noteStartOffset = value;
+		else if (sub == 0xE) //pattern delay (EEx / SEx)
+			ptnDelay = value;
+		else if (sub == loopSub) //pattern loop (E6x / SBx)
+		{
+			if (value == 0)
+				runningCellInfo.loop.startR = row;
+			else
 			{
-				int subEff = (value & 0xf0) >> 4;
-				if ((value & 0xf0) == (0xa << 4))
+				if (runningCellInfo.loop.loops == 0)
+					runningCellInfo.loop.loops = value;
+				else
+					runningCellInfo.loop.loops--;
+				if (runningCellInfo.loop.loops > 0)
 				{
-					cellInfo.volSlideVelScale = 1;
-					cellInfo.volSlideVel = value & 0xf;
+					ptnJump = order;
+					ptnStart = runningCellInfo.loop.startR;
 				}
-				else if ((value & 0xf0) == (0xb << 4))
-				{
-					cellInfo.volSlideVel = -(value & 0xf);
-					cellInfo.volSlideVelScale = 1;
-				}
-			}
-			else if (cellInfo.eff[i] == UNI_S3MEFFECTD)
-			{
-				cellInfo.volSlideVelScale = 1;
-				if ((value & 0xf) == 0xf)
-					cellInfo.volSlideVel = value >> 4;
-				else //value & 0xf0 == 0xf0
-					cellInfo.volSlideVel = -value;
-			}
-			else //if (value > 0)
-			{
-
 			}
 		}
+		else if (!s3m && sub == 0xA) //EAx fine volume slide up
+		{
+			cellInfo.volSlideVelScale = 1;
+			cellInfo.volSlideVel = value;
+		}
+		else if (!s3m && sub == 0xB) //EBx fine volume slide down
+		{
+			cellInfo.volSlideVelScale = 1;
+			cellInfo.volSlideVel = -value;
+		}
+		break;
+	}
+	}
+
+	//---- Volume column (VOLCMD_*) ----
+	switch (cellInfo.volcmd)
+	{
+	case VOLCMD_VOLUME_:
+		firstTick.vol = cellInfo.vol;
+		break;
+	case VOLCMD_VOLSLIDEUP_:
+		cellInfo.volSlideVelScale = curSongSpeed - 1;
+		cellInfo.volSlideVel = cellInfo.vol;
+		break;
+	case VOLCMD_VOLSLIDEDOWN_:
+		cellInfo.volSlideVelScale = curSongSpeed - 1;
+		cellInfo.volSlideVel = -cellInfo.vol;
+		break;
+	case VOLCMD_FINEVOLUP_:
+		cellInfo.volSlideVelScale = 1;
+		cellInfo.volSlideVel = cellInfo.vol;
+		break;
+	case VOLCMD_FINEVOLDOWN_:
+		cellInfo.volSlideVelScale = 1;
+		cellInfo.volSlideVel = -cellInfo.vol;
+		break;
 	}
 	return true;
-}
-
-void ModReader::getCellRepLen(BYTE replen, int &repeat, int &length)
-{
-	repeat = (replen >> 5) & 7;
-	length = replen & 31;
 }
 
 double ModReader::getRowDur(double tempo, double speed)
@@ -378,92 +354,61 @@ void ModReader::beginProcessing(const UserArgs &args)
 {
 	SongReader::beginProcessing(args);
 	isFadingOut = false;
-	std::string cmdLine;
-	BOOL mixdown = userArgs.audioPath[0] > 0;
-	md_device = 2; //nosound libmikmod driver
 
-	if (mixdown)
+	//Single libopenmpt instance is used for both note extraction and audio rendering.
+	//Throws openmpt::exception if the file is not a module; libRemuxer.cpp then falls back to the other readers.
+	std::ifstream file(userArgs.inputPath, std::ios::binary);
+	omptModule = std::make_unique<openmpt::module>(file);
+	file.close();
+	omptModule->ctl_set_text("play.at_end", "continue");
+
+	int numChannels = omptModule->get_num_channels();
+	song.tracks.resize(numChannels);
+	for (unsigned i = 0; i < song.tracks.size(); i++)
 	{
-		std::ifstream file(userArgs.inputPath, std::ios::binary);
-		omptModule = std::make_unique<openmpt::module>(file);
-		file.close();
-		omptModule->ctl_set_text("play.at_end", "continue");
-	}		
-	
-	module = Player_Load(userArgs.inputPath, 64, 0);
+		song.tracks[i].ticks.reserve(30000);
+		song.tracks[i].ticks.resize(1);
+	}
+	curRowInfo.resize(numChannels);
+	runningRowInfo.resize(numChannels);
 
-	if (module)
+	//MIDI output data-----------------------
+	curSongSpeed = omptModule->get_current_speed();
+	double initTempo = omptModule->get_current_tempo2();
+	rowDur = getRowDur(initTempo, curSongSpeed);
+
+	songData->tempoEvents[0].tempo = initTempo;
+	songData->tempoEvents[0].time = 0;
+	songData->numTempoEvents = 1;
+
+	songData->numTracks = 0;
+	for (int i = 0; i < MAX_MIDITRACKS; i++)
+		songData->tracks[i].numNotes = 0;
+	//-----------------------------------
+
+	if (userArgs.insTrack)	//One track per instrument/sample
 	{
-		song.tracks.resize(module->numchn);
-		for (unsigned i = 0; i < song.tracks.size(); i++)
+		const std::vector<std::string> names = omptModule->vm_has_instruments() ? omptModule->get_instrument_names() : omptModule->get_sample_names();
+		for (size_t i = 0; i < names.size() && i + 1 < MAX_MIDITRACKS; i++)
 		{
-			song.tracks[i].ticks.reserve(30000);
-			song.tracks[i].ticks.resize(1);
-		}
-		curRowInfo.resize(module->numchn);
-		runningRowInfo.resize(module->numchn);
-
-		//MIDI output data-----------------------
-		//songData->ticksPerMeasure = module->sngspd * 16; //assuming 4 rows per beat
-		curSongSpeed = module->initspeed;
-
-		//int curSongBpm = module->inittempo;
-		rowDur = getRowDur(module->inittempo, module->initspeed);
-
-		songData->tempoEvents[0].tempo = module->inittempo;
-		songData->tempoEvents[0].time = 0;
-		songData->numTempoEvents = 1;
-
-		songData->numTracks = 0;//module->numins;
-		for (int i = 0; i < MAX_MIDITRACKS; i++)
-			songData->tracks[i].numNotes = 0;
-		//-----------------------------------
-
-		if (userArgs.insTrack)	//One track per instrument/sample
-		{
-			if (module->instruments)
-			{
-				for (int i = 0; i < module->numins; i++)
-				{
-					if (module->instruments[i].insname != NULL)
-						strcpy_s(songData->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, module->instruments[i].insname);
-					else
-						songData->tracks[i + 1].name[0] = NULL;
-				}
-			}
+			if (!names[i].empty())
+				strcpy_s(songData->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, names[i].c_str());
 			else
-			{
-				for (int i = 0; i < module->numsmp; i++)
-				{
-					if (module->samples[i].samplename != NULL)
-						strcpy_s(songData->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, module->samples[i].samplename);
-					else
-						songData->tracks[i + 1].name[0] = NULL;
-				}
-			}
+				songData->tracks[i + 1].name[0] = '\0';
 		}
-		else	//One track per mod channel
-		{
-			for (int i = 0; i < module->numchn; i++)
-			{
-				std::ostringstream s;
-				s << "Channel " << i + 1;
-				strcpy_s(songData->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, s.str().c_str());
-			}
-		}
-
-		extractNotes();
-		
-		Player_Free(module);
-		module = 0;
 	}
-	else
+	else	//One track per mod channel
 	{
-		std::ostringstream err;
-		err << "Could not load module, reason: " << MikMod_strerror(MikMod_errno);
-		OutputDebugStringA(err.str().c_str());
-		throw err.str();
+		for (int i = 0; i < numChannels; i++)
+		{
+			std::ostringstream s;
+			s << "Channel " << i + 1;
+			strcpy_s(songData->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, s.str().c_str());
+		}
 	}
+
+	extractNotes();
+
 	songData->ticksPerBeat = 24;
 	if (song.tracks.empty())
 		throw "Empty song";
@@ -473,28 +418,31 @@ void ModReader::beginProcessing(const UserArgs &args)
 
 void ModReader::extractNotes()
 {
-	//Loop through patterns
-	for (int sequenceIndex = 0; sequenceIndex < module->numpos; sequenceIndex++)
+	int numOrders = omptModule->get_num_orders();
+	int numChannels = omptModule->get_num_channels();
+	//Loop through orders
+	for (int order = 0; order < numOrders; order++)
 	{
 		ptnJump = -1;
-		int pattern = module->patterns[module->positions[sequenceIndex]];
-		
-		for (int t = 0; t < module->numchn; t++)
-			runningRowInfo[t].offset = runningRowInfo[t].repeatsLeft = 0;
+		int pattern = omptModule->get_order_pattern(order);
+		if (pattern < 0)
+			continue; //skip / stop marker or invalid order
+
 		//Loop through rows
-		int numRows = module->pattrows[pattern];
+		int numRows = omptModule->get_pattern_num_rows(pattern);
+		if (numRows <= 0)
+			continue;
 		for (int rowIndex = 0; rowIndex < numRows; rowIndex++)
 		{
 			ptnDelay = 0;
 			//Loop through channels/tracks
-			for (int trackIndex = 0; trackIndex < module->numchn; trackIndex++)
+			for (int trackIndex = 0; trackIndex < numChannels; trackIndex++)
 			{
-				BYTE* track = module->tracks[pattern * module->numchn + trackIndex];
-				readNextCell(track, curRowInfo[trackIndex], runningRowInfo[trackIndex]);
-		
+				readCell(pattern, rowIndex, trackIndex, curRowInfo[trackIndex], runningRowInfo[trackIndex]);
+
 				if (ptnJump >= 0 || rowIndex >= ptnStart)
 				{
-					if (!readCellFx(song.tracks[trackIndex].ticks[timeT], curRowInfo[trackIndex], runningRowInfo[trackIndex], sequenceIndex, rowIndex))
+					if (!readCellFx(song.tracks[trackIndex].ticks[timeT], curRowInfo[trackIndex], runningRowInfo[trackIndex], order, rowIndex))
 						return;
 				}
 			}
@@ -508,7 +456,7 @@ void ModReader::extractNotes()
 
 			tickDur = rowDur / curSongSpeed;
 			//Loop through channels/tracks
-			for (int t = 0; t < module->numchn; t++)
+			for (int t = 0; t < numChannels; t++)
 			{
 				song.tracks[t].ticks.resize(song.tracks[t].ticks.size() + curSongSpeed * (ptnDelay + 1));
 				RunningTickInfo* curTick = &song.tracks[t].ticks[timeT];
@@ -518,10 +466,10 @@ void ModReader::extractNotes()
 
 			timeT += curSongSpeed * (ptnDelay + 1);
 			timeS += rowDur * (ptnDelay + 1);
-		
+
 			if (ptnJump >= 0)
 			{
-				sequenceIndex = ptnJump - 1;
+				order = ptnJump - 1;
 				break;
 			}
 		}
@@ -532,10 +480,10 @@ float ModReader::process()
 {
 	if (!userArgs.audioPath[0])
 		return -1;
-	
+
 	float songPosS = (float)omptModule->get_position_seconds();
 	std::size_t count = omptModule->read_interleaved_stereo(sampleRate, audioBuffer.size() / 2, audioBuffer.data());
-	
+
 	if (isFadingOut)
 	{
 		float fadeFactor = (float)((FadeOutTimeS + timeS - songPosS) / FadeOutTimeS);

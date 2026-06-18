@@ -1,7 +1,3 @@
-[submodule "mikmod"]
-	path = mikmod
-	url = https://github.com/yousernaym/mikmod.git
-	branch = ForkMaster
 [submodule "libsidplayfp"]
 	path = libsidplayfp
 	url = https://github.com/yousernaym/libsidplayfp.git
