@@ -19,6 +19,7 @@
 #include <sidplayfp/SidConfig.h>
 #include <sidemu.h>
 #include <sidplayfp/SidtuneInfo.h>
+#include <vm-extensions/libsidplayfp-volenv.h>
 
 #define KERNAL_PATH  "roms\\kernal.901227-03.bin"
 #define BASIC_PATH   "roms\\basic.901226-01.bin"
@@ -110,7 +111,11 @@ namespace
 		int waveform;
 	};
 
-	SidVoiceRegisters readVoiceRegisters(const std::array<uint8_t, 32>& regs, int channel, bool previousGate)
+	SidVoiceRegisters readVoiceRegisters(const std::array<uint8_t, 32>& regs,
+		const std::array<uint8_t, 3>& envelopes,
+		bool hasEnvelopes,
+		int channel,
+		bool previousGate)
 	{
 		int offset = channel * SidVoiceRegisterStride;
 		uint8_t control = regs[offset + SidControlRegisterOffset];
@@ -120,7 +125,7 @@ namespace
 		voice.frequency = regs[offset] | (regs[offset + 1] << 8);
 		voice.gate = gate;
 		voice.gateChanged = gate != previousGate;
-		voice.volume = gate ? 255 : 0;
+		voice.volume = hasEnvelopes ? envelopes[channel] : (gate ? 255 : 0);
 		voice.waveform = (control >> SidWaveformShift) & 0x0f;
 		return voice;
 	}
@@ -234,6 +239,7 @@ void SidReader::beginProcess(UserArgs &args)
 	samplesToProcess = (int)(sampleRate * userArgs.songLengthS) * AUDIO_CHANNEL_COUNT;
 	samplesBeforeFadeout = samplesToProcess - (int)(fadeOutS * sampleRate);
 	sidRegs.fill(0);
+	sidEnvelopes.fill(0);
 	gateState.fill(false);
 	sidAudioBuffer.resize(audioBuffer.size());
 }
@@ -251,6 +257,7 @@ float SidReader::process()
 	if (timeT > oldTimeT)
 	{
 		bool gotSidRegisters = engine.getSidStatus(0, sidRegs.data());
+		bool gotSidEnvelopes = libsidplayfp::vm_getSidEnvelopes(engine, 0, sidEnvelopes.data());
 		for (int c = 0; c < 3; c++)
 		{
 			for (int t = oldTimeT + 1; t < timeT; t++)
@@ -266,15 +273,26 @@ float SidReader::process()
 				continue;
 			}
 
-			SidVoiceRegisters voice = readVoiceRegisters(sidRegs, c, gateState[c]);
+			SidVoiceRegisters voice = readVoiceRegisters(sidRegs, sidEnvelopes, gotSidEnvelopes, c, gateState[c]);
 			gateState[c] = voice.gate;
 
-			if (voice.waveform > 0 && voice.volume > 0 && voice.frequency >= minFreq && voice.frequency <= maxFreq)
+			bool validVoice = voice.waveform > 0 && voice.frequency >= minFreq && voice.frequency <= maxFreq;
+			bool continuingRelease = !voice.gate && prevTick.vol > 0 && prevTick.noteStart >= 0;
+
+			if (validVoice && voice.volume > 0 && (voice.gate || continuingRelease))
 			{
-				curTick.notePitch = (int)(log2((float)voice.frequency / minFreq) * 12 + 0.5f) + 1;
-				if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || (voice.gateChanged && voice.gate))
-					curTick.noteStart = timeT;
-				curTick.ins = voice.waveform;
+				if (voice.gate)
+				{
+					curTick.notePitch = (int)(log2((float)voice.frequency / minFreq) * 12 + 0.5f) + 1;
+					if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || voice.gateChanged)
+						curTick.noteStart = timeT;
+					curTick.ins = voice.waveform;
+				}
+				else
+				{
+					curTick.notePitch = prevTick.notePitch;
+					curTick.ins = prevTick.ins;
+				}
 				usedWaveformCombos.insert(curTick.ins);
 				curTick.vol = voice.volume;
 			}

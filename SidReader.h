@@ -19,6 +19,7 @@ class SidReader : public SongReader
 	sidplayfp engine;
 	std::unique_ptr<ReSIDfpBuilder> rs;
 	std::array<uint8_t, 32> sidRegs;
+	std::array<uint8_t, 3> sidEnvelopes;
 	std::array<bool, 3> gateState;
 	std::vector<short> sidAudioBuffer;
 	int minFreq;
