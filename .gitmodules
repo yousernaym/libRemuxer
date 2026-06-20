@@ -8,5 +8,5 @@
 	branch = master
 [submodule "openmpt"]
 	path = openmpt
-	url = git@github.com:yousernaym/openmpt.git
+	url = https://github.com/yousernaym/openmpt.git
 	branch = master
