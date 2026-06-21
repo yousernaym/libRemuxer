@@ -11,6 +11,16 @@
 */
 
 
+/* MSVC: silence benign warnings in this vendored Hively/AHX replay source.
+   Must precede the CRT includes so _CRT_SECURE_NO_WARNINGS takes effect.
+   C4244: intentional int16->uint8 narrowing (chained resets, bitfield packing)
+   C4018: signed/unsigned mismatch in loop indices vs. unsigned struct fields
+   C4996: deprecated CRT string/file calls (strncpy/fopen) used as-is upstream */
+#define _CRT_SECURE_NO_WARNINGS
+#ifdef _MSC_VER
+#pragma warning(disable: 4244 4018)
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

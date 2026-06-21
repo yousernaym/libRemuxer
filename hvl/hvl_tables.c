@@ -1,3 +1,9 @@
+/* MSVC: C4018 signed/unsigned mismatch in loop indices vs. unsigned counts;
+   benign in this vendored Hively/AHX table-generation source. */
+#ifdef _MSC_VER
+#pragma warning(disable: 4018)
+#endif
+
 #include <math.h>
 
 #include "hvl_replay.h"
