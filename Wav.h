@@ -53,9 +53,12 @@ public:
 		float max = 1;
 		if (!isFloat)
 			max = 1 << ((sizeof(SampleType) * 8) - 1);
-		float normalizingScale = max * 0.89125f / peak; //Leave 1 dB headroom for any lossy compression that might occur
-		for (SampleType& sample : samples)
-			sample = (SampleType)(sample * normalizingScale);
+		if (peak > 0)
+		{
+			float normalizingScale = max * 0.89125f / peak; //Leave 1 dB headroom for any lossy compression that might occur
+			for (SampleType& sample : samples)
+				sample = (SampleType)(sample * normalizingScale);
+		}
 
 		int blockAlign = sizeof(SampleType) * channelCount;
 		int dataSize = (int)samples.size() * sizeof(SampleType);
@@ -84,7 +87,8 @@ public:
 			samples.push_back(0);
 			dataSize++;
 		}
-		writeChunk(&samples[0], dataSize);
+		if (dataSize > 0)
+			writeChunk(samples.data(), dataSize);
 		outFile.close();
 	}
 };
