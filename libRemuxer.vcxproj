@@ -192,9 +192,17 @@
     <ClCompile Include="hvl\hvl_replay.c" />
     <ClCompile Include="hvl\hvl_tables.c" />
     <ClCompile Include="HvlReader.cpp" />
-    <ClCompile Include="libRemuxer.cpp" />
+    <ClCompile Include="libRemuxer.cpp">
+      <!-- Includes SidReader.h; see the C4267 note on SidReader.cpp below. -->
+      <DisableSpecificWarnings>4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
     <ClCompile Include="ModReader.cpp" />
-    <ClCompile Include="SidReader.cpp" />
+    <ClCompile Include="SidReader.cpp">
+      <!-- C4267 (size_t -> unsigned int) fires inside the vendored upstream
+           libsidplayfp headers (sidbuilder.h); suppress it here rather than
+           patching upstream code. -->
+      <DisableSpecificWarnings>4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
     <ClCompile Include="Song.cpp" />
   </ItemGroup>
   <ItemGroup>
