@@ -39,7 +39,7 @@ public:
 		samples.clear();
 	}
 
-	void saveFile(const std::string &path)
+	bool saveFile(const std::string &path)
 	{
 		bool isFloat = std::is_floating_point<SampleType>::value;
 
@@ -62,7 +62,8 @@ public:
 
 		int blockAlign = sizeof(SampleType) * channelCount;
 		int dataSize = (int)samples.size() * sizeof(SampleType);
-		createFile(path);
+		if (!createFile(path))
+			return false;
 		outFile << "RIFF";	//Chunk id
 		writeLE(4, 36 + dataSize);	//Chunk size
 		outFile << "WAVEfmt ";  //Format + subchunk id
@@ -90,6 +91,7 @@ public:
 		if (dataSize > 0)
 			writeChunk(samples.data(), dataSize);
 		outFile.close();
+		return true;
 	}
 };
 

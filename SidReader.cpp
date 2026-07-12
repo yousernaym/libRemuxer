@@ -169,6 +169,10 @@ std::vector<char> SidReader::loadRom(const char* path, size_t romSize)
 void SidReader::beginProcess(UserArgs &args)
 {
 	SongReader::beginProcessing(args);
+	usedWaveformCombos.clear(); //file-scope global; must be fresh for each conversion
+	notesFinalized = false;
+	curPass = 0;
+	trackPasses.clear();
 	//args.songLengthS = 3;
 	if (userArgs.songLengthS == 0)
 		userArgs.songLengthS = 300;
@@ -189,9 +193,10 @@ void SidReader::beginProcess(UserArgs &args)
 			sprintf_s(song.songData->tracks[i + 1].name, MAX_TRACKNAME_LENGTH, "Channel %i", i + 1);
 	}
 		
-	// Load tune from file
-	std::unique_ptr<SidTune> tune(new SidTune(userArgs.inputPath));
-	
+	// Load tune from file. Kept as a member so it outlives beginProcess: engine.load keeps a
+	// reference to the tune, and each track pass re-loads it.
+	tune = std::make_unique<SidTune>(userArgs.inputPath);
+
 	// CHeck if the tune is valid
 	if (!tune->getStatus())
 		throw tune->statusString();
@@ -208,10 +213,11 @@ void SidReader::beginProcess(UserArgs &args)
 		maxFreq = 65535;
 	}
 	args.numSubSongs = tuneInfo->songs();
-	
+
 	// Select default song
 	args.subSong = tune->selectSong(userArgs.subSong);
-	
+	selectedSong = args.subSong;
+
 	// Configure the engine
 	SidConfig cfg;
 	cfg.frequency = sampleRate;
@@ -219,6 +225,7 @@ void SidReader::beginProcess(UserArgs &args)
 	cfg.samplingMethod = SidConfig::RESAMPLE_INTERPOLATE;
 	setFastSampling(cfg, false);
 	setPlayback(cfg);
+	cfg.powerOnDelay = 0; //deterministic per-pass start so track passes align sample-for-sample with the mixdown
 	cfg.sidEmulation = rs.get();
 	//cfg.forceSidModel = true;
 	//cfg.forceC64Model = true;
@@ -244,11 +251,13 @@ void SidReader::beginProcess(UserArgs &args)
 	sidAudioBuffer.resize(audioBuffer.size());
 }
 
-float SidReader::process()
+//Main pass: render one chunk, extract note ticks, and (if requested) accumulate the mixdown.
+//Returns true when the configured song length has been rendered.
+bool SidReader::renderMainChunk()
 {
 	uint_least32_t generatedSamples = playSid(engine, audioBuffer, sidAudioBuffer);
 	if (generatedSamples == 0)
-		return -1;
+		return true;
 
 	samplesProcessed += generatedSamples;
 	timeS = (float)samplesProcessed / sampleRate;
@@ -316,18 +325,56 @@ float SidReader::process()
 			wav.addSample(audioBuffer[i]);
 	}
 
-	if (samplesProcessed < samplesToProcess)
-		return (float)samplesProcessed / samplesToProcess;
-	else
-	{
-		return -1;
-	}
+	return samplesProcessed >= samplesToProcess;
 }
 
-void SidReader::endProcessing()
+//Track pass: render one chunk with the pass's voices muted (dynamically for per-instrument
+//passes), accumulate the per-track WAV. Never writes note ticks or usedWaveformCombos.
+bool SidReader::renderTrackChunk()
 {
-	SongReader::endProcessing();
-	
+	const TrackPass &tp = trackPasses[curPass - 1];
+
+	//Per-instrument passes: re-derive the mute mask each chunk from the current waveform of each
+	//voice (same register reads the note extractor uses). true = muted.
+	if (userArgs.insTrack)
+	{
+		if (engine.getSidStatus(0, sidRegs.data()))
+		{
+			for (int v = 0; v < 3; v++)
+			{
+				uint8_t control = sidRegs[v * SidVoiceRegisterStride + SidControlRegisterOffset];
+				int waveform = (control >> SidWaveformShift) & 0x0f;
+				engine.mute(0, v, waveform != tp.combo);
+			}
+		}
+	}
+
+	uint_least32_t generatedSamples = playSid(engine, audioBuffer, sidAudioBuffer);
+	if (generatedSamples == 0)
+		return true;
+
+	samplesProcessed += generatedSamples;
+
+	//Fade out (same envelope as the mixdown so per-track WAVs match its length).
+	if (samplesProcessed > samplesBeforeFadeout)
+	{
+		float scale = (float)(samplesToProcess - samplesProcessed) / (samplesToProcess - samplesBeforeFadeout);
+		for (uint_least32_t i = 0; i < generatedSamples; i++)
+			audioBuffer[i] *= scale;
+	}
+	for (uint_least32_t i = 0; i < generatedSamples; i++)
+		wav.addSample(audioBuffer[i]);
+
+	return samplesProcessed >= samplesToProcess;
+}
+
+//Name instrument tracks (per-instrument mode) and build the note/MIDI output. Idempotent.
+void SidReader::finalizeNotes()
+{
+	if (notesFinalized)
+		return;
+	notesFinalized = true;
+
 	if (userArgs.insTrack)
 	{
 		//Use waveform names as track names
@@ -336,7 +383,7 @@ void SidReader::endProcessing()
 		{
 			//First waveform
 			std::string trackName = waveformNames[waveformCombo & 1];
-			
+
 			//Loop through the remaining 3 waveform bits
 			for (int i = 1; i < 4; i++)
 			{
@@ -349,6 +396,113 @@ void SidReader::endProcessing()
 		}
 	}
 	song.createNoteList(userArgs, &usedWaveformCombos);
+}
+
+//Build the per-track pass list after finalizeNotes (track numbers/note counts are then known).
+void SidReader::buildTrackPasses()
+{
+	trackPasses.clear();
+	if (!trackAudioRequested())
+		return;
+
+	if (userArgs.insTrack)
+	{
+		//One pass per used waveform combo, in usedWaveformCombos order (matches createNoteList's
+		//track compaction); midiTrack = 1-based index. Skip empty tracks.
+		int t = 1;
+		for (int combo : usedWaveformCombos)
+		{
+			if (song.songData->tracks[t].numNotes > 0)
+				trackPasses.push_back({ t, -1, combo });
+			t++;
+		}
+	}
+	else
+	{
+		//One pass per chip-0 voice (0..2) that produced notes; midiTrack = voice + 1.
+		for (int v = 0; v < 3; v++)
+		{
+			int midiTrack = v + 1;
+			if (song.songData->tracks[midiTrack].numNotes > 0)
+				trackPasses.push_back({ midiTrack, v, -1 });
+		}
+	}
+}
+
+//Reset the engine for a track pass: full C64 reset via reload, then set the initial mute mask.
+void SidReader::startTrackPass(int passIndex)
+{
+	const TrackPass &tp = trackPasses[passIndex];
+
+	tune->selectSong(selectedSong);
+	engine.load(tune.get()); //forces full C64 reset + reconfig
+	initMixer(engine);       //chip buffers recreated
+
+	samplesProcessed = 0;
+	oldTimeT = 0;
+	timeS = 0;
+	gateState.fill(false);
+
+	//isMuted is only reset in the sidemu constructor and emus may be reused, so set every slot
+	//explicitly every pass. Mute all 4 voice slots (0..2 voices, 3 = digi/samples) on all 3 chips.
+	for (unsigned int sid = 0; sid < 3; sid++)
+		for (unsigned int v = 0; v < 4; v++)
+			engine.mute(sid, v, true);
+
+	if (!userArgs.insTrack)
+		engine.mute(0, (unsigned int)tp.voice, false); //per-channel: only the target voice audible
+	//Per-instrument passes start fully muted; renderTrackChunk unmutes voices dynamically.
+	//Voice 3 (digi) and chips 1-2 stay muted in all track passes.
+}
+
+float SidReader::process()
+{
+	if (curPass == 0)
+	{
+		bool done = renderMainChunk();
+		if (done)
+		{
+			finalizeNotes();
+			buildTrackPasses();
+			saveMixdownNow();
+			curPass = 1;
+			if (trackPasses.empty())
+				return -1;
+			startTrackPass(0);
+			return clampProgress(1.f / (1 + (int)trackPasses.size()));
+		}
+		//Estimate total passes while the combo/voice set is still filling in.
+		int estPasses = userArgs.insTrack
+			? 1 + (std::max)((int)usedWaveformCombos.size(), 1)
+			: 1 + 3;
+		float mainFrac = samplesToProcess > 0 ? (float)samplesProcessed / samplesToProcess : 1;
+		return clampProgress(mainFrac / estPasses);
+	}
+	else
+	{
+		bool done = renderTrackChunk();
+		int totalPasses = 1 + (int)trackPasses.size();
+		if (done)
+		{
+			const TrackPass &tp = trackPasses[curPass - 1];
+			saveTrackWav(tp.midiTrack, song.songData->tracks[tp.midiTrack].name);
+			curPass++;
+			if (curPass - 1 >= (int)trackPasses.size())
+				return -1;
+			startTrackPass(curPass - 1);
+			return clampProgress((float)curPass / totalPasses);
+		}
+		float frac = samplesToProcess > 0 ? (float)samplesProcessed / samplesToProcess : 1;
+		return clampProgress((curPass + frac) / totalPasses);
+	}
+}
+
+void SidReader::endProcessing()
+{
+	//Cancel-during-main-pass path: notes were never finalized, so do it now (partial import).
+	finalizeNotes();
+	//Saves the (partial) mixdown only if a track pass hasn't already saved the full one.
+	SongReader::endProcessing();
 }
 
 

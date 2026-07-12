@@ -3,8 +3,10 @@
 #include "libRemuxer.h"
 #include "SongReader.h"
 #include <libopenmpt/libopenmpt.hpp>
+#include <libopenmpt/libopenmpt_ext.hpp>
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 // Note/pitch conventions mirror libopenmpt's internal modcommand.h (stable enum values).
 // Notes are 1..128, NOTE_MIDDLEC = 61 (= MIDI middle C). Emitted MIDI pitch = note + PITCH_OFFSET,
@@ -98,7 +100,11 @@ class ModReader : public SongReader
 	const int FadeOutTimeS = 7;
 	std::vector<RunningCellInfo> runningRowInfo;
 	std::vector<CellInfo> curRowInfo;
-	std::unique_ptr<openmpt::module> omptModule;
+	std::unique_ptr<openmpt::module_ext> omptModule;
+	openmpt::ext::interactive *interactive = nullptr;
+	std::vector<int> passList; // pass 0 = mixdown (midiTrack sentinel 0); >0 = per-track WAV for that midiTrack
+	int curPass = 0;
+	float passFraction = 0;
 	int curSongSpeed;
 	int ptnDelay;
 	int timeT = 0;
@@ -119,6 +125,8 @@ public:
 	void updateCellTicks(Song::Track &track, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo);
 	void extractNotes();
 	void beginProcessing(const UserArgs &args);
+	bool renderPassChunk();      // renders one audio chunk into wav; returns true when the current pass is complete
+	void setupTrackPass(int midiTrack);
 	float process() override;
 	void endProcessing() override;
 };

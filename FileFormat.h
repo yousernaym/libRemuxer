@@ -12,7 +12,7 @@ protected:
 	void writeBE(size_t size, unsigned value); //Big endian
 	void writeByte(unsigned char value);
 	void writeChunk(void *chunk, size_t size);
-	void createFile(const std::string &path);
+	bool createFile(const std::string &path); //returns false if the file could not be opened
 public:
 	FileFormat();
 	~FileFormat();

@@ -19,6 +19,7 @@ void initLib()
 	userArgs.inputPath = new char[MAX_PATH_LENGTH];
 	userArgs.audioPath = new char[MAX_PATH_LENGTH];
 	userArgs.midiPath = new char[MAX_PATH_LENGTH];
+	userArgs.trackAudioBasePath = new char[MAX_PATH_LENGTH];
 
 	songData.tempoEvents = new TempoEvent[MAX_TEMPOEVENTS];
 	songData.tracks = new SongTrack[MAX_MIDITRACKS];
@@ -47,6 +48,7 @@ void closeLib()
 	safeDeleteArray(userArgs.inputPath);
 	safeDeleteArray(userArgs.audioPath);
 	safeDeleteArray(userArgs.midiPath);
+	safeDeleteArray(userArgs.trackAudioBasePath);
 }
 
 //const int MAX_EFFECTS_PER_CELL = 10;
@@ -68,7 +70,11 @@ BOOL beginProcessing(UserArgs &args)
 		strcpy_s(userArgs.midiPath, MAX_PATH_LENGTH, args.midiPath);
 	else
 		userArgs.midiPath[0] = NULL;
-	
+	if (args.trackAudioBasePath)
+		strcpy_s(userArgs.trackAudioBasePath, MAX_PATH_LENGTH, args.trackAudioBasePath);
+	else
+		userArgs.trackAudioBasePath[0] = NULL;
+
 	try 
 	{
 		modReader.beginProcessing(userArgs);
@@ -110,6 +116,25 @@ float process()
 void endProcessing()
 {
 	songReader->endProcessing();
+}
+
+int getNumTrackAudioFiles()
+{
+	return songReader ? (int)songReader->getTrackAudioFiles().size() : 0;
+}
+
+BOOL getTrackAudioFile(int index, int *midiTrack, char *path, int maxPathLength)
+{
+	if (!songReader)
+		return FALSE;
+	const auto &files = songReader->getTrackAudioFiles();
+	if (index < 0 || index >= (int)files.size())
+		return FALSE;
+	if (midiTrack)
+		*midiTrack = files[index].first;
+	if (path && maxPathLength > 0)
+		strcpy_s(path, maxPathLength, files[index].second.c_str());
+	return TRUE;
 }
 
 

@@ -14,12 +14,22 @@ struct hvl_tune;
 
 class HvlReader : public SongReader
 {
+    // Per-track pass descriptor. channel = target channel for per-channel passes (instrument = -1);
+    // instrument = target instrument index for per-instrument passes (channel = -1).
+    struct TrackPass
+    {
+        int midiTrack;
+        int channel;
+        int instrument;
+    };
+
     struct hvl_tune *ht = nullptr;
 
     int   numChannels   = 0;
     int   frameIndex    = 0;    // current tick (== frame number; 50 frames/s PAL)
     bool  isFadingOut   = false;
     int   fadeFrame     = 0;    // frames elapsed since fade-out began
+    int   selectedSubsong = 0;
 
     const int FRAME_RATE    = 50;  // PAL
     const int FADE_OUT_S    = 7;   // fade-out duration in seconds
@@ -30,7 +40,19 @@ class HvlReader : public SongReader
     // Interleaved int16 buffer written by hvl_DecodeFrame before float conversion
     std::vector<short> renderBuf;
 
+    bool  notesFinalized = false;
+    int   curPass = 0;   // 0 = main pass (note extraction + mixdown); >=1 = track passes
+    float passFrac = 0;  // progress within the current pass (0..1)
+    std::vector<TrackPass> trackPasses;
+
     int periodToMidi(int audioPeriod, int waveLength) const;
+
+    void  finalizeNotes();
+    void  buildTrackPasses();
+    void  startTrackPass(int passIndex);
+    void  decodeFrameForPass(const TrackPass &tp);  // mutes voices output-only, then mixes one frame
+    bool  renderMainChunk();   // extracts ticks + renders mixdown; true when the main pass is done
+    bool  renderTrackChunk();  // renders one muted track pass frame; true when the pass is done
 
 public:
     HvlReader(Song &song);

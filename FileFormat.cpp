@@ -49,7 +49,8 @@ void FileFormat::writeChunk(void *chunk, size_t size)
 {
 	outFile.write(reinterpret_cast<const char*>(chunk), size);
 }
-void FileFormat::createFile(const std::string &path)
+bool FileFormat::createFile(const std::string &path)
 {
 	outFile.open(path, std::ios::binary | std::ios::out);
+	return outFile.is_open();
 }

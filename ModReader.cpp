@@ -358,9 +358,10 @@ void ModReader::beginProcessing(const UserArgs &args)
 	//Single libopenmpt instance is used for both note extraction and audio rendering.
 	//Throws openmpt::exception if the file is not a module; libRemuxer.cpp then falls back to the other readers.
 	std::ifstream file(userArgs.inputPath, std::ios::binary);
-	omptModule = std::make_unique<openmpt::module>(file);
+	omptModule = std::make_unique<openmpt::module_ext>(file);
 	file.close();
 	omptModule->ctl_set_text("play.at_end", "continue");
+	interactive = static_cast<openmpt::ext::interactive*>(omptModule->get_interface(openmpt::ext::interactive_id));
 
 	int numChannels = omptModule->get_num_channels();
 	song.tracks.resize(numChannels);
@@ -413,6 +414,22 @@ void ModReader::beginProcessing(const UserArgs &args)
 	if (song.tracks.empty())
 		throw "Empty song";
 	song.createNoteList(userArgs);
+
+	//Build the pass list now that note counts are known.
+	//Pass 0 = mixdown render (only if an audio path was requested; -t without -a supplies its own mixdown).
+	passList.clear();
+	curPass = 0;
+	passFraction = 0;
+	if (userArgs.audioPath[0])
+		passList.push_back(0);
+	if (trackAudioRequested())
+	{
+		for (int t = 1; t < songData->numTracks; t++)
+			if (songData->tracks[t].numNotes > 0)
+				passList.push_back(t);
+	}
+	if (!passList.empty() && passList[0] != 0)
+		setupTrackPass(passList[0]); //no mixdown pass: start straight on the first track pass
 }
 
 
@@ -476,11 +493,10 @@ void ModReader::extractNotes()
 	}
 }
 
-float ModReader::process()
+//Renders one audio chunk of the current pass into wav; sets passFraction (0..1 within the pass)
+//and returns true when the current pass has fully rendered.
+bool ModReader::renderPassChunk()
 {
-	if (!userArgs.audioPath[0])
-		return -1;
-
 	float songPosS = (float)omptModule->get_position_seconds();
 	std::size_t count = omptModule->read_interleaved_stereo(sampleRate, audioBuffer.size() / 2, audioBuffer.data());
 
@@ -490,24 +506,77 @@ float ModReader::process()
 		for (auto& sample : audioBuffer)
 			sample *= fadeFactor;
 		wav.addSamples(audioBuffer);
-		return songPosS > (FadeOutTimeS + timeS) ? -1.f : 1.f;
+		passFraction = 1;
+		return songPosS > (FadeOutTimeS + timeS);
 	}
 
 	wav.addSamples(audioBuffer);
 
 	if (count == 0) //end of song
 	{	//If there is audio at song end, loop and fade out
-		//return -1;
 		if (std::any_of(audioBuffer.begin(), audioBuffer.end(), [](SampleType sample) {return sample != 0; }))
 		{
 			isFadingOut = true;
-			return 1;
+			passFraction = 1;
+			return false;
 		}
-		else
-			return -1;
+		passFraction = 1;
+		return true;
+	}
+	passFraction = (float)min(1, songPosS / timeS);
+	return false;
+}
+
+//Prepare playback state for a per-track pass: seek to start, reset fade, mute all but the target track.
+void ModReader::setupTrackPass(int midiTrack)
+{
+	omptModule->set_position_seconds(0.0); //re-simulates play state from start; mute statuses persist across seeks
+	isFadingOut = false;
+	wav.clearSamples();
+
+	int numChannels = omptModule->get_num_channels();
+	if (userArgs.insTrack)
+	{
+		//Per-instrument: all channels audible, mute every instrument except the target.
+		for (int c = 0; c < numChannels; c++)
+			interactive->set_channel_mute_status(c, false);
+		//API is 0-based (falls back to samples when the module has no instruments);
+		//remuxer track/instrument numbers are 1-based, so instrument index = midiTrack-1.
+		int numInstruments = omptModule->get_num_instruments();
+		if (numInstruments == 0)
+			numInstruments = omptModule->get_num_samples();
+		for (int i = 0; i < numInstruments; i++)
+			interactive->set_instrument_mute_status(i, (i + 1) != midiTrack);
 	}
 	else
-		return (float)min(1, songPosS / timeS);
+	{
+		//Per-channel: audible only on the target channel (midiTrack-1).
+		for (int c = 0; c < numChannels; c++)
+			interactive->set_channel_mute_status(c, c != midiTrack - 1);
+	}
+}
+
+float ModReader::process()
+{
+	if (curPass >= (int)passList.size())
+		return -1;
+
+	bool passComplete = renderPassChunk();
+	if (passComplete)
+	{
+		int midiTrack = passList[curPass];
+		if (midiTrack == 0)
+			saveMixdownNow();
+		else
+			saveTrackWav(midiTrack, song.songData->tracks[midiTrack].name);
+		curPass++;
+		if (curPass >= (int)passList.size())
+			return -1;
+		setupTrackPass(passList[curPass]);
+		passFraction = 0;
+	}
+
+	return clampProgress((curPass + passFraction) / (float)passList.size());
 }
 
 void ModReader::endProcessing()

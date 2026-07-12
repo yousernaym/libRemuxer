@@ -15,6 +15,11 @@
 extern "C"
 {
     #include "hvl/hvl_replay.h"
+    // Non-static replayer internals used by the per-track muting helper below. They are not
+    // declared in hvl_replay.h (only hvl_DecodeFrame is), so declare them here — not in the
+    // vendored header. Types (int8/uint32/int32) come from the header included just above.
+    void hvl_play_irq( struct hvl_tune *ht );
+    void hvl_mixchunk( struct hvl_tune *ht, uint32 samples, int8 *buf1, int8 *buf2, int32 bufmod );
 }
 
 // <windows.h> defines min/max as macros, which
@@ -111,6 +116,7 @@ void HvlReader::beginProcess(UserArgs &args)
     if (selected < 0 || selected >= totalSubsongs)
         selected = 0;
     args.subSong = selected;
+    selectedSubsong = selected;
     hvl_InitSubsong(ht, (uint32)selected);
 
     // Channel / track setup.
@@ -133,17 +139,62 @@ void HvlReader::beginProcess(UserArgs &args)
     frameIndex  = 0;
     isFadingOut = false;
     fadeFrame   = 0;
+    notesFinalized = false;
+    curPass     = 0;
+    passFrac    = 0;
+    trackPasses.clear();
 }
 
 // ---------------------------------------------------------------------------
 // process — called in a loop by Form1 until it returns -1.
 // Decodes one 50 Hz frame: renders audio, samples voice state, emits ticks.
 // ---------------------------------------------------------------------------
-float HvlReader::process()
+// ---------------------------------------------------------------------------
+// decodeFrameForPass — replicate hvl_DecodeFrame's driver loop, but zero
+// vc_VoiceVolume for muted channels *after* hvl_play_irq (state update) and
+// *before* hvl_mixchunk (mixing). vc_VoiceVolume is recomputed every frame, so
+// this mutes output only — every channel's playback state stays identical to
+// the main pass. (Using vc_TrackOn would skip channel processing → desync.)
+// ---------------------------------------------------------------------------
+void HvlReader::decodeFrameForPass(const TrackPass &tp)
+{
+    uint32 samples = ht->ht_Frequency / FRAME_RATE / ht->ht_SpeedMultiplier;
+    uint32 loops   = ht->ht_SpeedMultiplier;
+    int8  *buf1    = (int8 *)renderBuf.data();
+    int8  *buf2    = (int8 *)renderBuf.data() + 2;
+    const int32 bufmod = 4;
+
+    do
+    {
+        hvl_play_irq(ht);
+        for (int c = 0; c < numChannels; c++)
+        {
+            bool mute;
+            if (tp.instrument < 0)          // per-channel pass: static mute set
+                mute = (c != tp.channel);
+            else                            // per-instrument pass: mute by current instrument
+            {
+                const struct hvl_voice &v = ht->ht_Voices[c];
+                int ins = v.vc_Instrument ? (int)(v.vc_Instrument - ht->ht_Instruments) : 0;
+                mute = (ins != tp.instrument);
+            }
+            if (mute)
+                ht->ht_Voices[c].vc_VoiceVolume = 0;
+        }
+        hvl_mixchunk(ht, samples, buf1, buf2, bufmod);
+        buf1 += samples * bufmod;
+        buf2 += samples * bufmod;
+        loops--;
+    } while (loops);
+}
+
+// ---------------------------------------------------------------------------
+// renderMainChunk — one 50 Hz frame: render audio, sample voice state, emit
+// ticks, accumulate the mixdown. Returns true when the fade-out has finished.
+// ---------------------------------------------------------------------------
+bool HvlReader::renderMainChunk()
 {
     // 1. Decode one audio frame into renderBuf (int16 interleaved stereo).
-    //    buf1 = left  (byte 0, stride 4)
-    //    buf2 = right (byte 2, stride 4)
     hvl_DecodeFrame(ht,
         (char *)renderBuf.data(),
         (char *)renderBuf.data() + 2,
@@ -223,33 +274,77 @@ float HvlReader::process()
         wav.addSamples(audioBuffer);
     }
 
-    // 5. Return progress or signal completion.
+    // 5. Report pass fraction / completion.
     if (isFadingOut)
     {
         if (++fadeFrame >= FADE_OUT_S * FRAME_RATE)
-            return -1.0f;   // done
-
-        // Small declining progress during fade so the bar keeps moving.
-        float fadeProg = (float)(FADE_OUT_S * FRAME_RATE - fadeFrame)
-                       / (float)(FADE_OUT_S * FRAME_RATE);
-        return std::max(0.01f, fadeProg);
+        {
+            passFrac = 1;
+            return true;   // done
+        }
+        passFrac = std::min(1.0f, 0.9f + 0.1f * fadeFrame / (float)(FADE_OUT_S * FRAME_RATE));
+        return false;
     }
 
-    // Normal progress: fraction of song positions traversed.
-    if (ht->ht_PositionNr > 0)
-    {
-        float prog = (float)ht->ht_PosNr / (float)ht->ht_PositionNr;
-        return std::max(0.01f, std::min(0.99f, prog));
-    }
-    return 0.5f;   // unknown length fallback
+    passFrac = (ht->ht_PositionNr > 0)
+                   ? std::min(0.99f, (float)ht->ht_PosNr / (float)ht->ht_PositionNr)
+                   : 0.5f;
+    return false;
 }
 
 // ---------------------------------------------------------------------------
-// endProcessing — save WAV, name instrument tracks, build MIDI note list.
+// renderTrackChunk — one frame of a per-track pass: mute voices, render audio
+// into the track WAV. Never writes ticks or touches usedInstruments. Runs its
+// own song-end + fade detection (the replayer is deterministic → same length).
 // ---------------------------------------------------------------------------
-void HvlReader::endProcessing()
+bool HvlReader::renderTrackChunk()
 {
-    SongReader::endProcessing();   // saves WAV if audioPath is set
+    decodeFrameForPass(trackPasses[curPass - 1]);
+    frameIndex++;
+
+    if (!isFadingOut && ht->ht_SongEndReached)
+    {
+        isFadingOut = true;
+        fadeFrame   = 0;
+    }
+
+    const int fadeTotalFrames = FADE_OUT_S * FRAME_RATE;
+    for (size_t i = 0; i < renderBuf.size(); i++)
+        audioBuffer[i] = renderBuf[i] / 32768.0f;
+    if (isFadingOut)
+    {
+        float scale = (float)(fadeTotalFrames - fadeFrame) / (float)fadeTotalFrames;
+        if (scale < 0.0f) scale = 0.0f;
+        for (float &s : audioBuffer)
+            s *= scale;
+    }
+    wav.addSamples(audioBuffer);
+
+    if (isFadingOut)
+    {
+        if (++fadeFrame >= FADE_OUT_S * FRAME_RATE)
+        {
+            passFrac = 1;
+            return true;
+        }
+        passFrac = std::min(1.0f, 0.9f + 0.1f * fadeFrame / (float)(FADE_OUT_S * FRAME_RATE));
+        return false;
+    }
+
+    passFrac = (ht->ht_PositionNr > 0)
+                   ? std::min(0.99f, (float)ht->ht_PosNr / (float)ht->ht_PositionNr)
+                   : 0.5f;
+    return false;
+}
+
+// ---------------------------------------------------------------------------
+// finalizeNotes — name instrument tracks and build the MIDI note list. Idempotent.
+// ---------------------------------------------------------------------------
+void HvlReader::finalizeNotes()
+{
+    if (notesFinalized)
+        return;
+    notesFinalized = true;
 
     if (userArgs.insTrack && ht)
     {
@@ -274,7 +369,109 @@ void HvlReader::endProcessing()
     }
 
     song.createNoteList(userArgs, &usedInstruments);
+}
 
-    hvl_FreeTune(ht);
-    ht = nullptr;
+// ---------------------------------------------------------------------------
+// buildTrackPasses — one pass per non-empty track (channel or instrument).
+// ---------------------------------------------------------------------------
+void HvlReader::buildTrackPasses()
+{
+    trackPasses.clear();
+    if (!trackAudioRequested())
+        return;
+
+    if (userArgs.insTrack)
+    {
+        //One pass per used instrument in usedInstruments order (matches createNoteList's
+        //compaction); midiTrack = 1-based index. Skip empty tracks.
+        int t = 1;
+        for (int ins : usedInstruments)
+        {
+            if (song.songData->tracks[t].numNotes > 0)
+                trackPasses.push_back({ t, -1, ins });
+            t++;
+        }
+    }
+    else
+    {
+        //One pass per channel that produced notes; midiTrack = channel + 1.
+        for (int c = 0; c < numChannels; c++)
+        {
+            int midiTrack = c + 1;
+            if (song.songData->tracks[midiTrack].numNotes > 0)
+                trackPasses.push_back({ midiTrack, c, -1 });
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// startTrackPass — full playback + voice reset for a deterministic replay.
+// ---------------------------------------------------------------------------
+void HvlReader::startTrackPass(int /*passIndex*/)
+{
+    hvl_InitSubsong(ht, (uint32)selectedSubsong); // full playback + voice reset
+    frameIndex  = 0;
+    isFadingOut = false;
+    fadeFrame   = 0;
+    passFrac    = 0;
+    std::fill(prevTrackPeriod.begin(), prevTrackPeriod.end(), 0);
+    wav.clearSamples();
+}
+
+// ---------------------------------------------------------------------------
+// process — pass state machine: main pass (extract + mixdown), then one pass
+// per non-empty track.
+// ---------------------------------------------------------------------------
+float HvlReader::process()
+{
+    if (curPass == 0)
+    {
+        bool done = renderMainChunk();
+        if (done)
+        {
+            finalizeNotes();
+            buildTrackPasses();
+            saveMixdownNow();
+            curPass = 1;
+            if (trackPasses.empty())
+                return -1;
+            startTrackPass(0);
+            return clampProgress(1.f / (1 + (int)trackPasses.size()));
+        }
+        int estPasses = userArgs.insTrack
+            ? 1 + (std::max)((int)usedInstruments.size(), 1)
+            : 1 + numChannels;
+        return clampProgress(passFrac / estPasses);
+    }
+    else
+    {
+        bool done = renderTrackChunk();
+        int totalPasses = 1 + (int)trackPasses.size();
+        if (done)
+        {
+            const TrackPass &tp = trackPasses[curPass - 1];
+            saveTrackWav(tp.midiTrack, song.songData->tracks[tp.midiTrack].name);
+            curPass++;
+            if (curPass - 1 >= (int)trackPasses.size())
+                return -1;
+            startTrackPass(curPass - 1);
+            return clampProgress((float)curPass / totalPasses);
+        }
+        return clampProgress((curPass + passFrac) / totalPasses);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// endProcessing — finalize notes (cancel path), save partial mixdown, free tune.
+// ---------------------------------------------------------------------------
+void HvlReader::endProcessing()
+{
+    finalizeNotes();               // cancel-during-main-pass path
+    SongReader::endProcessing();   // saves the mixdown only if a track pass hasn't already
+
+    if (ht)
+    {
+        hvl_FreeTune(ht);
+        ht = nullptr;
+    }
 }

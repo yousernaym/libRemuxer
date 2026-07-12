@@ -54,6 +54,7 @@ struct UserArgs
 	float songLengthS;
 	int subSong;
 	int numSubSongs;
+	char *trackAudioBasePath; //Base path for per-track WAVs ("" = disabled). Offset 40 on x64; keep in sync with C# Args.
 };
 #pragma pack(pop, 8)
 
@@ -64,4 +65,7 @@ extern "C"
 	__declspec(dllexport) BOOL beginProcessing(UserArgs &a);
 	__declspec(dllexport) float process();
 	__declspec(dllexport) void endProcessing();
+	//Enumerate per-track WAVs saved during processing (call after endProcessing).
+	__declspec(dllexport) int  getNumTrackAudioFiles();
+	__declspec(dllexport) BOOL getTrackAudioFile(int index, int *midiTrack, char *path, int maxPathLength);
 }
