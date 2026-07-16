@@ -35,7 +35,10 @@ namespace
 	constexpr int SidVoiceRegisterStride = 7;
 	constexpr int SidControlRegisterOffset = 4;
 	constexpr int SidWaveformShift = 4;
-	constexpr int MaxSidPlayCycles = 20000;
+	//Poll interval for note extraction. Must stay well under one PAL frame (19656 cycles):
+	//at ~20000 cycles the sampling aliased against the 50 Hz driver writes, skipping frames and
+	//merging fast arpeggio steps. ~1 ms also keeps gate off->on retriggers between polls rare.
+	constexpr int MaxSidPlayCycles = 1000;
 	constexpr float ShortSampleScale = 1.0f / 32768.0f;
 
 	template<typename Config>
@@ -248,6 +251,8 @@ void SidReader::beginProcess(UserArgs &args)
 	sidRegs.fill(0);
 	sidEnvelopes.fill(0);
 	gateState.fill(false);
+	attackState.fill(false);
+	pendingRetrigger.fill(false);
 	sidAudioBuffer.resize(audioBuffer.size());
 }
 
@@ -260,6 +265,21 @@ bool SidReader::renderMainChunk()
 		return true;
 
 	samplesProcessed += generatedSamples;
+
+	//Latch envelope ATTACK rising edges every chunk (~1 ms). reSIDfp only enters ATTACK on a
+	//gate 0->1 write, so this catches retriggers whose gate off+on both happen between two
+	//register polls (invisible to the gateState comparison below). Consumed per recorded tick.
+	std::array<bool, 3> attackNow{};
+	if (libsidplayfp::vm_getSidEnvelopeAttackStates(engine, 0, attackNow.data()))
+	{
+		for (int c = 0; c < 3; c++)
+		{
+			if (attackNow[c] && !attackState[c])
+				pendingRetrigger[c] = true;
+			attackState[c] = attackNow[c];
+		}
+	}
+
 	timeS = (float)samplesProcessed / sampleRate;
 	timeS /= AUDIO_CHANNEL_COUNT;
 	int timeT = (int)(timeS * ticksPerSeconds);
@@ -284,6 +304,8 @@ bool SidReader::renderMainChunk()
 
 			SidVoiceRegisters voice = readVoiceRegisters(sidRegs, sidEnvelopes, gotSidEnvelopes, c, gateState[c]);
 			gateState[c] = voice.gate;
+			bool retriggered = pendingRetrigger[c];
+			pendingRetrigger[c] = false;
 
 			bool validVoice = voice.waveform > 0 && voice.frequency >= minFreq && voice.frequency <= maxFreq;
 			bool continuingRelease = !voice.gate && prevTick.vol > 0 && prevTick.noteStart >= 0;
@@ -293,7 +315,7 @@ bool SidReader::renderMainChunk()
 				if (voice.gate)
 				{
 					curTick.notePitch = (int)(log2((float)voice.frequency / minFreq) * 12 + 0.5f) + 1;
-					if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || voice.gateChanged)
+					if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || voice.gateChanged || retriggered)
 						curTick.noteStart = timeT;
 					curTick.ins = voice.waveform;
 				}
@@ -442,6 +464,8 @@ void SidReader::startTrackPass(int passIndex)
 	oldTimeT = 0;
 	timeS = 0;
 	gateState.fill(false);
+	attackState.fill(false);
+	pendingRetrigger.fill(false);
 
 	//isMuted is only reset in the sidemu constructor and emus may be reused, so set every slot
 	//explicitly every pass. Mute all 4 voice slots (0..2 voices, 3 = digi/samples) on all 3 chips.

@@ -34,6 +34,8 @@ class SidReader : public SongReader
 	std::array<uint8_t, 32> sidRegs;
 	std::array<uint8_t, 3> sidEnvelopes;
 	std::array<bool, 3> gateState;
+	std::array<bool, 3> attackState;      //envelope in ATTACK at the previous chunk poll
+	std::array<bool, 3> pendingRetrigger; //ATTACK rising edge latched since the last recorded tick
 	std::vector<short> sidAudioBuffer;
 	int minFreq;
 	int maxFreq;
