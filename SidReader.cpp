@@ -308,22 +308,18 @@ bool SidReader::renderMainChunk()
 			pendingRetrigger[c] = false;
 
 			bool validVoice = voice.waveform > 0 && voice.frequency >= minFreq && voice.frequency <= maxFreq;
-			bool continuingRelease = !voice.gate && prevTick.vol > 0 && prevTick.noteStart >= 0;
 
-			if (validVoice && voice.volume > 0 && (voice.gate || continuingRelease))
+			//Record any audible tick regardless of gate, always reading pitch/waveform from the
+			//current registers (matches v0.4.0). Fast-note drivers (e.g. Giana Sisters) gate off
+			//after one frame and play the rest of a run during the release phase, changing the
+			//frequency register every frame; freezing pitch during release would collapse such a
+			//run into one long note at the first pitch and drop the rest.
+			if (validVoice && voice.volume > 0)
 			{
-				if (voice.gate)
-				{
-					curTick.notePitch = (int)(log2((float)voice.frequency / minFreq) * 12 + 0.5f) + 1;
-					if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || voice.gateChanged || retriggered)
-						curTick.noteStart = timeT;
-					curTick.ins = voice.waveform;
-				}
-				else
-				{
-					curTick.notePitch = prevTick.notePitch;
-					curTick.ins = prevTick.ins;
-				}
+				curTick.notePitch = (int)(log2((float)voice.frequency / minFreq) * 12 + 0.5f) + 1;
+				if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || (voice.gateChanged && voice.gate) || retriggered)
+					curTick.noteStart = timeT;
+				curTick.ins = voice.waveform;
 				usedWaveformCombos.insert(curTick.ins);
 				curTick.vol = voice.volume;
 			}
