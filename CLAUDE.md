@@ -61,7 +61,8 @@ libopenmpt pattern API plus a small set of Visual-Music read-only accessors adde
 (`module::vm_*` in `openmpt/libopenmpt/libopenmpt.hpp`) that expose the instrument/sample metadata
 (envelopes, sample length/loop/C5-speed, note maps) the note-cutter needs. SID uses libsidplayfp and
 samples SID chip note state during `process()` via the stock `sidplayfp::getSidStatus` register API
-(no engine modifications). HVL/AHX uses the HVL replay code.
+plus the additive `vm_*` accessors under `libsidplayfp/src/vm-extensions/` (envelope levels and ATTACK
+states for retrigger detection). HVL/AHX uses the HVL replay code.
 
 ## Vendored Third-Party Code
 
@@ -70,13 +71,17 @@ The subdirectories are large external libraries, all built as their own projects
 
 - `openmpt/` - libopenmpt, module note extraction and audio rendering (a fork with additive `module::vm_*`
   accessors; keep changes minimal so upstream merges stay clean).
-- `libsidplayfp/` - tracks stock upstream **libsidplayfp 3.0.1**. The fork delta is build-files only (MSVC
+- `libsidplayfp/` - tracks stock upstream **libsidplayfp 3.0.1**. The fork delta is build files (MSVC
   `libsidplayfp.vcxproj`, a hand-maintained `config.h`, and the generated `.bin`/`sidversion.h` assets the
-  autotools build would otherwise produce); there are no source modifications. SID note state is read through
-  the stock `getSidStatus` register API in [SidReader.cpp](SidReader.cpp).
+  autotools build would otherwise produce) plus small marked Visual Music additions: the additive
+  `src/vm-extensions/` accessors (which reach engine internals from their own TU instead of patching
+  upstream headers) and a `vm_`-prefixed per-voice waveform filter in `sidemu.{h,cpp}` used for
+  per-instrument track rendering (it must intercept each control-register write, so it cannot live
+  outside `sidemu::writeReg`).
 - `libresidfp/` - tracks stock upstream **libresidfp 1.0.2**, the ReSIDfp engine that 3.0.x split out of
-  libsidplayfp into its own repo. Same build-files-only fork delta (MSVC `libresidfp.vcxproj` + generated
-  `siddefs-fp.h`/`sidversion.h`). libsidplayfp's `residfp-builder` bridge is the only thing that links against it.
+  libsidplayfp into its own repo. Fork delta: build files (MSVC `libresidfp.vcxproj` + generated
+  `siddefs-fp.h`/`sidversion.h`) plus the additive `src/vm-extensions/` envelope accessors. libsidplayfp's
+  `residfp-builder` bridge is the only thing that links against it.
 
 ## Build & Output
 

@@ -186,6 +186,8 @@ void SidReader::beginProcess(UserArgs &args)
 {
 	SongReader::beginProcessing(args);
 	usedWaveformCombos.clear(); //file-scope global; must be fresh for each conversion
+	for (auto &combos : voiceWaveformCombos)
+		combos.clear();
 	notesFinalized = false;
 	curPass = 0;
 	trackPasses.clear();
@@ -255,6 +257,7 @@ void SidReader::beginProcess(UserArgs &args)
 	if (!engine.load(tune.get()))
 		throw engine.error();
 	initMixer(engine);
+	libsidplayfp::vm_setSidWaveformFilter(engine, 0, 0); //main pass renders all waveforms
 
 	timeS = 0;
 	oldTimeT = 0;
@@ -390,6 +393,7 @@ bool SidReader::renderMainChunk()
 				vp.lastPf = pitchF;
 				curTick.ins = voice.waveform;
 				usedWaveformCombos.insert(curTick.ins);
+				voiceWaveformCombos[c].insert(curTick.ins);
 				curTick.vol = voice.volume;
 			}
 			else
@@ -415,27 +419,10 @@ bool SidReader::renderMainChunk()
 	return samplesProcessed >= samplesToProcess;
 }
 
-//Track pass: render one chunk with the pass's voices muted (dynamically for per-instrument
-//passes), accumulate the per-track WAV. Never writes note ticks or usedWaveformCombos.
+//Track pass: render one chunk with the pass's voices muted (per-channel) or waveform-filtered
+//(per-instrument), accumulate the per-track WAV. Never writes note ticks or usedWaveformCombos.
 bool SidReader::renderTrackChunk()
 {
-	const TrackPass &tp = trackPasses[curPass - 1];
-
-	//Per-instrument passes: re-derive the mute mask each chunk from the current waveform of each
-	//voice (same register reads the note extractor uses). true = muted.
-	if (userArgs.insTrack)
-	{
-		if (engine.getSidStatus(0, sidRegs.data()))
-		{
-			for (int v = 0; v < 3; v++)
-			{
-				uint8_t control = sidRegs[v * SidVoiceRegisterStride + SidControlRegisterOffset];
-				int waveform = (control >> SidWaveformShift) & 0x0f;
-				engine.mute(0, v, waveform != tp.combo);
-			}
-		}
-	}
-
 	uint_least32_t generatedSamples = playSid(engine, audioBuffer, sidAudioBuffer);
 	if (generatedSamples == 0)
 		return true;
@@ -540,8 +527,26 @@ void SidReader::startTrackPass(int passIndex)
 			engine.mute(sid, v, true);
 
 	if (!userArgs.insTrack)
+	{
 		engine.mute(0, (unsigned int)tp.voice, false); //per-channel: only the target voice audible
-	//Per-instrument passes start fully muted; renderTrackChunk unmutes voices dynamically.
+		libsidplayfp::vm_setSidWaveformFilter(engine, 0, 0);
+	}
+	else
+	{
+		//Per-instrument: voices that play this pass's combo are audible but restricted to that
+		//waveform. The filter is applied per control-register write inside sidemu, so voices that
+		//alternate waveforms every frame (e.g. pulse/noise arpeggios) are isolated frame-exactly;
+		//muting via engine.mute would mask the *next* write and silence exactly the wrong frames.
+		//Voices that never play the combo stay muted upstream-style instead: a waveform-stripped
+		//voice still runs its envelope over the oscillator's held (floating-DAC) level, so every
+		//note attack on it would otherwise thump as a DC step in the track WAV.
+		for (unsigned int v = 0; v < 3; v++)
+		{
+			if (voiceWaveformCombos[v].count(tp.combo))
+				engine.mute(0, v, false);
+		}
+		libsidplayfp::vm_setSidWaveformFilter(engine, 0, (uint8_t)tp.combo);
+	}
 	//Voice 3 (digi) and chips 1-2 stay muted in all track passes.
 }
 

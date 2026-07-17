@@ -10,6 +10,7 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <set>
 #include <vector>
 #include <sidplayfp/sidplayfp.h>
 #include <builders/residfp-builder/residfp.h>
@@ -48,6 +49,9 @@ class SidReader : public SongReader
 		bool lastSplitWasBand = false;          //previous split came from the slide-band rule
 	};
 	std::array<VoicePitch, 3> voicePitch;
+	//Waveform combos each voice audibly played during the main pass; decides which voices a
+	//per-instrument track pass runs waveform-filtered vs statically muted (see startTrackPass).
+	std::array<std::set<int>, 3> voiceWaveformCombos;
 	std::vector<short> sidAudioBuffer;
 	int minFreq;
 	int maxFreq;
