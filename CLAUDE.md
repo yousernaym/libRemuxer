@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Role
 
 `libRemuxer` is the native C++ engine (`libRemuxer.dll`) that converts tracker modules, SID files, and HVL
-files into MIDI + WAV. It is the bottom layer of **Remuxer** (see [../AGENTS.md](../AGENTS.md)): a git
+files into MIDI + WAV. It is the bottom layer of **Remuxer** (see [../CLAUDE.md](../CLAUDE.md)): a git
 submodule nested inside the Remuxer submodule (separate repo: `yousernaym/libRemuxer`).
 
 It is consumed only by Remuxer's C# front-end, which P/Invokes the exported C functions
@@ -87,4 +87,4 @@ The subdirectories are large external libraries, all built as their own projects
 
 [libRemuxer.vcxproj](libRemuxer.vcxproj) builds a DynamicLibrary with the v143 toolset, C++20 on x64, statically
 linked CRT, and Spectre mitigation on Release x64. Build via the repo-root `VisualMusic.sln` so dependency
-projects are built first; see [../../../AGENTS.md](../../../AGENTS.md) for the whole picture.
+projects are built first; see [../../../CLAUDE.md](../../../CLAUDE.md) for the whole picture.
