@@ -7,6 +7,24 @@ Song::Song(SongData *_songData)
 	songData = _songData;
 }
 
+int Song::instrumentTrack(int ins, const std::set<int> *usedInstruments)
+{
+	if (usedInstruments)
+	{
+		//Only used instruments get tracks; track = 1-based position in the sorted set.
+		int t = 1;
+		for (int i : *usedInstruments)
+		{
+			if (i == ins)
+				return t;
+			t++;
+		}
+		return -1; //instrument not in the used set
+	}
+	//Sample-based module: track number == instrument number (1-based, no +1).
+	return ins > 0 ? ins : -1;
+}
+
 void Song::createNoteList(const UserArgs &args, const std::set<int> *usedInstruments)
 {
 	int resolutionScale = 480 / songData->ticksPerBeat;
@@ -32,33 +50,19 @@ void Song::createNoteList(const UserArgs &args, const std::set<int> *usedInstrum
 				note.start = int(prevTick.noteStart * resolutionScale);
 				note.stop = int(j * resolutionScale);
 				note.chn = i % 16; //Keep channel number below 16 for midi compatibility. //TODO: Keep track of which channels are used and choose unused ones, to avoid midi notes on the same channel and same pitch cutting each other off.
-				unsigned track;
+				int track;
 				if (args.insTrack)
 				{
-					int noteIns = prevTick.ins;
-					if (usedInstruments)
-					{
-						//Only create tracks for instruments that were actually used
-						int t = 1;
-						for (int ins : *usedInstruments)
-						{
-							if (ins == noteIns)
-								track = t;
-							t++;
-						}
-					}
-					else
-					{
-						//Track number corresponds with instrument number
-						track = noteIns; //No need for +1 because instruments start at 1
-					}
+					track = instrumentTrack(prevTick.ins, usedInstruments);
+					if (track < 1)
+						continue; //instrument not mapped to a track (e.g. absent from the used set)
 				}
 				else
 				{
 					//Track number corresponds with channel number + 1 since track 0 should only be used for tempo and such
-					track = i + 1; 
+					track = i + 1;
 				}
-				if (track >= notes.size())
+				if (track >= (int)notes.size())
 					notes.resize(track + 1);
 				notes[track].insert(note);
 				if (notes[track].size() >= MAX_TRACKNOTES)

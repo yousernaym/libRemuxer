@@ -413,23 +413,67 @@ void ModReader::beginProcessing(const UserArgs &args)
 	songData->ticksPerBeat = 24;
 	if (song.tracks.empty())
 		throw "Empty song";
+	buildTempoSegs();       //must precede createNoteList: it scales tempoEvents[].time in place
 	song.createNoteList(userArgs);
 
 	//Build the pass list now that note counts are known.
-	//Pass 0 = mixdown render (only if an audio path was requested; -t without -a supplies its own mixdown).
+	//Mixdown pass renders first (only if an audio path was requested; -t without -a supplies its own).
 	passList.clear();
 	curPass = 0;
 	passFraction = 0;
 	if (userArgs.audioPath[0])
-		passList.push_back(0);
+		passList.push_back({ 0, -1 });
 	if (trackAudioRequested())
 	{
-		for (int t = 1; t < songData->numTracks; t++)
-			if (songData->tracks[t].numNotes > 0)
-				passList.push_back(t);
+		if (userArgs.insTrack)
+		{
+			//Per-instrument: render each channel that carries any note, then splice by instrument.
+			int numChannels = (int)song.tracks.size();
+			for (int c = 0; c < numChannels; c++)
+				if (!buildInstrumentRuns(song.tracks[c]).empty())
+					passList.push_back({ -1, c });
+		}
+		else
+		{
+			//Per-channel: one whole-track WAV per non-empty track (channel = track - 1).
+			for (int t = 1; t < songData->numTracks; t++)
+				if (songData->tracks[t].numNotes > 0)
+					passList.push_back({ t, t - 1 });
+		}
 	}
-	if (!passList.empty() && passList[0] != 0)
-		setupTrackPass(passList[0]); //no mixdown pass: start straight on the first track pass
+	if (!passList.empty() && passList[0].channel >= 0)
+		setupTrackPass(passList[0].channel); //no mixdown pass: start straight on the first channel pass
+}
+
+//Piecewise-linear tick->seconds over the tempo map, snapshotted while tempoEvents[].time is still
+//in pre-scale (24-tpb) ticks (createNoteList later multiplies these times by resolutionScale).
+void ModReader::buildTempoSegs()
+{
+	tempoSegs.clear();
+	for (int i = 0; i < songData->numTempoEvents; i++)
+	{
+		int startTick = songData->tempoEvents[i].time;
+		double startS = 0;
+		if (!tempoSegs.empty())
+		{
+			const TempoSeg& prev = tempoSegs.back();
+			startS = prev.startS + (startTick - prev.startTick) * prev.secPerTick;
+		}
+		tempoSegs.push_back({ startTick, startS, 2.5 / songData->tempoEvents[i].tempo });
+	}
+}
+
+double ModReader::tickToSeconds(int tick) const
+{
+	const TempoSeg* seg = &tempoSegs.front();
+	for (const TempoSeg& s : tempoSegs)
+	{
+		if (s.startTick <= tick)
+			seg = &s;
+		else
+			break;
+	}
+	return seg->startS + (tick - seg->startTick) * seg->secPerTick;
 }
 
 
@@ -527,33 +571,16 @@ bool ModReader::renderPassChunk()
 	return false;
 }
 
-//Prepare playback state for a per-track pass: seek to start, reset fade, mute all but the target track.
-void ModReader::setupTrackPass(int midiTrack)
+//Prepare playback state for a channel render pass: seek to start, reset fade, mute all but `channel`.
+void ModReader::setupTrackPass(int channel)
 {
 	omptModule->set_position_seconds(0.0); //re-simulates play state from start; mute statuses persist across seeks
 	isFadingOut = false;
 	wav.clearSamples();
 
 	int numChannels = omptModule->get_num_channels();
-	if (userArgs.insTrack)
-	{
-		//Per-instrument: all channels audible, mute every instrument except the target.
-		for (int c = 0; c < numChannels; c++)
-			interactive->set_channel_mute_status(c, false);
-		//API is 0-based (falls back to samples when the module has no instruments);
-		//remuxer track/instrument numbers are 1-based, so instrument index = midiTrack-1.
-		int numInstruments = omptModule->get_num_instruments();
-		if (numInstruments == 0)
-			numInstruments = omptModule->get_num_samples();
-		for (int i = 0; i < numInstruments; i++)
-			interactive->set_instrument_mute_status(i, (i + 1) != midiTrack);
-	}
-	else
-	{
-		//Per-channel: audible only on the target channel (midiTrack-1).
-		for (int c = 0; c < numChannels; c++)
-			interactive->set_channel_mute_status(c, c != midiTrack - 1);
-	}
+	for (int c = 0; c < numChannels; c++)
+		interactive->set_channel_mute_status(c, c != channel);
 }
 
 float ModReader::process()
@@ -564,15 +591,19 @@ float ModReader::process()
 	bool passComplete = renderPassChunk();
 	if (passComplete)
 	{
-		int midiTrack = passList[curPass];
-		if (midiTrack == 0)
+		const Pass& p = passList[curPass];
+		if (p.channel < 0)
 			saveMixdownNow();
+		else if (userArgs.insTrack)
+			spliceChannelPass(p.channel, song.tracks[p.channel],
+				[this](int tick) { return tickToSeconds(tick); },
+				[](int ins) { return Song::instrumentTrack(ins, nullptr); });
 		else
-			saveTrackWav(midiTrack, song.songData->tracks[midiTrack].name);
+			saveTrackWav(p.midiTrack, song.songData->tracks[p.midiTrack].name);
 		curPass++;
 		if (curPass >= (int)passList.size())
 			return -1;
-		setupTrackPass(passList[curPass]);
+		setupTrackPass(passList[curPass].channel);
 		passFraction = 0;
 	}
 

@@ -169,16 +169,7 @@ void HvlReader::decodeFrameForPass(const TrackPass &tp)
         hvl_play_irq(ht);
         for (int c = 0; c < numChannels; c++)
         {
-            bool mute;
-            if (tp.instrument < 0)          // per-channel pass: static mute set
-                mute = (c != tp.channel);
-            else                            // per-instrument pass: mute by current instrument
-            {
-                const struct hvl_voice &v = ht->ht_Voices[c];
-                int ins = v.vc_Instrument ? (int)(v.vc_Instrument - ht->ht_Instruments) : 0;
-                mute = (ins != tp.instrument);
-            }
-            if (mute)
+            if (c != tp.channel)            // render only the target channel; others muted
                 ht->ht_Voices[c].vc_VoiceVolume = 0;
         }
         hvl_mixchunk(ht, samples, buf1, buf2, bufmod);
@@ -382,15 +373,10 @@ void HvlReader::buildTrackPasses()
 
     if (userArgs.insTrack)
     {
-        //One pass per used instrument in usedInstruments order (matches createNoteList's
-        //compaction); midiTrack = 1-based index. Skip empty tracks.
-        int t = 1;
-        for (int ins : usedInstruments)
-        {
-            if (song.songData->tracks[t].numNotes > 0)
-                trackPasses.push_back({ t, -1, ins });
-            t++;
-        }
+        //Per-instrument: render each channel that carries any note, then splice by instrument.
+        for (int c = 0; c < numChannels; c++)
+            if (!buildInstrumentRuns(song.tracks[c]).empty())
+                trackPasses.push_back({ -1, c });
     }
     else
     {
@@ -399,7 +385,7 @@ void HvlReader::buildTrackPasses()
         {
             int midiTrack = c + 1;
             if (song.songData->tracks[midiTrack].numNotes > 0)
-                trackPasses.push_back({ midiTrack, c, -1 });
+                trackPasses.push_back({ midiTrack, c });
         }
     }
 }
@@ -450,7 +436,12 @@ float HvlReader::process()
         if (done)
         {
             const TrackPass &tp = trackPasses[curPass - 1];
-            saveTrackWav(tp.midiTrack, song.songData->tracks[tp.midiTrack].name);
+            if (userArgs.insTrack)
+                spliceChannelPass(tp.channel, song.tracks[tp.channel],
+                    [this](int tick) { return (double)tick / FRAME_RATE; },
+                    [this](int ins) { return Song::instrumentTrack(ins, &usedInstruments); });
+            else
+                saveTrackWav(tp.midiTrack, song.songData->tracks[tp.midiTrack].name);
             curPass++;
             if (curPass - 1 >= (int)trackPasses.size())
                 return -1;

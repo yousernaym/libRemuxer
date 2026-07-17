@@ -19,13 +19,12 @@ class SidTune;
 
 class SidReader : public SongReader
 {
-	// Per-track pass descriptor. voice = chip-0 voice for per-channel passes;
-	// combo = target waveform combo for per-instrument passes.
+	// Per-track pass descriptor. voice = chip-0 voice to render. Per-channel mode saves the whole
+	// voice as track `midiTrack`; per-instrument mode splices it by waveform combo (midiTrack unused).
 	struct TrackPass
 	{
 		int midiTrack;
 		int voice;
-		int combo;
 	};
 
 	sidplayfp engine;
@@ -49,9 +48,6 @@ class SidReader : public SongReader
 		bool lastSplitWasBand = false;          //previous split came from the slide-band rule
 	};
 	std::array<VoicePitch, 3> voicePitch;
-	//Waveform combos each voice audibly played during the main pass; decides which voices a
-	//per-instrument track pass runs waveform-filtered vs statically muted (see startTrackPass).
-	std::array<std::set<int>, 3> voiceWaveformCombos;
 	std::vector<short> sidAudioBuffer;
 	int minFreq;
 	int maxFreq;

@@ -186,8 +186,6 @@ void SidReader::beginProcess(UserArgs &args)
 {
 	SongReader::beginProcessing(args);
 	usedWaveformCombos.clear(); //file-scope global; must be fresh for each conversion
-	for (auto &combos : voiceWaveformCombos)
-		combos.clear();
 	notesFinalized = false;
 	curPass = 0;
 	trackPasses.clear();
@@ -257,7 +255,6 @@ void SidReader::beginProcess(UserArgs &args)
 	if (!engine.load(tune.get()))
 		throw engine.error();
 	initMixer(engine);
-	libsidplayfp::vm_setSidWaveformFilter(engine, 0, 0); //main pass renders all waveforms
 
 	timeS = 0;
 	oldTimeT = 0;
@@ -393,7 +390,6 @@ bool SidReader::renderMainChunk()
 				vp.lastPf = pitchF;
 				curTick.ins = voice.waveform;
 				usedWaveformCombos.insert(curTick.ins);
-				voiceWaveformCombos[c].insert(curTick.ins);
 				curTick.vol = voice.volume;
 			}
 			else
@@ -419,8 +415,8 @@ bool SidReader::renderMainChunk()
 	return samplesProcessed >= samplesToProcess;
 }
 
-//Track pass: render one chunk with the pass's voices muted (per-channel) or waveform-filtered
-//(per-instrument), accumulate the per-track WAV. Never writes note ticks or usedWaveformCombos.
+//Track pass: render one chunk with only the pass's target voice audible (all others muted),
+//accumulate the per-track WAV. Never writes note ticks or usedWaveformCombos.
 bool SidReader::renderTrackChunk()
 {
 	uint_least32_t generatedSamples = playSid(engine, audioBuffer, sidAudioBuffer);
@@ -481,15 +477,10 @@ void SidReader::buildTrackPasses()
 
 	if (userArgs.insTrack)
 	{
-		//One pass per used waveform combo, in usedWaveformCombos order (matches createNoteList's
-		//track compaction); midiTrack = 1-based index. Skip empty tracks.
-		int t = 1;
-		for (int combo : usedWaveformCombos)
-		{
-			if (song.songData->tracks[t].numNotes > 0)
-				trackPasses.push_back({ t, -1, combo });
-			t++;
-		}
+		//Per-instrument: render each chip-0 voice that produced notes, then splice by waveform combo.
+		for (int v = 0; v < 3; v++)
+			if (!buildInstrumentRuns(song.tracks[v]).empty())
+				trackPasses.push_back({ -1, v });
 	}
 	else
 	{
@@ -498,7 +489,7 @@ void SidReader::buildTrackPasses()
 		{
 			int midiTrack = v + 1;
 			if (song.songData->tracks[midiTrack].numNotes > 0)
-				trackPasses.push_back({ midiTrack, v, -1 });
+				trackPasses.push_back({ midiTrack, v });
 		}
 	}
 }
@@ -526,27 +517,10 @@ void SidReader::startTrackPass(int passIndex)
 		for (unsigned int v = 0; v < 4; v++)
 			engine.mute(sid, v, true);
 
-	if (!userArgs.insTrack)
-	{
-		engine.mute(0, (unsigned int)tp.voice, false); //per-channel: only the target voice audible
-		libsidplayfp::vm_setSidWaveformFilter(engine, 0, 0);
-	}
-	else
-	{
-		//Per-instrument: voices that play this pass's combo are audible but restricted to that
-		//waveform. The filter is applied per control-register write inside sidemu, so voices that
-		//alternate waveforms every frame (e.g. pulse/noise arpeggios) are isolated frame-exactly;
-		//muting via engine.mute would mask the *next* write and silence exactly the wrong frames.
-		//Voices that never play the combo stay muted upstream-style instead: a waveform-stripped
-		//voice still runs its envelope over the oscillator's held (floating-DAC) level, so every
-		//note attack on it would otherwise thump as a DC step in the track WAV.
-		for (unsigned int v = 0; v < 3; v++)
-		{
-			if (voiceWaveformCombos[v].count(tp.combo))
-				engine.mute(0, v, false);
-		}
-		libsidplayfp::vm_setSidWaveformFilter(engine, 0, (uint8_t)tp.combo);
-	}
+	//Only the target chip-0 voice is audible. Per-instrument mode isolates instruments afterwards
+	//by splicing this exact voice audio against the note-run timeline, so no waveform filtering is
+	//needed here any more.
+	engine.mute(0, (unsigned int)tp.voice, false);
 	//Voice 3 (digi) and chips 1-2 stay muted in all track passes.
 }
 
@@ -580,7 +554,12 @@ float SidReader::process()
 		if (done)
 		{
 			const TrackPass &tp = trackPasses[curPass - 1];
-			saveTrackWav(tp.midiTrack, song.songData->tracks[tp.midiTrack].name);
+			if (userArgs.insTrack)
+				spliceChannelPass(tp.voice, song.tracks[tp.voice],
+					[this](int tick) { return (double)tick / ticksPerSeconds; },
+					[](int ins) { return Song::instrumentTrack(ins, &usedWaveformCombos); });
+			else
+				saveTrackWav(tp.midiTrack, song.songData->tracks[tp.midiTrack].name);
 			curPass++;
 			if (curPass - 1 >= (int)trackPasses.size())
 				return -1;

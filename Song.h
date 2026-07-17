@@ -35,6 +35,10 @@ public:
 	Song(SongData *_songData);
 	void createNoteList(const UserArgs &args, const std::set<int> *usedInstruments = nullptr);
 	void saveMidiFile(const std::string &path);
+	// MIDI track an instrument's notes are assigned to (must match createNoteList exactly).
+	//   usedInstruments != null: 1-based index of ins within the sorted set, or -1 if absent.
+	//   usedInstruments == null (sample-based/MOD): the instrument number itself (1-based), -1 if <= 0.
+	static int instrumentTrack(int ins, const std::set<int> *usedInstruments);
 };
 
 struct Song::Track

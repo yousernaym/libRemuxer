@@ -14,13 +14,12 @@ struct hvl_tune;
 
 class HvlReader : public SongReader
 {
-    // Per-track pass descriptor. channel = target channel for per-channel passes (instrument = -1);
-    // instrument = target instrument index for per-instrument passes (channel = -1).
+    // Per-track pass descriptor. channel = the channel to render. Per-channel mode saves it whole
+    // as track `midiTrack`; per-instrument mode splices it by instrument (midiTrack unused).
     struct TrackPass
     {
         int midiTrack;
         int channel;
-        int instrument;
     };
 
     struct hvl_tune *ht = nullptr;

@@ -123,7 +123,7 @@ int getNumTrackAudioFiles()
 	return songReader ? (int)songReader->getTrackAudioFiles().size() : 0;
 }
 
-BOOL getTrackAudioFile(int index, int *midiTrack, char *path, int maxPathLength)
+BOOL getTrackAudioFile(int index, int *midiTrack, int *channel, char *path, int maxPathLength)
 {
 	if (!songReader)
 		return FALSE;
@@ -131,9 +131,11 @@ BOOL getTrackAudioFile(int index, int *midiTrack, char *path, int maxPathLength)
 	if (index < 0 || index >= (int)files.size())
 		return FALSE;
 	if (midiTrack)
-		*midiTrack = files[index].first;
+		*midiTrack = files[index].midiTrack;
+	if (channel)
+		*channel = files[index].channel;
 	if (path && maxPathLength > 0)
-		strcpy_s(path, maxPathLength, files[index].second.c_str());
+		strcpy_s(path, maxPathLength, files[index].path.c_str());
 	return TRUE;
 }
 

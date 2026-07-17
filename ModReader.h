@@ -96,13 +96,30 @@ struct RunningCellInfo
 
 class ModReader : public SongReader
 {
+	// One audio render pass. channel < 0 => mixdown pass. channel >= 0 => render only that mod
+	// channel: per-channel mode saves it whole as track `midiTrack`; per-instrument mode splices it.
+	struct Pass
+	{
+		int midiTrack; // whole-track WAV target (per-channel mode); unused (-1) for splice passes
+		int channel;   // mod channel to render, or -1 for the mixdown pass
+	};
+	// Tick->seconds is piecewise-linear over the tempo map (a mod "tick" = 1/24 beat = 2.5/tempo s,
+	// independent of speed). Snapshotted before createNoteList scales the tempo times in place.
+	struct TempoSeg
+	{
+		int startTick;      // pre-scale (24-tpb) tick this tempo starts at
+		double startS;      // seconds elapsed at startTick
+		double secPerTick;  // 2.5 / tempo
+	};
+
 	const double semitone = 1.0594630943593; //12th root of 2
 	const int FadeOutTimeS = 7;
 	std::vector<RunningCellInfo> runningRowInfo;
 	std::vector<CellInfo> curRowInfo;
 	std::unique_ptr<openmpt::module_ext> omptModule;
 	openmpt::ext::interactive *interactive = nullptr;
-	std::vector<int> passList; // pass 0 = mixdown (midiTrack sentinel 0); >0 = per-track WAV for that midiTrack
+	std::vector<Pass> passList;
+	std::vector<TempoSeg> tempoSegs;
 	int curPass = 0;
 	float passFraction = 0;
 	int curSongSpeed;
@@ -125,8 +142,10 @@ public:
 	void updateCellTicks(Song::Track &track, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo);
 	void extractNotes();
 	void beginProcessing(const UserArgs &args);
+	void buildTempoSegs();               // snapshot tick->seconds before createNoteList scales the tempo map
+	double tickToSeconds(int tick) const;
 	bool renderPassChunk();      // renders one audio chunk into wav; returns true when the current pass is complete
-	void setupTrackPass(int midiTrack);
+	void setupTrackPass(int channel);    // mute all mod channels except `channel`
 	float process() override;
 	void endProcessing() override;
 };
