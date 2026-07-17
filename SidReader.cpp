@@ -39,6 +39,11 @@ namespace
 	//at ~20000 cycles the sampling aliased against the 50 Hz driver writes, skipping frames and
 	//merging fast arpeggio steps. ~1 ms also keeps gate off->on retriggers between polls rare.
 	constexpr int MaxSidPlayCycles = 1000;
+	//Max deviation (in semitones) from the pitch a note started at before it is split. Driver
+	//vibrato oscillates symmetrically around the starting pitch (Krakout bass measures +/-0.5 st),
+	//so it stays inside the window, while slides depart from it and keep splitting every ~0.6 st.
+	//Kept below 1.0 so chromatic (1 st) steps still split immediately.
+	constexpr float PitchSplitSemitones = 0.6f;
 	constexpr float ShortSampleScale = 1.0f / 32768.0f;
 
 	template<typename Config>
@@ -253,6 +258,7 @@ void SidReader::beginProcess(UserArgs &args)
 	gateState.fill(false);
 	attackState.fill(false);
 	pendingRetrigger.fill(false);
+	notePitchAnchor.fill(0);
 	sidAudioBuffer.resize(audioBuffer.size());
 }
 
@@ -316,9 +322,17 @@ bool SidReader::renderMainChunk()
 			//run into one long note at the first pitch and drop the rest.
 			if (validVoice && voice.volume > 0)
 			{
-				curTick.notePitch = (int)(log2((float)voice.frequency / minFreq) * 12 + 0.5f) + 1;
-				if (prevTick.vol == 0 || prevTick.notePitch != curTick.notePitch || (voice.gateChanged && voice.gate) || retriggered)
+				float pitchF = log2((float)voice.frequency / minFreq) * 12;
+				bool newNote = prevTick.vol == 0 || (voice.gateChanged && voice.gate) || retriggered
+					|| fabsf(pitchF - notePitchAnchor[c]) > PitchSplitSemitones;
+				if (newNote)
+				{
+					notePitchAnchor[c] = pitchF;
+					curTick.notePitch = (int)(pitchF + 0.5f) + 1;
 					curTick.noteStart = timeT;
+				}
+				else
+					curTick.notePitch = prevTick.notePitch; //hold pitch steady while vibrato wobbles around the anchor
 				curTick.ins = voice.waveform;
 				usedWaveformCombos.insert(curTick.ins);
 				curTick.vol = voice.volume;
@@ -462,6 +476,7 @@ void SidReader::startTrackPass(int passIndex)
 	gateState.fill(false);
 	attackState.fill(false);
 	pendingRetrigger.fill(false);
+	notePitchAnchor.fill(0);
 
 	//isMuted is only reset in the sidemu constructor and emus may be reused, so set every slot
 	//explicitly every pass. Mute all 4 voice slots (0..2 voices, 3 = digi/samples) on all 3 chips.
