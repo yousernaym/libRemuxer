@@ -36,7 +36,18 @@ class SidReader : public SongReader
 	std::array<bool, 3> gateState;
 	std::array<bool, 3> attackState;      //envelope in ATTACK at the previous chunk poll
 	std::array<bool, 3> pendingRetrigger; //ATTACK rising edge latched since the last recorded tick
-	std::array<float, 3> notePitchAnchor; //unrounded pitch the current note started at
+	//Per-voice pitch-tracking state for note splitting (see renderMainChunk).
+	struct VoicePitch
+	{
+		float bandMin = 0, bandMax = 0;         //unrounded pitch range of the current note
+		float prevBandMin = 0, prevBandMax = 0; //range of the previous note (for band-split undo)
+		float lastPf = 0;                       //pitch at the previous recorded tick
+		int segStart = 0, prevSegStart = 0;     //noteStart ticks of the current/previous note
+		int lastDir = 0;                        //sign of the last pitch movement
+		bool oscillating = false;               //a direction reversal was seen in this note
+		bool lastSplitWasBand = false;          //previous split came from the slide-band rule
+	};
+	std::array<VoicePitch, 3> voicePitch;
 	std::vector<short> sidAudioBuffer;
 	int minFreq;
 	int maxFreq;
