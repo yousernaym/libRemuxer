@@ -427,7 +427,7 @@ void ModReader::beginProcessing(const UserArgs &args)
 	{
 		if (userArgs.insTrack)
 		{
-			//Per-instrument: render each channel that carries any note; the whole channel WAV is
+			//Per-instrument: render each channel that carries any note to "-chCC.wav"; the file is
 			//shared by the instrument tracks that play on it (the app gates by note ownership).
 			int numChannels = (int)song.tracks.size();
 			for (int c = 0; c < numChannels; c++)
@@ -436,7 +436,7 @@ void ModReader::beginProcessing(const UserArgs &args)
 		}
 		else
 		{
-			//Per-channel: one whole-track WAV per non-empty track (channel = track - 1).
+			//Per-channel: one "-chCC.wav" per non-empty track (channel = track - 1).
 			for (int t = 1; t < songData->numTracks; t++)
 				if (songData->tracks[t].numNotes > 0)
 					passList.push_back({ t, t - 1 });
@@ -600,7 +600,7 @@ float ModReader::process()
 				[this](int tick) { return tickToSeconds(tick); },
 				[](int ins) { return Song::instrumentTrack(ins, nullptr); });
 		else
-			saveTrackWav(p.midiTrack, song.songData->tracks[p.midiTrack].name);
+			saveTrackWav(p.midiTrack, p.channel);
 		curPass++;
 		if (curPass >= (int)passList.size())
 			return -1;

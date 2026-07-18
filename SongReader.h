@@ -12,10 +12,11 @@
 #include "Song.h"
 #include "wav.h"
 
-// A saved per-track WAV. channel == -1 for a whole-track WAV (per-channel import mode);
-// channel >= 0 for a voice entry (per-instrument mode): the path is the whole source channel's
-// WAV, shared by every instrument track that plays on that channel — the app gates each track's
-// copy to the note ranges it owns. File scope so the C ABI layer (libRemuxer.cpp) can read it.
+// A saved per-track WAV. On disk the file is always a whole source-channel render named
+// "<base>-chCC.wav" (same path with or without -i, so imports share the cache). channel == -1
+// means "assign this file as the track's single Filename" (per-channel MIDI mode); channel >= 0
+// means "voice entry for that source channel" (per-instrument mode — the app gates each track's
+// copy to the note ranges it owns). File scope so the C ABI layer (libRemuxer.cpp) can read it.
 struct TrackAudioFile
 {
 	int midiTrack;
@@ -73,32 +74,8 @@ protected:
 		return userArgs.trackAudioBasePath != nullptr && userArgs.trackAudioBasePath[0] != 0;
 	}
 
-	// Sanitize a track name for use inside a WAV filename (letters/digits/space/_+- kept, capped).
-	static std::string sanitizeTrackName(const std::string& trackName)
-	{
-		std::string sanitized;
-		for (char c : trackName)
-		{
-			bool ok = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
-				(c >= '0' && c <= '9') || c == ' ' || c == '_' || c == '+' || c == '-';
-			sanitized += ok ? c : '_';
-			if (sanitized.size() >= 40)
-				break;
-		}
-		return sanitized;
-	}
-
-	// Build a per-track WAV path: "<base>-trackNN-<sanitized name>.wav".
-	std::string trackAudioPath(int midiTrack, const std::string& trackName) const
-	{
-		char buf[16];
-		sprintf_s(buf, sizeof(buf), "-track%02d-", midiTrack);
-		return std::string(userArgs.trackAudioBasePath) + buf + sanitizeTrackName(trackName) + ".wav";
-	}
-
-	// Build a per-channel WAV path: "<base>-chCC.wav" (deterministic, so a project reload
-	// regenerates identical paths and can skip the render passes when they exist). Distinct from
-	// the retired per-voice "-trackNN-chCC-" names so stale spliced files can't collide.
+	// Build a per-channel WAV path: "<base>-chCC.wav". Deterministic and independent of -i, so
+	// per-channel and per-instrument imports share the same files on disk.
 	std::string channelAudioPath(int channel) const
 	{
 		char buf[16];
@@ -193,11 +170,12 @@ protected:
 		wav.clearSamples();
 	}
 
-	// Save the current wav buffer as the whole-track WAV for midiTrack (channel -1), then free it.
-	void saveTrackWav(int midiTrack, const std::string& name)
+	// Save the current wav buffer as "<base>-chCC.wav" for a per-channel-mode track assignment
+	// (TrackAudioFile.channel = -1). Unnormalized so the bytes match the -i channel passes.
+	void saveTrackWav(int midiTrack, int channel)
 	{
-		std::string path = trackAudioPath(midiTrack, name);
-		if (wav.saveFile(path))
+		std::string path = channelAudioPath(channel);
+		if (wav.saveFile(path, false))
 			trackAudioFiles.push_back({ midiTrack, -1, path });
 		wav.clearSamples();
 	}

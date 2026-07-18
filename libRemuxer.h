@@ -66,7 +66,8 @@ extern "C"
 	__declspec(dllexport) float process();
 	__declspec(dllexport) void endProcessing();
 	//Enumerate per-track WAVs saved during processing (call after endProcessing).
-	//*channel is -1 for a whole-track WAV, or the source channel for a per-instrument voice WAV.
+	//Paths are always "<base>-chCC.wav". *channel is -1 for per-channel mode (Filename assign),
+	//or the source channel index for a per-instrument shared-channel entry.
 	__declspec(dllexport) int  getNumTrackAudioFiles();
 	__declspec(dllexport) BOOL getTrackAudioFile(int index, int *midiTrack, int *channel, char *path, int maxPathLength);
 }

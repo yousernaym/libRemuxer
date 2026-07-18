@@ -14,9 +14,9 @@ struct hvl_tune;
 
 class HvlReader : public SongReader
 {
-    // Per-track pass descriptor. channel = the channel to render. Per-channel mode saves it whole
-    // as track `midiTrack`; per-instrument mode saves the whole channel WAV shared by its
-    // instrument tracks (midiTrack unused).
+    // Per-track pass descriptor. channel = the channel to render to "<base>-chCC.wav". Per-channel
+    // mode assigns it to track `midiTrack`; per-instrument mode shares it among instrument tracks
+    // that play on the channel (midiTrack unused).
     struct TrackPass
     {
         int midiTrack;

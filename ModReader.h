@@ -97,8 +97,8 @@ struct RunningCellInfo
 class ModReader : public SongReader
 {
 	// One audio render pass. channel < 0 => mixdown pass. channel >= 0 => render only that mod
-	// channel: per-channel mode saves it whole as track `midiTrack`; per-instrument mode saves the
-	// whole channel WAV shared by its instrument tracks.
+	// channel to "<base>-chCC.wav": per-channel mode assigns it to track `midiTrack`; per-instrument
+	// mode shares it among instrument tracks that play on the channel.
 	struct Pass
 	{
 		int midiTrack; // whole-track WAV target (per-channel mode); unused (-1) for channel passes

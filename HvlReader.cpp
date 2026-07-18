@@ -373,7 +373,7 @@ void HvlReader::buildTrackPasses()
 
     if (userArgs.insTrack)
     {
-        //Per-instrument: render each channel that carries any note; the whole channel WAV is
+        //Per-instrument: render each channel that carries any note to "-chCC.wav"; the file is
         //shared by the instrument tracks that play on it (the app gates by note ownership).
         for (int c = 0; c < numChannels; c++)
             if (!buildInstrumentRuns(song.tracks[c]).empty())
@@ -381,7 +381,7 @@ void HvlReader::buildTrackPasses()
     }
     else
     {
-        //One pass per channel that produced notes; midiTrack = channel + 1.
+        //Per-channel: one "-chCC.wav" per channel that produced notes; midiTrack = channel + 1.
         for (int c = 0; c < numChannels; c++)
         {
             int midiTrack = c + 1;
@@ -442,7 +442,7 @@ float HvlReader::process()
                     [this](int tick) { return (double)tick / FRAME_RATE; },
                     [this](int ins) { return Song::instrumentTrack(ins, &usedInstruments); });
             else
-                saveTrackWav(tp.midiTrack, song.songData->tracks[tp.midiTrack].name);
+                saveTrackWav(tp.midiTrack, tp.channel);
             curPass++;
             if (curPass - 1 >= (int)trackPasses.size())
                 return -1;

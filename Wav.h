@@ -46,8 +46,8 @@ public:
 	}
 
 	//Write an arbitrary interleaved buffer as a WAV with this instance's channel count / sample rate.
-	//normalize = true peak-normalises to -1 dB (used for mixdown / whole-track WAVs); voice WAVs pass
-	//false so per-lane levels stay comparable and sum back to the channel signal.
+	//normalize = true peak-normalises to -1 dB (used for the mixdown); per-channel solo WAVs pass
+	//false so lane levels stay comparable across shared channels.
 	bool writeFile(const std::string &path, std::vector<SampleType> &data, bool normalize)
 	{
 		bool isFloat = std::is_floating_point<SampleType>::value;

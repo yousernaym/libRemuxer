@@ -477,7 +477,7 @@ void SidReader::buildTrackPasses()
 
 	if (userArgs.insTrack)
 	{
-		//Per-instrument: render each chip-0 voice that produced notes; the whole voice WAV is
+		//Per-instrument: render each chip-0 voice that produced notes to "-chCC.wav"; the file is
 		//shared by the waveform-combo tracks that play on it (the app gates by note ownership).
 		for (int v = 0; v < 3; v++)
 			if (!buildInstrumentRuns(song.tracks[v]).empty())
@@ -485,7 +485,7 @@ void SidReader::buildTrackPasses()
 	}
 	else
 	{
-		//One pass per chip-0 voice (0..2) that produced notes; midiTrack = voice + 1.
+		//Per-channel: one "-chCC.wav" per chip-0 voice (0..2) that produced notes; midiTrack = voice + 1.
 		for (int v = 0; v < 3; v++)
 		{
 			int midiTrack = v + 1;
@@ -560,7 +560,7 @@ float SidReader::process()
 					[this](int tick) { return (double)tick / ticksPerSeconds; },
 					[](int ins) { return Song::instrumentTrack(ins, &usedWaveformCombos); });
 			else
-				saveTrackWav(tp.midiTrack, song.songData->tracks[tp.midiTrack].name);
+				saveTrackWav(tp.midiTrack, tp.voice);
 			curPass++;
 			if (curPass - 1 >= (int)trackPasses.size())
 				return -1;
