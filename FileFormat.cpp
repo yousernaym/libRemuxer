@@ -51,6 +51,8 @@ void FileFormat::writeChunk(void *chunk, size_t size)
 }
 bool FileFormat::createFile(const std::string &path)
 {
-	outFile.open(path, std::ios::binary | std::ios::out);
+	// Truncate so a shorter rewrite (e.g. 8-bit mono over an older float stereo file) cannot
+	// leave a stale RIFF size / trailing junk that confuses readers.
+	outFile.open(path, std::ios::binary | std::ios::out | std::ios::trunc);
 	return outFile.is_open();
 }

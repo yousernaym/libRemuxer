@@ -12,8 +12,8 @@
 #include "Song.h"
 #include "wav.h"
 
-// A saved per-track WAV. On disk the file is always a whole source-channel render named
-// "<base>-chCC.wav" (same path with or without -i, so imports share the cache). channel == -1
+// A saved per-track WAV. On disk the file is always an 8-bit mono whole source-channel render
+// named "<base>-chCC.wav" (same path with or without -i, so imports share the cache). channel == -1
 // means "assign this file as the track's single Filename" (per-channel MIDI mode); channel >= 0
 // means "voice entry for that source channel" (per-instrument mode — the app gates each track's
 // copy to the note ranges it owns). File scope so the C ABI layer (libRemuxer.cpp) can read it.
@@ -113,7 +113,7 @@ protected:
 	// Save the just-rendered per-channel pass (accumulated in wav) as one whole-channel WAV shared
 	// by every instrument track that runs on this channel, and record a {midiTrack, channel, path}
 	// entry per such track (the app gates each track's copy to the sample ranges its notes own).
-	// Saves unnormalized (lane levels stay comparable across shared channels), skips tracks whose
+	// Saves as unnormalized 8-bit mono (lane levels stay comparable), skips tracks whose
 	// owned ranges are all-silent, then clears wav.
 	//   tickToSeconds : maps a tick index in track.ticks to seconds (reader-specific timing)
 	//   insToMidiTrack: maps a run's instrument id to its MIDI track (< 1 => drop the run)
@@ -163,19 +163,19 @@ protected:
 		if (!audibleTracks.empty())
 		{
 			std::string path = channelAudioPath(channel);
-			if (wav.saveFile(path, false))
+			if (wav.saveFile8BitMono(path))
 				for (int midiTrack : audibleTracks)
 					trackAudioFiles.push_back({ midiTrack, channel, path });
 		}
 		wav.clearSamples();
 	}
 
-	// Save the current wav buffer as "<base>-chCC.wav" for a per-channel-mode track assignment
-	// (TrackAudioFile.channel = -1). Unnormalized so the bytes match the -i channel passes.
+	// Save the current wav buffer as "<base>-chCC.wav" (8-bit mono) for a per-channel-mode track
+	// assignment (TrackAudioFile.channel = -1). Same format as the -i channel passes.
 	void saveTrackWav(int midiTrack, int channel)
 	{
 		std::string path = channelAudioPath(channel);
-		if (wav.saveFile(path, false))
+		if (wav.saveFile8BitMono(path))
 			trackAudioFiles.push_back({ midiTrack, -1, path });
 		wav.clearSamples();
 	}
