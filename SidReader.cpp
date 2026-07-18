@@ -477,7 +477,8 @@ void SidReader::buildTrackPasses()
 
 	if (userArgs.insTrack)
 	{
-		//Per-instrument: render each chip-0 voice that produced notes, then splice by waveform combo.
+		//Per-instrument: render each chip-0 voice that produced notes; the whole voice WAV is
+		//shared by the waveform-combo tracks that play on it (the app gates by note ownership).
 		for (int v = 0; v < 3; v++)
 			if (!buildInstrumentRuns(song.tracks[v]).empty())
 				trackPasses.push_back({ -1, v });
@@ -517,9 +518,9 @@ void SidReader::startTrackPass(int passIndex)
 		for (unsigned int v = 0; v < 4; v++)
 			engine.mute(sid, v, true);
 
-	//Only the target chip-0 voice is audible. Per-instrument mode isolates instruments afterwards
-	//by splicing this exact voice audio against the note-run timeline, so no waveform filtering is
-	//needed here any more.
+	//Only the target chip-0 voice is audible. Per-instrument mode isolates instruments later in
+	//the app, which gates this exact voice audio against the note-run timeline, so no waveform
+	//filtering is needed here any more.
 	engine.mute(0, (unsigned int)tp.voice, false);
 	//Voice 3 (digi) and chips 1-2 stay muted in all track passes.
 }
@@ -555,7 +556,7 @@ float SidReader::process()
 		{
 			const TrackPass &tp = trackPasses[curPass - 1];
 			if (userArgs.insTrack)
-				spliceChannelPass(tp.voice, song.tracks[tp.voice],
+				saveChannelPass(tp.voice, song.tracks[tp.voice],
 					[this](int tick) { return (double)tick / ticksPerSeconds; },
 					[](int ins) { return Song::instrumentTrack(ins, &usedWaveformCombos); });
 			else

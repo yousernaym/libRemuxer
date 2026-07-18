@@ -39,7 +39,7 @@ public:
 		samples.clear();
 	}
 
-	//Read-only view of the accumulated buffer (used by the per-channel splicer).
+	//Read-only view of the accumulated buffer (used by the per-channel pass save).
 	const std::vector<SampleType>& getSamples() const
 	{
 		return samples;
@@ -106,9 +106,9 @@ public:
 		return true;
 	}
 
-	bool saveFile(const std::string &path)
+	bool saveFile(const std::string &path, bool normalize = true)
 	{
-		return writeFile(path, samples, true);
+		return writeFile(path, samples, normalize);
 	}
 };
 

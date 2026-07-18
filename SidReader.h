@@ -20,7 +20,8 @@ class SidTune;
 class SidReader : public SongReader
 {
 	// Per-track pass descriptor. voice = chip-0 voice to render. Per-channel mode saves the whole
-	// voice as track `midiTrack`; per-instrument mode splices it by waveform combo (midiTrack unused).
+	// voice as track `midiTrack`; per-instrument mode saves the whole voice WAV shared by its
+	// waveform-combo tracks (midiTrack unused).
 	struct TrackPass
 	{
 		int midiTrack;

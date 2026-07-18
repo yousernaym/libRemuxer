@@ -97,10 +97,11 @@ struct RunningCellInfo
 class ModReader : public SongReader
 {
 	// One audio render pass. channel < 0 => mixdown pass. channel >= 0 => render only that mod
-	// channel: per-channel mode saves it whole as track `midiTrack`; per-instrument mode splices it.
+	// channel: per-channel mode saves it whole as track `midiTrack`; per-instrument mode saves the
+	// whole channel WAV shared by its instrument tracks.
 	struct Pass
 	{
-		int midiTrack; // whole-track WAV target (per-channel mode); unused (-1) for splice passes
+		int midiTrack; // whole-track WAV target (per-channel mode); unused (-1) for channel passes
 		int channel;   // mod channel to render, or -1 for the mixdown pass
 	};
 	// Tick->seconds is piecewise-linear over the tempo map (a mod "tick" = 1/24 beat = 2.5/tempo s,

@@ -427,7 +427,8 @@ void ModReader::beginProcessing(const UserArgs &args)
 	{
 		if (userArgs.insTrack)
 		{
-			//Per-instrument: render each channel that carries any note, then splice by instrument.
+			//Per-instrument: render each channel that carries any note; the whole channel WAV is
+			//shared by the instrument tracks that play on it (the app gates by note ownership).
 			int numChannels = (int)song.tracks.size();
 			for (int c = 0; c < numChannels; c++)
 				if (!buildInstrumentRuns(song.tracks[c]).empty())
@@ -595,7 +596,7 @@ float ModReader::process()
 		if (p.channel < 0)
 			saveMixdownNow();
 		else if (userArgs.insTrack)
-			spliceChannelPass(p.channel, song.tracks[p.channel],
+			saveChannelPass(p.channel, song.tracks[p.channel],
 				[this](int tick) { return tickToSeconds(tick); },
 				[](int ins) { return Song::instrumentTrack(ins, nullptr); });
 		else

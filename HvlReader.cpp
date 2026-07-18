@@ -373,7 +373,8 @@ void HvlReader::buildTrackPasses()
 
     if (userArgs.insTrack)
     {
-        //Per-instrument: render each channel that carries any note, then splice by instrument.
+        //Per-instrument: render each channel that carries any note; the whole channel WAV is
+        //shared by the instrument tracks that play on it (the app gates by note ownership).
         for (int c = 0; c < numChannels; c++)
             if (!buildInstrumentRuns(song.tracks[c]).empty())
                 trackPasses.push_back({ -1, c });
@@ -437,7 +438,7 @@ float HvlReader::process()
         {
             const TrackPass &tp = trackPasses[curPass - 1];
             if (userArgs.insTrack)
-                spliceChannelPass(tp.channel, song.tracks[tp.channel],
+                saveChannelPass(tp.channel, song.tracks[tp.channel],
                     [this](int tick) { return (double)tick / FRAME_RATE; },
                     [this](int ins) { return Song::instrumentTrack(ins, &usedInstruments); });
             else

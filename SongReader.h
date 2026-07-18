@@ -13,8 +13,9 @@
 #include "wav.h"
 
 // A saved per-track WAV. channel == -1 for a whole-track WAV (per-channel import mode);
-// channel >= 0 for a per-(instrument-track, source-channel) voice WAV (per-instrument mode).
-// File scope so the C ABI layer (libRemuxer.cpp) can read its fields.
+// channel >= 0 for a voice entry (per-instrument mode): the path is the whole source channel's
+// WAV, shared by every instrument track that plays on that channel — the app gates each track's
+// copy to the note ranges it owns. File scope so the C ABI layer (libRemuxer.cpp) can read it.
 struct TrackAudioFile
 {
 	int midiTrack;
@@ -43,7 +44,6 @@ protected:
 	const int channelCount;
 	Song &song;
 	std::vector<SampleType> audioBuffer;
-	std::vector<SampleType> spliceScratch; // reused across voice outputs (see spliceChannelPass)
 	Wav wav;
 
 	// Per-track WAV pass state (shared by all readers)
@@ -96,13 +96,14 @@ protected:
 		return std::string(userArgs.trackAudioBasePath) + buf + sanitizeTrackName(trackName) + ".wav";
 	}
 
-	// Build a per-voice WAV path: "<base>-trackNN-chCC-<sanitized name>.wav" (deterministic, so a
-	// project reload regenerates identical paths and can skip the render passes when they exist).
-	std::string trackVoiceAudioPath(int midiTrack, int channel, const std::string& trackName) const
+	// Build a per-channel WAV path: "<base>-chCC.wav" (deterministic, so a project reload
+	// regenerates identical paths and can skip the render passes when they exist). Distinct from
+	// the retired per-voice "-trackNN-chCC-" names so stale spliced files can't collide.
+	std::string channelAudioPath(int channel) const
 	{
-		char buf[24];
-		sprintf_s(buf, sizeof(buf), "-track%02d-ch%02d-", midiTrack, channel);
-		return std::string(userArgs.trackAudioBasePath) + buf + sanitizeTrackName(trackName) + ".wav";
+		char buf[16];
+		sprintf_s(buf, sizeof(buf), "-ch%02d", channel);
+		return std::string(userArgs.trackAudioBasePath) + buf + ".wav";
 	}
 
 	// Collapse a channel's per-tick note timeline into instrument-owned runs. Mirrors
@@ -132,13 +133,14 @@ protected:
 		return runs;
 	}
 
-	// Slice the just-rendered per-channel pass (accumulated in wav) into one full-length WAV per
-	// instrument-track that runs on this channel, gated to the ticks that instrument owns and zero
-	// elsewhere. Saves unnormalized (voice levels stay comparable and sum to the channel signal),
-	// skips all-silent outputs, records {midiTrack, channel, path}, then clears wav.
+	// Save the just-rendered per-channel pass (accumulated in wav) as one whole-channel WAV shared
+	// by every instrument track that runs on this channel, and record a {midiTrack, channel, path}
+	// entry per such track (the app gates each track's copy to the sample ranges its notes own).
+	// Saves unnormalized (lane levels stay comparable across shared channels), skips tracks whose
+	// owned ranges are all-silent, then clears wav.
 	//   tickToSeconds : maps a tick index in track.ticks to seconds (reader-specific timing)
 	//   insToMidiTrack: maps a run's instrument id to its MIDI track (< 1 => drop the run)
-	void spliceChannelPass(int channel, const Song::Track& track,
+	void saveChannelPass(int channel, const Song::Track& track,
 		const std::function<double(int)>& tickToSeconds,
 		const std::function<int(int)>& insToMidiTrack)
 	{
@@ -163,25 +165,30 @@ protected:
 				trackRanges[midiTrack].emplace_back(startSample, endSample);
 		}
 
+		// Tracks that actually have audio within their owned ranges get an entry; a track whose
+		// runs rendered silent gets no lane (matches the old splicer's all-zero skip).
+		std::vector<int> audibleTracks;
 		for (auto& kv : trackRanges)
 		{
-			int midiTrack = kv.first;
-			spliceScratch.assign(total, (SampleType)0);
 			bool anyAudio = false;
 			for (auto& range : kv.second)
 			{
-				for (size_t i = range.first; i < range.second; i++)
-				{
-					spliceScratch[i] = src[i];
-					if (!anyAudio && src[i] != 0)
+				for (size_t i = range.first; i < range.second && !anyAudio; i++)
+					if (src[i] != 0)
 						anyAudio = true;
-				}
+				if (anyAudio)
+					break;
 			}
-			if (!anyAudio)
-				continue;
-			std::string path = trackVoiceAudioPath(midiTrack, channel, song.songData->tracks[midiTrack].name);
-			if (wav.writeFile(path, spliceScratch, false))
-				trackAudioFiles.push_back({ midiTrack, channel, path });
+			if (anyAudio)
+				audibleTracks.push_back(kv.first);
+		}
+
+		if (!audibleTracks.empty())
+		{
+			std::string path = channelAudioPath(channel);
+			if (wav.saveFile(path, false))
+				for (int midiTrack : audibleTracks)
+					trackAudioFiles.push_back({ midiTrack, channel, path });
 		}
 		wav.clearSamples();
 	}
