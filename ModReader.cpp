@@ -573,6 +573,8 @@ bool ModReader::renderPassChunk()
 }
 
 //Prepare playback state for a channel render pass: seek to start, reset fade, mute all but `channel`.
+//Mute must be sync-preserving (CHN_SYNCMUTE) so global effects on other channels still run — see
+//set_channel_mute_status in libopenmpt_ext_impl.cpp. CHN_MUTE would desync S3M solos from MIDI/mixdown.
 void ModReader::setupTrackPass(int channel)
 {
 	omptModule->set_position_seconds(0.0); //re-simulates play state from start; mute statuses persist across seeks
