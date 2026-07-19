@@ -88,3 +88,13 @@ The subdirectories are large external libraries, all built as their own projects
 [libRemuxer.vcxproj](libRemuxer.vcxproj) builds a DynamicLibrary with the v143 toolset, C++20 on x64, statically
 linked CRT, and Spectre mitigation on Release x64. Build via the repo-root `VisualMusic.sln` so dependency
 projects are built first; see [../../../AGENTS.md](../../../AGENTS.md) for the whole picture.
+
+## Testing
+
+GoogleTest project [tests/libRemuxer.Tests.vcxproj](tests/libRemuxer.Tests.vcxproj) links first-party
+`Song.cpp` / `FileFormat.cpp` only (gtest via local `tests/vcpkg.json` manifest). Build and run:
+
+```powershell
+msbuild tests\libRemuxer.Tests.vcxproj /p:Configuration=Debug /p:Platform=x64
+tests\x64\Debug\libRemuxer.Tests.exe
+```
