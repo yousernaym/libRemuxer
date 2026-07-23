@@ -1,4 +1,5 @@
 #include "ModReader.h"
+#include "Utf8Path.h"
 #include <sstream>
 #include <vector>
 #include <string>
@@ -6,6 +7,7 @@
 #include <assert.h>
 #include <algorithm>
 #include <fstream>
+#include <stdexcept>
 
 ModReader::ModReader(Song& song) : SongReader(song, true, 480)
 {
@@ -357,7 +359,9 @@ void ModReader::beginProcessing(const UserArgs &args)
 
 	//Single libopenmpt instance is used for both note extraction and audio rendering.
 	//Throws openmpt::exception if the file is not a module; libRemuxer.cpp then falls back to the other readers.
-	std::ifstream file(userArgs.inputPath, std::ios::binary);
+	std::ifstream file;
+	if (!openUtf8Input(file, userArgs.inputPath))
+		throw std::runtime_error(std::string("Couldn't open input file: ") + userArgs.inputPath);
 	omptModule = std::make_unique<openmpt::module_ext>(file);
 	file.close();
 	omptModule->ctl_set_text("play.at_end", "continue");

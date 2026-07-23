@@ -1,8 +1,10 @@
 #include "HvlReader.h"
+#include "Utf8Path.h"
 
 #include <algorithm>
 #include <cmath>
 #include <string>
+#include <vector>
 
 // hvl_replay.h defines its own BOOL/TEXT types that conflict with <windows.h>.
 // Un-define the Windows macros first, then include the hvl header in a C-linkage block.
@@ -101,10 +103,15 @@ void HvlReader::beginProcess(UserArgs &args)
     song.songData->numTempoEvents        = 1;
     // resolutionScale in createNoteList = 480 / ticksPerBeat = 20
 
-    // Attempt to load the tune.  hvl_LoadTune validates the "THX" / "HVL"
+    // Attempt to load the tune.  hvl_ParseTune validates the "THX" / "HVL"
     // magic bytes and returns NULL on unknown formats — that is our format gate.
+    // Read via UTF-8 wide path (hvl_LoadTune uses ANSI fopen and would fail under
+    // non-ASCII profiles).
     //   defstereo=4  → classic Amiga LRRL stereo panning
-    ht = hvl_LoadTune(userArgs.inputPath, (uint32)sampleRate, 4);
+    std::vector<unsigned char> tuneBytes = readUtf8File(userArgs.inputPath);
+    if (tuneBytes.empty())
+        throw std::string("Couldn't open input file: ") + userArgs.inputPath;
+    ht = hvl_ParseTune(tuneBytes.data(), (uint32)tuneBytes.size(), (uint32)sampleRate, 4);
     if (!ht)
         throw std::string("Not an HVL/AHX file: ") + userArgs.inputPath;
 

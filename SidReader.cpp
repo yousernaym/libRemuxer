@@ -1,4 +1,5 @@
 #include "SidReader.h"
+#include "Utf8Path.h"
 
 #include <fcntl.h>
 #include <stdlib.h>
@@ -173,12 +174,11 @@ SidReader::~SidReader()
 std::vector<char> SidReader::loadRom(const char* path, size_t romSize)
 {
 	std::vector<char> buffer;
-	std::ifstream is(path, std::ios::binary);
-	if (is.good())
-	{
-		buffer.resize(romSize);
-		is.read(&buffer[0], romSize);
-	}
+	std::ifstream is;
+	if (!openUtf8Input(is, path) || !is.good())
+		return buffer;
+	buffer.resize(romSize);
+	is.read(&buffer[0], romSize);
 	is.close();
 	return buffer;
 }
@@ -211,7 +211,11 @@ void SidReader::beginProcess(UserArgs &args)
 		
 	// Load tune from file. Kept as a member so it outlives beginProcess: engine.load keeps a
 	// reference to the tune, and each track pass re-loads it.
-	tune = std::make_unique<SidTune>(userArgs.inputPath);
+	// Read via UTF-8 wide path then construct from the buffer — SidTune(path) uses ANSI fopen.
+	std::vector<unsigned char> tuneBytes = readUtf8File(userArgs.inputPath);
+	if (tuneBytes.empty())
+		throw std::string("Couldn't open input file: ") + userArgs.inputPath;
+	tune = std::make_unique<SidTune>(tuneBytes.data(), (uint_least32_t)tuneBytes.size());
 
 	// CHeck if the tune is valid
 	if (!tune->getStatus())

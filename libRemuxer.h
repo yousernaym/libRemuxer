@@ -2,7 +2,8 @@
 #include <windows.h>
 #include <cmath>
 
-const int MAX_PATH_LENGTH = 256;
+// UTF-8 paths under non-ASCII user profiles need more than classic MAX_PATH bytes.
+const int MAX_PATH_LENGTH = 1024;
 
 const int MAX_TEMPOEVENTS = 10000;
 const int MAX_TRACKNOTES = 150000;

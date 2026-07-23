@@ -1,5 +1,6 @@
 #include <assert.h>
 #include "FileFormat.h"
+#include "Utf8Path.h"
 
 FileFormat::FileFormat()
 {
@@ -53,6 +54,6 @@ bool FileFormat::createFile(const std::string &path)
 {
 	// Truncate so a shorter rewrite (e.g. 8-bit mono over an older float stereo file) cannot
 	// leave a stale RIFF size / trailing junk that confuses readers.
-	outFile.open(path, std::ios::binary | std::ios::out | std::ios::trunc);
-	return outFile.is_open();
+	// path is UTF-8 from the managed side — open via wide so non-ASCII profiles work.
+	return openUtf8Output(outFile, path, std::ios::binary | std::ios::out | std::ios::trunc);
 }
