@@ -1,4 +1,5 @@
 #pragma once
+#include <cstring>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -6,6 +7,28 @@
 
 // Paths arrive as UTF-8 from the managed Remuxer front-end (LPUTF8Str). MSVC narrow
 // iostreams / CRT fopen use the ANSI code page, so convert before opening.
+
+// Copy a UTF-8 path into a fixed buffer. Returns false if it does not fit (including NUL);
+// on failure dest is cleared when destChars > 0. Prefer this over strcpy_s — oversize
+// paths must not invoke the CRT invalid-parameter handler.
+inline bool copyUtf8Path(char *dest, size_t destChars, const char *utf8)
+{
+	if (!dest || destChars == 0)
+		return false;
+	if (!utf8)
+	{
+		dest[0] = '\0';
+		return true;
+	}
+	size_t len = strlen(utf8);
+	if (len + 1 > destChars)
+	{
+		dest[0] = '\0';
+		return false;
+	}
+	memcpy(dest, utf8, len + 1);
+	return true;
+}
 
 inline std::wstring utf8ToWide(const std::string &utf8)
 {

@@ -2,8 +2,9 @@
 #include <windows.h>
 #include <cmath>
 
-// UTF-8 paths under non-ASCII user profiles need more than classic MAX_PATH bytes.
-const int MAX_PATH_LENGTH = 1024;
+// UTF-8 path buffers. Windows long paths are up to 32 767 UTF-16 code units; size for
+// UTF-8 so deep / non-ASCII profiles fit. Exceeding this fails cleanly (no strcpy_s abort).
+const int MAX_PATH_LENGTH = 32768;
 
 const int MAX_TEMPOEVENTS = 10000;
 const int MAX_TRACKNOTES = 150000;

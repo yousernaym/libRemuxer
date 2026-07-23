@@ -1,5 +1,6 @@
 #include <string>
 #include "libRemuxer.h"
+#include "Utf8Path.h"
 #include "Song.h"
 #include "ModReader.h"
 #include "sidreader.h"
@@ -58,22 +59,14 @@ BOOL beginProcessing(UserArgs &args)
 	userArgs.insTrack = args.insTrack;
 	userArgs.songLengthS = args.songLengthS;
 	userArgs.subSong = args.subSong;
-	if (args.inputPath)
-		strcpy_s(userArgs.inputPath, MAX_PATH_LENGTH, args.inputPath);
-	else
-		userArgs.inputPath[0] = NULL;
-	if (args.audioPath)
-		strcpy_s(userArgs.audioPath, MAX_PATH_LENGTH, args.audioPath);
-	else
-		userArgs.audioPath[0] = NULL;
-	if (args.midiPath)
-		strcpy_s(userArgs.midiPath, MAX_PATH_LENGTH, args.midiPath);
-	else
-		userArgs.midiPath[0] = NULL;
-	if (args.trackAudioBasePath)
-		strcpy_s(userArgs.trackAudioBasePath, MAX_PATH_LENGTH, args.trackAudioBasePath);
-	else
-		userArgs.trackAudioBasePath[0] = NULL;
+	// Reject oversize UTF-8 paths instead of strcpy_s truncating / aborting.
+	if (!copyUtf8Path(userArgs.inputPath, MAX_PATH_LENGTH, args.inputPath)
+		|| !copyUtf8Path(userArgs.audioPath, MAX_PATH_LENGTH, args.audioPath)
+		|| !copyUtf8Path(userArgs.midiPath, MAX_PATH_LENGTH, args.midiPath)
+		|| !copyUtf8Path(userArgs.trackAudioBasePath, MAX_PATH_LENGTH, args.trackAudioBasePath))
+	{
+		return FALSE;
+	}
 
 	try 
 	{
@@ -135,7 +128,10 @@ BOOL getTrackAudioFile(int index, int *midiTrack, int *channel, char *path, int 
 	if (channel)
 		*channel = files[index].channel;
 	if (path && maxPathLength > 0)
-		strcpy_s(path, maxPathLength, files[index].path.c_str());
+	{
+		if (!copyUtf8Path(path, (size_t)maxPathLength, files[index].path.c_str()))
+			return FALSE;
+	}
 	return TRUE;
 }
 
