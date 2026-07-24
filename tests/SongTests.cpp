@@ -184,6 +184,9 @@ TEST(CreateNoteList, NoteStartChangeSplitsNotes)
 TEST(CreateNoteList, PitchChangeSameNoteStartDoesNotSplit)
 {
 	// Pitch alone does not close a note — only noteStart / vol / last-tick do.
+	// Trailing silence closes here so prevTick is the last sounding tick (pitch 62).
+	// A pitch change only on the final sounding tick (no following silence) would
+	// still emit the prior pitch: last-tick close uses ticks[j-1].
 	SongDataFixture fx;
 	fx.song.tracks.resize(1);
 	auto& ticks = fx.song.tracks[0].ticks;
@@ -198,7 +201,7 @@ TEST(CreateNoteList, PitchChangeSameNoteStartDoesNotSplit)
 	fx.song.createNoteList(MakeArgs(FALSE, midiPath, empty), nullptr);
 
 	ASSERT_EQ(1, fx.data.tracks[1].numNotes);
-	EXPECT_EQ(62, fx.data.tracks[1].notes[0].pitch); // pitch at close (prevTick)
+	EXPECT_EQ(62, fx.data.tracks[1].notes[0].pitch); // last sounding tick via silence close
 	EXPECT_EQ(0, fx.data.tracks[1].notes[0].start);
 	EXPECT_EQ(30, fx.data.tracks[1].notes[0].stop); // j=3 * scale 10
 }
@@ -352,7 +355,7 @@ TEST(Wav, WriteFile8BitMonoDownmixClampAndPad)
 	Wav wav(/*stereo*/ true, 48000);
 	// Frame 0: downmix (1 + -1) / 2 = 0 → PCM 128
 	// Frame 1: clamp 2.0 → 1.0 → PCM 255
-	// Frame 2: clamp -2.0 → -1.0 → PCM 0
+	// Frame 2: clamp -2.0 → -1.0 → lround(-127) + 128 → PCM 1
 	// Odd frame count → 1 pad byte after data chunk
 	std::vector<float> data{
 		1.0f, -1.0f,
