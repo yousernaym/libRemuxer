@@ -23,7 +23,9 @@ ModReader::~ModReader()
 void ModReader::updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo)
 {
 	int note = cellInfo.note;
-	if (note > 0)
+	// 5xy: note column is a porta target only — do not retrigger / restart the note.
+	bool tonePorta = cellInfo.command == CMD_TONEPORTAVOL_;
+	if (note > 0 && !tonePorta)
 	{ //a new note was played
 		runningCellInfo.samplePlaying = true;
 		int smpIndex = 0; //1-based libopenmpt sample index (0 = none)
@@ -128,7 +130,7 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 			}
 		}
 
-		if ((cellInfo.noteStartOffset == t && cellInfo.note > 0 || //Note starts at current tick (first tick of cell or start is offset using edx command)
+		if ((cellInfo.noteStartOffset == t && cellInfo.note > 0 && cellInfo.command != CMD_TONEPORTAVOL_ || //Note starts at current tick (not 5xy porta target)
 			cellInfo.retriggerOffset > 0 && t % cellInfo.retriggerOffset == 0 ||  //Retrigger effect (e9x)
 			// Pattern delay (EEx): EDx retriggers on each delayed-row repeat at the same in-row tick.
 			cellInfo.noteStartOffset > 0 && t >= curSongSpeed && (t % curSongSpeed) == cellInfo.noteStartOffset && cellInfo.note > 0)
@@ -248,6 +250,8 @@ bool ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 			cellInfo.retriggerOffset = interval;
 		break;
 	}
+	case CMD_TONEPORTAVOL_: // 5xy: ignore porta for note extraction; apply Axy volume slide
+	case CMD_VIBRATOVOL_:   // 6xy: ignore vibrato for note extraction; apply Axy volume slide
 	case CMD_VOLUMESLIDE_:
 	{
 		int value = param;
@@ -257,12 +261,12 @@ bool ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 			runningCellInfo.volSlideMem = value;
 		int hi = (value >> 4) & 0xf;
 		int lo = value & 0xf;
-		if (hi == 0xf && lo != 0) //fine slide down (DFx)
+		if (hi == 0xf && lo != 0) //fine slide down (DFx / S3M-IT)
 		{
 			cellInfo.volSlideVelScale = 1;
 			cellInfo.volSlideVel = -lo;
 		}
-		else if (lo == 0xf && hi != 0) //fine slide up (DxF)
+		else if (lo == 0xf && hi != 0) //fine slide up (DxF / S3M-IT)
 		{
 			cellInfo.volSlideVelScale = 1;
 			cellInfo.volSlideVel = hi;
@@ -308,11 +312,19 @@ bool ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 		}
 		else if (!s3m && sub == 0xA) //EAx fine volume slide up
 		{
+			if (value == 0)
+				value = runningCellInfo.fineVolSlideMem;
+			else
+				runningCellInfo.fineVolSlideMem = value;
 			cellInfo.volSlideVelScale = 1;
 			cellInfo.volSlideVel = value;
 		}
 		else if (!s3m && sub == 0xB) //EBx fine volume slide down
 		{
+			if (value == 0)
+				value = runningCellInfo.fineVolSlideMem;
+			else
+				runningCellInfo.fineVolSlideMem = value;
 			cellInfo.volSlideVelScale = 1;
 			cellInfo.volSlideVel = -value;
 		}

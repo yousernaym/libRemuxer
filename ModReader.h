@@ -24,8 +24,10 @@ enum OmptEffect : std::uint8_t
 {
 	CMD_NONE_ = 0,
 	CMD_ARPEGGIO_ = 1,
+	CMD_TONEPORTAVOL_ = 6, // 5xy: tone porta + volume slide (volume same as Axy)
+	CMD_VIBRATOVOL_ = 7,   // 6xy: vibrato + volume slide (volume same as Axy)
 	CMD_OFFSET_ = 10,
-	CMD_VOLUMESLIDE_ = 11,
+	CMD_VOLUMESLIDE_ = 11, // Axy
 	CMD_POSITIONJUMP_ = 12,
 	CMD_VOLUME_ = 13,
 	CMD_PATTERNBREAK_ = 14,
@@ -89,8 +91,9 @@ struct RunningCellInfo
 	int startVol = 64;
 	bool samplePlaying = false;
 	bool volEnvEnded = false;
-	int volSlideMem = 0;  // CMD_VOLUMESLIDE param memory
-	int offsetMem = 0;    // CMD_OFFSET param memory
+	int volSlideMem = 0;      // Axy / 5xy / 6xy volume-slide param memory
+	int fineVolSlideMem = 0;  // EAx / EBx nibble memory
+	int offsetMem = 0;        // CMD_OFFSET param memory
 	Loop loop;
 };
 
