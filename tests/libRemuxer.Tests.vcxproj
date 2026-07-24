@@ -81,6 +81,7 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="SongTests.cpp" />
+    <ClCompile Include="Utf8PathTests.cpp" />
     <ClCompile Include="..\Song.cpp" />
     <ClCompile Include="..\FileFormat.cpp" />
   </ItemGroup>
@@ -88,6 +89,7 @@
     <ClInclude Include="..\Song.h" />
     <ClInclude Include="..\FileFormat.h" />
     <ClInclude Include="..\Wav.h" />
+    <ClInclude Include="..\Utf8Path.h" />
     <ClInclude Include="..\libRemuxer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
