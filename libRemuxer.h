@@ -2,8 +2,9 @@
 #include <windows.h>
 #include <cmath>
 
-// UTF-8 path buffers. Windows long paths are up to 32 767 UTF-16 code units; size for
-// UTF-8 so deep / non-ASCII profiles fit. Exceeding this fails cleanly (no strcpy_s abort).
+// UTF-8 path copy buffers (bytes including NUL). Sized so non-ASCII profile paths fit in
+// the marshalled Args; exceeding this fails cleanly (no strcpy_s abort). File opens still
+// use ordinary wide iostreams — classic MAX_PATH / OS limits apply; this is not long-path I/O.
 const int MAX_PATH_LENGTH = 32768;
 
 const int MAX_TEMPOEVENTS = 10000;
