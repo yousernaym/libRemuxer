@@ -77,16 +77,6 @@ bool ContainsBytes(const std::vector<unsigned char> &hay, const unsigned char *n
 	return false;
 }
 
-bool ContainsStatus(const std::vector<unsigned char> &hay, unsigned char statusHiNibble)
-{
-	for (unsigned char b : hay)
-	{
-		if ((b & 0xF0) == statusHiNibble)
-			return true;
-	}
-	return false;
-}
-
 } // namespace
 
 TEST(InstrumentTrack, SampleBasedUsesInstrumentNumber)
@@ -167,7 +157,7 @@ TEST(CreateNoteList, InsTrackMapsInstrumentsAndSkipsUnmapped)
 	EXPECT_EQ(50, fx.data.tracks[2].notes[0].stop);  // tick 5 * 10
 }
 
-TEST(CreateNoteList, PitchChangeSplitsNotes)
+TEST(CreateNoteList, NoteStartChangeSplitsNotes)
 {
 	SongDataFixture fx;
 	fx.song.tracks.resize(1);
@@ -189,6 +179,28 @@ TEST(CreateNoteList, PitchChangeSplitsNotes)
 	EXPECT_EQ(62, fx.data.tracks[1].notes[1].pitch);
 	EXPECT_EQ(10, fx.data.tracks[1].notes[1].start);
 	EXPECT_EQ(30, fx.data.tracks[1].notes[1].stop);
+}
+
+TEST(CreateNoteList, PitchChangeSameNoteStartDoesNotSplit)
+{
+	// Pitch alone does not close a note — only noteStart / vol / last-tick do.
+	SongDataFixture fx;
+	fx.song.tracks.resize(1);
+	auto& ticks = fx.song.tracks[0].ticks;
+	ticks.resize(4);
+	ticks[0] = RunningTickInfo{ 0, 60, 64, 1 };
+	ticks[1] = RunningTickInfo{ 0, 62, 64, 1 }; // pitch change, same noteStart
+	ticks[2] = RunningTickInfo{ 0, 62, 64, 1 };
+	ticks[3] = RunningTickInfo{ -1, 0, 0, 0 };
+
+	char midiPath[MAX_PATH_LENGTH] = "";
+	char empty[1] = "";
+	fx.song.createNoteList(MakeArgs(FALSE, midiPath, empty), nullptr);
+
+	ASSERT_EQ(1, fx.data.tracks[1].numNotes);
+	EXPECT_EQ(62, fx.data.tracks[1].notes[0].pitch); // pitch at close (prevTick)
+	EXPECT_EQ(0, fx.data.tracks[1].notes[0].start);
+	EXPECT_EQ(30, fx.data.tracks[1].notes[0].stop); // j=3 * scale 10
 }
 
 TEST(CreateNoteList, LastTickStillSoundingClosesNote)
@@ -279,8 +291,12 @@ TEST(SaveMidiFile, WritesTempoMetaAndNoteOnOff)
 
 	const unsigned char tempoMeta[] = { 0xFF, 0x51 };
 	EXPECT_TRUE(ContainsBytes(bytes, tempoMeta, 2));
-	EXPECT_TRUE(ContainsStatus(bytes, 0x90)); // note on
-	EXPECT_TRUE(ContainsStatus(bytes, 0x80)); // note off
+	// Full channel voice events (status|chn, pitch, velocity) — not bare status nibbles,
+	// which VLQ continuation bytes can also satisfy.
+	const unsigned char noteOn[] = { 0x90, 60, 64 };
+	const unsigned char noteOff[] = { 0x80, 60, 64 };
+	EXPECT_TRUE(ContainsBytes(bytes, noteOn, 3));
+	EXPECT_TRUE(ContainsBytes(bytes, noteOff, 3));
 
 	std::error_code ec;
 	fs::remove(path, ec);
