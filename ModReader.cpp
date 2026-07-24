@@ -99,6 +99,8 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 			curTick.vol += cellInfo.volSlideVel;
 			if (curTick.vol < 0)
 				curTick.vol = 0;
+			else if (curTick.vol > 64)
+				curTick.vol = 64;
 		}
 		if (curTick.vol > 0 && prevTick.vol == 0 && prevTick.ins > 0)
 			curTick.noteStart = timeT + t;
