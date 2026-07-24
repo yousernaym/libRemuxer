@@ -58,7 +58,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(ProjectDir)vcpkg_installed\x64-windows\x64-windows\debug\bin\*.dll" "$(OutDir)" /D /Y /I</Command>
+      <!-- Marker so VS Test Adapter for Google Test discovers this exe (links gmock.dll, not gtest.dll). -->
+      <Command>xcopy "$(ProjectDir)vcpkg_installed\x64-windows\x64-windows\debug\bin\*.dll" "$(OutDir)" /D /Y /I
+type nul &gt; "$(OutDir)$(TargetFileName).is_google_test"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -75,7 +77,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(ProjectDir)vcpkg_installed\x64-windows\x64-windows\bin\*.dll" "$(OutDir)" /D /Y /I</Command>
+      <!-- Marker so VS Test Adapter for Google Test discovers this exe (links gmock.dll, not gtest.dll). -->
+      <Command>xcopy "$(ProjectDir)vcpkg_installed\x64-windows\x64-windows\bin\*.dll" "$(OutDir)" /D /Y /I
+type nul &gt; "$(OutDir)$(TargetFileName).is_google_test"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
