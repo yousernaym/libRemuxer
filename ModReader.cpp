@@ -130,7 +130,8 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 
 		if ((cellInfo.noteStartOffset == t && cellInfo.note > 0 || //Note starts at current tick (first tick of cell or start is offset using edx command)
 			cellInfo.retriggerOffset > 0 && t % cellInfo.retriggerOffset == 0 ||  //Retrigger effect (e9x)
-			cellInfo.noteStartOffset > 0 && t % curSongSpeed != 0 && t % cellInfo.noteStartOffset == 0 && cellInfo.note > 0)  //If pattern delay is used, note can be replayed on repeats if edx is used.
+			// Pattern delay (EEx): EDx retriggers on each delayed-row repeat at the same in-row tick.
+			cellInfo.noteStartOffset > 0 && t >= curSongSpeed && (t % curSongSpeed) == cellInfo.noteStartOffset && cellInfo.note > 0)
 			&& !runningCellInfo.volEnvEnded && curTick.vol && runningCellInfo.samplePlaying)
 		{
 			curTick.noteStart = timeT + t;
