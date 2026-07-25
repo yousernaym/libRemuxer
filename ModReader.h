@@ -24,6 +24,7 @@ enum OmptEffect : std::uint8_t
 {
 	CMD_NONE_ = 0,
 	CMD_ARPEGGIO_ = 1,
+	CMD_TONEPORTA_ = 3,    // 3xx: tone porta (glide ignored; note column starts a new note at target pitch)
 	CMD_TONEPORTAVOL_ = 6, // 5xy: tone porta + volume slide (volume same as Axy)
 	CMD_VIBRATOVOL_ = 7,   // 6xy: vibrato + volume slide (volume same as Axy)
 	CMD_OFFSET_ = 10,

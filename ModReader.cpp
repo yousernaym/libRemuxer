@@ -23,10 +23,8 @@ ModReader::~ModReader()
 void ModReader::updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo)
 {
 	int note = cellInfo.note;
-	// 5xy: note column is a porta target only — do not retrigger / restart the note.
-	bool tonePorta = cellInfo.command == CMD_TONEPORTAVOL_;
-	if (note > 0 && !tonePorta)
-	{ //a new note was played
+	if (note > 0)
+	{ //a new note was played (includes 3xx / 5xy: end previous note, start at new pitch; porta glide not modeled)
 		runningCellInfo.samplePlaying = true;
 		int smpIndex = 0; //1-based libopenmpt sample index (0 = none)
 		int ins;
@@ -132,7 +130,7 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 			}
 		}
 
-		if ((cellInfo.noteStartOffset == t && cellInfo.note > 0 && cellInfo.command != CMD_TONEPORTAVOL_ || //Note starts at current tick (not 5xy porta target)
+		if ((cellInfo.noteStartOffset == t && cellInfo.note > 0 || //Note starts at current tick (first tick of cell or start is offset using edx command)
 			cellInfo.retriggerOffset > 0 && t % cellInfo.retriggerOffset == 0 ||  //Retrigger effect (e9x)
 			// Pattern delay (EEx): EDx retriggers on each delayed-row repeat at the same in-row tick.
 			cellInfo.noteStartOffset > 0 && t >= curSongSpeed && (t % curSongSpeed) == cellInfo.noteStartOffset && cellInfo.note > 0)
@@ -252,8 +250,8 @@ bool ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 			cellInfo.retriggerOffset = interval;
 		break;
 	}
-	case CMD_TONEPORTAVOL_: // 5xy: ignore porta for note extraction; apply Axy volume slide
-	case CMD_VIBRATOVOL_:   // 6xy: ignore vibrato for note extraction; apply Axy volume slide
+	case CMD_TONEPORTAVOL_: // 5xy: porta ignored for pitch (note column still starts a new note); volume = Axy
+	case CMD_VIBRATOVOL_:   // 6xy: vibrato ignored for pitch; volume = Axy
 	case CMD_VOLUMESLIDE_:
 	{
 		int value = param;
