@@ -20,6 +20,7 @@ struct MidiNoteEvent
 	bool on;
 	int pitch;
 	int chn;
+	int velocity;
 };
 
 class Song : FileFormat

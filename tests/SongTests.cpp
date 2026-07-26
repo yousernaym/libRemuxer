@@ -247,7 +247,7 @@ TEST(SaveMidiFile, WritesFormat1Header)
 	fx.data.ticksPerBeat = 480;
 	fx.data.numTracks = 2;
 	fx.data.tracks[1].numNotes = 1;
-	fx.data.tracks[1].notes[0] = SongNote{ 0, 480, 60, 0 };
+	fx.data.tracks[1].notes[0] = SongNote{ 0, 480, 60, 0, 64 };
 	strcpy_s(fx.data.tracks[1].name, MAX_TRACKNAME_LENGTH, "ch1");
 
 	fs::path path = fs::temp_directory_path() / ("vm_song_" + std::to_string(GetCurrentProcessId()) + ".mid");
@@ -279,7 +279,7 @@ TEST(SaveMidiFile, WritesTempoMetaAndNoteOnOff)
 	fx.data.numTempoEvents = 1;
 	fx.data.tempoEvents[0] = TempoEvent{ 0, 120.0 };
 	fx.data.tracks[1].numNotes = 1;
-	fx.data.tracks[1].notes[0] = SongNote{ 0, 480, 60, 0 };
+	fx.data.tracks[1].notes[0] = SongNote{ 0, 480, 60, 0, 64 };
 	strcpy_s(fx.data.tracks[1].name, MAX_TRACKNAME_LENGTH, "ch1");
 
 	fs::path path = fs::temp_directory_path() / ("vm_song_body_" + std::to_string(GetCurrentProcessId()) + ".mid");

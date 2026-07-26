@@ -25,6 +25,7 @@ struct SongNote
 	int stop;
 	int pitch;
 	int chn;
+	int velocity; // note-start channel volume (0..64), written as MIDI velocity
 	bool operator<(const SongNote &right) const
 	{
 		return start < right.start;

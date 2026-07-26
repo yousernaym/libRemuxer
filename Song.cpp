@@ -50,6 +50,12 @@ void Song::createNoteList(const UserArgs &args, const std::set<int> *usedInstrum
 				note.start = int(prevTick.noteStart * resolutionScale);
 				note.stop = int(j * resolutionScale);
 				note.chn = i % 16; //Keep channel number below 16 for midi compatibility. //TODO: Keep track of which channels are used and choose unused ones, to avoid midi notes on the same channel and same pitch cutting each other off.
+				int startTick = prevTick.noteStart;
+				int startVol = (startTick >= 0 && startTick < (int)tracks[i].ticks.size())
+					? tracks[i].ticks[startTick].vol : prevTick.vol;
+				if (startVol < 0) startVol = 0;
+				else if (startVol > 64) startVol = 64;
+				note.velocity = startVol;
 				int track;
 				if (args.insTrack)
 				{
@@ -137,7 +143,7 @@ void Song::saveMidiFile(const std::string &path)
 					absoluteTime = eventsAtTime.first;
 					writeByte((noteEvent.on ? 0x90 : 0x80) | noteEvent.chn); //note on/off
 					writeByte(noteEvent.pitch); //pitch
-					writeByte(64); //velocity
+					writeByte(noteEvent.velocity);
 				}
 			}
 		}
@@ -174,6 +180,7 @@ void Song::createNoteEvents(std::map<int, std::vector<MidiNoteEvent>> *noteEvent
 		noteEvent.on = true;
 		noteEvent.pitch = note.pitch;
 		noteEvent.chn = note.chn;
+		noteEvent.velocity = note.velocity;
 		(*noteEvents)[note.start].push_back(noteEvent);
 		noteEvent.on = false;
 		(*noteEvents)[note.stop].push_back(noteEvent);

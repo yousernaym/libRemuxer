@@ -18,7 +18,12 @@ ModReader::~ModReader()
 {
 }
 
-
+static int clampVol(int v)
+{
+	if (v < 0) return 0;
+	if (v > 64) return 64;
+	return v;
+}
 
 void ModReader::updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo, RunningCellInfo &runningCellInfo)
 {
@@ -37,6 +42,7 @@ void ModReader::updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo,
 		else
 			ins = runningCellInfo.ins;
 		firstTick.ins = ins;
+		firstTick.notePitch = note; // arm pitch even when volume column forces silence (revival later)
 		int openmptNote = note - PITCH_OFFSET; //back to 1..128
 
 		if (omptModule->vm_has_instruments())
@@ -48,7 +54,7 @@ void ModReader::updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo,
 			{
 				if (omptModule->vm_get_vol_env_one_shot_zero_end(ins)) //volenv on but not sustain or loop, last point = 0
 					runningCellInfo.volEnvEnd = omptModule->vm_get_vol_env_end_tick(ins);
-				runningCellInfo.startVol = omptModule->vm_get_instrument_global_vol(ins);
+				runningCellInfo.startVol = clampVol(omptModule->vm_get_instrument_global_vol(ins));
 			}
 			else
 				runningCellInfo.samplePlaying = false;
@@ -76,7 +82,7 @@ void ModReader::updateCell(RunningTickInfo &firstTick, const CellInfo &cellInfo,
 	}
 	if (cellInfo.ins) //Ins but not nessecarily note was specified, so running ins info should be used. Just reset volume and envelope start.
 	{
-		firstTick.vol = runningCellInfo.startVol;
+		firstTick.vol = clampVol(runningCellInfo.startVol);
 		runningCellInfo.volEnvStartS = timeS;
 		runningCellInfo.volEnvEnded = false;
 	}
@@ -91,17 +97,20 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 		RunningTickInfo &curTick = track.ticks[timeT+t];
 		RunningTickInfo &prevTick = *track.getPrevTick(timeT+t);
 
-		//Volume sliding effects
-		if (t == 0 && cellInfo.volSlideVelScale == 1 || t > 0 && cellInfo.volSlideVelScale > 1)
-		{
-			curTick.vol += cellInfo.volSlideVel;
-			if (curTick.vol < 0)
-				curTick.vol = 0;
-			else if (curTick.vol > 64)
-				curTick.vol = 64;
-		}
+		//Volume sliding effects. Fine slides (scale==1) apply on every tick including t==0.
+		//Normal slides apply on t>0; also on t==0 when rising from silence so a note can
+		//revive at the row boundary (module tick of the slide row).
+		bool applySlide = cellInfo.volSlideVelScale > 0 &&
+			(t == 0 && (cellInfo.volSlideVelScale == 1 || (curTick.vol == 0 && cellInfo.volSlideVel > 0)) ||
+			 t > 0 && cellInfo.volSlideVelScale > 1);
+		if (applySlide)
+			curTick.vol = clampVol(curTick.vol + cellInfo.volSlideVel);
 		if (curTick.vol > 0 && prevTick.vol == 0 && prevTick.ins > 0)
+		{
 			curTick.noteStart = timeT + t;
+			if (runningCellInfo.note > 0)
+				curTick.notePitch = runningCellInfo.note;
+		}
 
 		//Check sample and envelope
 		double tickTimeS = timeS + tickDur * t;
@@ -241,7 +250,7 @@ bool ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 		ptnStart = param;
 		break;
 	case CMD_VOLUME_:
-		firstTick.vol = param;
+		firstTick.vol = clampVol(param);
 		break;
 	case CMD_RETRIG_:
 	{
@@ -336,7 +345,7 @@ bool ModReader::readCellFx(RunningTickInfo &firstTick, CellInfo &cellInfo, Runni
 	switch (cellInfo.volcmd)
 	{
 	case VOLCMD_VOLUME_:
-		firstTick.vol = cellInfo.vol;
+		firstTick.vol = clampVol(cellInfo.vol);
 		break;
 	case VOLCMD_VOLSLIDEUP_:
 		cellInfo.volSlideVelScale = curSongSpeed - 1;
@@ -514,15 +523,36 @@ void ModReader::extractNotes()
 		for (int rowIndex = 0; rowIndex < numRows; rowIndex++)
 		{
 			ptnDelay = 0;
-			//Loop through channels/tracks
+			//Loop through channels/tracks: default volume from note/ins, then effect/volume column overrides.
 			for (int trackIndex = 0; trackIndex < numChannels; trackIndex++)
 			{
 				readCell(pattern, rowIndex, trackIndex, curRowInfo[trackIndex], runningRowInfo[trackIndex]);
 
 				if (ptnJump >= 0 || rowIndex >= ptnStart)
 				{
-					if (!readCellFx(song.tracks[trackIndex].ticks[timeT], curRowInfo[trackIndex], runningRowInfo[trackIndex], order, rowIndex))
+					RunningTickInfo &firstTick = song.tracks[trackIndex].ticks[timeT];
+					updateCell(firstTick, curRowInfo[trackIndex], runningRowInfo[trackIndex]);
+					if (!readCellFx(firstTick, curRowInfo[trackIndex], runningRowInfo[trackIndex], order, rowIndex))
 						return;
+					// Offset FX is applied in readCellFx after updateCell; recompute sample length only.
+					CellInfo &cell = curRowInfo[trackIndex];
+					RunningCellInfo &running = runningRowInfo[trackIndex];
+					if (cell.sampleOffset > 0 && cell.note > 0 && running.samplePlaying)
+					{
+						int openmptNote = cell.note - PITCH_OFFSET;
+						int ins = cell.ins ? cell.ins : running.ins;
+						int smpIndex = omptModule->vm_has_instruments()
+							? (ins > 0 ? omptModule->vm_get_note_sample(ins, openmptNote) : 0)
+							: ins;
+						if (smpIndex > 0)
+						{
+							double sampleLength = (double)omptModule->vm_get_sample_length(smpIndex);
+							long long loopEnd = omptModule->vm_get_sample_loop_end(smpIndex);
+							running.sampleLength = sampleLength < cell.sampleOffset ? 0 : sampleLength - cell.sampleOffset;
+							if (running.sampleLength == 0 || (running.loopSample && loopEnd > 0 && loopEnd <= (long long)cell.sampleOffset))
+								running.samplePlaying = false;
+						}
+					}
 				}
 			}
 			if (ptnJump == -1)
@@ -538,8 +568,6 @@ void ModReader::extractNotes()
 			for (int t = 0; t < numChannels; t++)
 			{
 				song.tracks[t].ticks.resize(song.tracks[t].ticks.size() + curSongSpeed * (ptnDelay + 1));
-				RunningTickInfo* curTick = &song.tracks[t].ticks[timeT];
-				updateCell(*curTick, curRowInfo[t], runningRowInfo[t]);
 				updateCellTicks(song.tracks[t], curRowInfo[t], runningRowInfo[t]);
 			}
 
