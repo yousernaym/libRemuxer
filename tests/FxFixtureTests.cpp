@@ -289,12 +289,13 @@ TEST_P(FxFixtureTest, MatchesDescribedPatternAndSpeed)
 		}
 		else
 		{
+			// DF2 then D00 (memory). DF0 is normal slide-up F in ModReader, not fine-down mem.
 			EXPECT_EQ(CMD_VOLUMESLIDE_, C(0, 10).fx);
 			EXPECT_EQ(0xF2, C(0, 10).param);
 			for (int r = 1; r <= 31; r++)
 			{
 				EXPECT_EQ(CMD_VOLUMESLIDE_, C(r, 10).fx) << "ch10 row " << r;
-				EXPECT_EQ(0xF0, C(r, 10).param) << "ch10 row " << r;
+				EXPECT_EQ(0x00, C(r, 10).param) << "ch10 row " << r;
 			}
 		}
 		ExpectNoEffect(C(32, 10), "ch10 row 32");
@@ -348,29 +349,27 @@ TEST_P(FxFixtureTest, MatchesDescribedPatternAndSpeed)
 		EXPECT_EQ(0x00, b.param);
 		EXPECT_EQ(a.note + 1, b.note);
 	}
-	// Ch16: fine vol up, fine vol down, vol slide up 1
+	// Ch16: vol slide up F, down F, up 1 (XM vol column; S3M/IT effect Dxy)
 	{
 		ExpectNoteIns(C(0, 16), 1, "ch16");
-		if (fmt == FxFormat::S3m)
+		if (fmt == FxFormat::Xm)
 		{
-			EXPECT_EQ(CMD_VOLUMESLIDE_, C(0, 16).fx);
-			EXPECT_EQ(0x1F, C(0, 16).param); // DxF fine up 1
-			EXPECT_EQ(CMD_VOLUMESLIDE_, C(1, 16).fx);
-			EXPECT_EQ(0xF1, C(1, 16).param); // DFx fine down 1
-			EXPECT_EQ(CMD_VOLUMESLIDE_, C(2, 16).fx);
-			EXPECT_EQ(0x10, C(2, 16).param); // slide up 1
+			EXPECT_EQ(VOLCMD_VOLSLIDEUP_, C(0, 16).volcmd);
+			EXPECT_EQ(0xF, C(0, 16).vol);
+			EXPECT_EQ(VOLCMD_VOLSLIDEDOWN_, C(1, 16).volcmd);
+			EXPECT_EQ(0xF, C(1, 16).vol);
+			EXPECT_EQ(VOLCMD_VOLSLIDEUP_, C(2, 16).volcmd);
+			EXPECT_EQ(1, C(2, 16).vol);
 		}
 		else
 		{
-			// XM 0x7F/0x6F/0x71 → vol slide up F, down F, up 1 (not fine slides).
-			// IT volume column only encodes slide amounts 0..9.
-			const int slideAmt = (fmt == FxFormat::Xm) ? 0xF : 9;
-			EXPECT_EQ(VOLCMD_VOLSLIDEUP_, C(0, 16).volcmd);
-			EXPECT_EQ(slideAmt, C(0, 16).vol);
-			EXPECT_EQ(VOLCMD_VOLSLIDEDOWN_, C(1, 16).volcmd);
-			EXPECT_EQ(slideAmt, C(1, 16).vol);
-			EXPECT_EQ(VOLCMD_VOLSLIDEUP_, C(2, 16).volcmd);
-			EXPECT_EQ(1, C(2, 16).vol);
+			// DF0 = normal up F; D0F = normal down F; D10 = up 1
+			EXPECT_EQ(CMD_VOLUMESLIDE_, C(0, 16).fx);
+			EXPECT_EQ(0xF0, C(0, 16).param);
+			EXPECT_EQ(CMD_VOLUMESLIDE_, C(1, 16).fx);
+			EXPECT_EQ(0x0F, C(1, 16).param);
+			EXPECT_EQ(CMD_VOLUMESLIDE_, C(2, 16).fx);
+			EXPECT_EQ(0x10, C(2, 16).param);
 		}
 	}
 	// Ch17: note at zero volume then volume +1

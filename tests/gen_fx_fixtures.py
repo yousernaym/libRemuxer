@@ -67,9 +67,10 @@ def build_cells(s3m: bool) -> list[list[dict]]:
     for r in range(2, 8):
         setc(r, 9, fx=FX_K, param=0x00)
 
+    # Fine vol down 2, then D00 memory (DF0 would be read as normal slide *up* F).
     setc(0, 10, fx=FX_D, param=0xF2)
     for r in range(1, 32):
-        setc(r, 10, fx=FX_D, param=0xF0)
+        setc(r, 10, fx=FX_D, param=0x00)
 
     setc(0, 11, fx=FX_J, param=0x25)
     setc(1, 11, note=0xFF)
@@ -79,18 +80,16 @@ def build_cells(s3m: bool) -> list[list[dict]]:
     setc(1, 14, note=CH14_N1, ins=1, fx=FX_G, param=0x00)
     setc(1, 15, note=CH15_N1, ins=1, fx=FX_L, param=0x00)
 
+    # Ch16: match XM vol-column ±F then +1 so volume hits 0 then revives.
+    # Use effect-column Dxy (IT vol column only encodes slides 0..9).
+    # DF0 = normal slide up F (hi=F,lo=0); D0F = normal slide down F; D10 = up 1.
+    setc(0, 16, fx=FX_D, param=0xF0)
+    setc(1, 16, fx=FX_D, param=0x0F)
+    setc(2, 16, fx=FX_D, param=0x10)
     if s3m:
-        setc(0, 16, fx=FX_D, param=0x1F)
-        setc(1, 16, fx=FX_D, param=0xF1)
-        setc(2, 16, fx=FX_D, param=0x10)
         setc(0, 17, vol=0)
         setc(1, 17, fx=FX_D, param=0x10)
     else:
-        # Classic IT volume column only encodes fine slides 0..9 (not 0..15).
-        # Classic IT volume column only encodes slide amounts 0..9 (XM uses F).
-        setc(0, 16, volcmd="volup", vol=9)
-        setc(1, 16, volcmd="voldown", vol=9)
-        setc(2, 16, volcmd="volup", vol=1)
         setc(0, 17, volcmd="volume", vol=0)
         setc(1, 17, volcmd="volup", vol=1)
 
