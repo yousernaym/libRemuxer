@@ -97,13 +97,9 @@ void ModReader::updateCellTicks(Song::Track &track, const CellInfo &cellInfo, Ru
 		RunningTickInfo &curTick = track.ticks[timeT+t];
 		RunningTickInfo &prevTick = *track.getPrevTick(timeT+t);
 
-		//Volume sliding effects. Fine slides (scale==1) apply on every tick including t==0.
-		//Normal slides apply on t>0; also on t==0 when rising from silence so a note can
-		//revive at the row boundary (module tick of the slide row).
-		bool applySlide = cellInfo.volSlideVelScale > 0 &&
-			(t == 0 && (cellInfo.volSlideVelScale == 1 || (curTick.vol == 0 && cellInfo.volSlideVel > 0)) ||
-			 t > 0 && cellInfo.volSlideVelScale > 1);
-		if (applySlide)
+		//Volume sliding effects. Fine slides (scale==1) apply once on tick 0;
+		//normal slides (MOD/XM Axy, S3M Dxy) apply on t>0 — first tick of the row is skipped.
+		if (t == 0 && cellInfo.volSlideVelScale == 1 || t > 0 && cellInfo.volSlideVelScale > 1)
 			curTick.vol = clampVol(curTick.vol + cellInfo.volSlideVel);
 		if (curTick.vol > 0 && prevTick.vol == 0 && prevTick.ins > 0)
 		{
