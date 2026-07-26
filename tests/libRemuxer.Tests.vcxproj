@@ -32,34 +32,39 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup Label="Vcpkg" Condition="'$(Platform)'=='x64'">
+    <!-- Static CRT gtest to match libopenmpt /MT (avoids LNK2038 CRT mismatch). -->
     <VcpkgEnableManifest>true</VcpkgEnableManifest>
     <VcpkgAutoBootstrap>false</VcpkgAutoBootstrap>
+    <VcpkgTriplet>x64-windows-static</VcpkgTriplet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\</IntDir>
+    <LibraryPath>$(ProjectDir)..\openmpt\bin\$(Configuration)\vs2022-win10-static\amd64;$(ProjectDir)..\openmpt\build\lib\vs2022win10\x86_64\$(Configuration)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\</IntDir>
+    <LibraryPath>$(ProjectDir)..\openmpt\bin\$(Configuration)\vs2022-win10-static\amd64;$(ProjectDir)..\openmpt\build\lib\vs2022win10\x86_64\$(Configuration)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <!-- Match vcpkg gtest (dynamic CRT); Song/FileFormat TUs are compiled into this exe. -->
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;HAVE_CXX17;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- Match libopenmpt static CRT; gtest via x64-windows-static. -->
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..;$(ProjectDir)..\openmpt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>openmpt-mpg123.lib;openmpt-ogg.lib;openmpt-vorbis.lib;libopenmpt.lib;openmpt-zlib.lib;winmm.lib;bcrypt.lib;kernel32.lib;user32.lib;gdi32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <!-- Marker so VS Test Adapter for Google Test discovers this exe (links gmock.dll, not gtest.dll). -->
-      <Command>xcopy "$(ProjectDir)vcpkg_installed\x64-windows\x64-windows\debug\bin\*.dll" "$(OutDir)" /D /Y /I
+      <!-- mpg123 is a DLL import; gtest is static. Marker for VS Google Test adapter. -->
+      <Command>xcopy "$(ProjectDir)..\openmpt\bin\Debug\vs2022-win10-static\amd64\openmpt-mpg123.dll" "$(OutDir)" /D /Y /I
 type nul &gt; "$(OutDir)$(TargetFileName).is_google_test"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -67,18 +72,18 @@ type nul &gt; "$(OutDir)$(TargetFileName).is_google_test"</Command>
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;HAVE_CXX17;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..;$(ProjectDir)..\openmpt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>openmpt-mpg123.lib;openmpt-ogg.lib;openmpt-vorbis.lib;libopenmpt.lib;openmpt-zlib.lib;winmm.lib;bcrypt.lib;kernel32.lib;user32.lib;gdi32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <!-- Marker so VS Test Adapter for Google Test discovers this exe (links gmock.dll, not gtest.dll). -->
-      <Command>xcopy "$(ProjectDir)vcpkg_installed\x64-windows\x64-windows\bin\*.dll" "$(OutDir)" /D /Y /I
+      <Command>xcopy "$(ProjectDir)..\openmpt\bin\Release\vs2022-win10-static\amd64\openmpt-mpg123.dll" "$(OutDir)" /D /Y /I
 type nul &gt; "$(OutDir)$(TargetFileName).is_google_test"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -86,6 +91,7 @@ type nul &gt; "$(OutDir)$(TargetFileName).is_google_test"</Command>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="SongTests.cpp" />
     <ClCompile Include="Utf8PathTests.cpp" />
+    <ClCompile Include="FxFixtureTests.cpp" />
     <ClCompile Include="..\Song.cpp" />
     <ClCompile Include="..\FileFormat.cpp" />
   </ItemGroup>
