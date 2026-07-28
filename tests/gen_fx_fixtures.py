@@ -19,16 +19,17 @@ CHANNELS = 18
 FX_D, FX_G, FX_J, FX_K, FX_L, FX_Q, FX_S = 4, 7, 10, 11, 12, 17, 19
 
 
-# OpenMPT Load_s3m: note = (s3m&0x0F) + 12*(s3m>>4) + 12 + NOTE_MIN  (NOTE_MIN=1)
-# → ompt = low + 12*oct + 13, with low nibble 1..12 = C..B.
+# S3M note byte: (octave << 4) | semitone with semitone in 0..11 (ST3 / OpenMPT writer).
+# OpenMPT Load_s3m: ompt = (s3m&0x0F) + 12*(s3m>>4) + 12 + NOTE_MIN  (NOTE_MIN=1)
+# → ompt = low + 12*oct + 13, so x = ompt - 13 encodes as (x//12)<<4 | (x%12). C-0 is 0x00.
 def ompt_to_s3m_note(n: int) -> int:
     if n == 0xFF or n in (0xFE, 0xFD):
         return 254  # s3mNoteOff
     x = n - 13
-    if x < 1:
+    if x < 0:
         raise ValueError(f"OpenMPT note {n} too low for S3M")
-    octv = (x - 1) // 12
-    low = ((x - 1) % 12) + 1
+    octv = x // 12
+    low = x % 12
     return (octv << 4) | low
 
 
@@ -234,13 +235,9 @@ def pack_it_pattern(cells: list[list[dict]]) -> bytes:
                 continue
             note = c.get("note")
             ins = c.get("ins")
-            volcmd = c.get("volcmd")
-            vol = c.get("vol") if ("vol" in c or volcmd) else None
             fx = c.get("fx")
             param = c.get("param")
-            volb = it_volume_column(volcmd, vol if vol is not None else (0 if volcmd == "volume" else None))
-            if volcmd is None and "vol" in c:
-                volb = it_volume_column("volume", c["vol"])
+            volb = it_volume_column(c.get("volcmd"), c.get("vol"))
 
             it_note = None
             if note is not None:

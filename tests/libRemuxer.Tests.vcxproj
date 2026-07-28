@@ -37,15 +37,19 @@
     <VcpkgAutoBootstrap>false</VcpkgAutoBootstrap>
     <VcpkgTriplet>x64-windows-static</VcpkgTriplet>
   </PropertyGroup>
+  <PropertyGroup>
+    <OpenmptBinDir>$(ProjectDir)..\openmpt\bin\$(Configuration)\vs2022-win10-static\amd64</OpenmptBinDir>
+    <OpenmptLibDir>$(ProjectDir)..\openmpt\build\lib\vs2022win10\x86_64\$(Configuration)\</OpenmptLibDir>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\</IntDir>
-    <LibraryPath>$(ProjectDir)..\openmpt\bin\$(Configuration)\vs2022-win10-static\amd64;$(ProjectDir)..\openmpt\build\lib\vs2022win10\x86_64\$(Configuration)\;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(OpenmptBinDir);$(OpenmptLibDir);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\</IntDir>
-    <LibraryPath>$(ProjectDir)..\openmpt\bin\$(Configuration)\vs2022-win10-static\amd64;$(ProjectDir)..\openmpt\build\lib\vs2022win10\x86_64\$(Configuration)\;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(OpenmptBinDir);$(OpenmptLibDir);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -64,7 +68,7 @@
     </Link>
     <PostBuildEvent>
       <!-- mpg123 is a DLL import; gtest is static. Marker for VS Google Test adapter. -->
-      <Command>xcopy "$(ProjectDir)..\openmpt\bin\Debug\vs2022-win10-static\amd64\openmpt-mpg123.dll" "$(OutDir)" /D /Y /I
+      <Command>xcopy "$(OpenmptBinDir)\openmpt-mpg123.dll" "$(OutDir)" /D /Y /I
 type nul &gt; "$(OutDir)$(TargetFileName).is_google_test"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -83,7 +87,7 @@ type nul &gt; "$(OutDir)$(TargetFileName).is_google_test"</Command>
       <AdditionalDependencies>openmpt-mpg123.lib;openmpt-ogg.lib;openmpt-vorbis.lib;libopenmpt.lib;openmpt-zlib.lib;winmm.lib;bcrypt.lib;kernel32.lib;user32.lib;gdi32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(ProjectDir)..\openmpt\bin\Release\vs2022-win10-static\amd64\openmpt-mpg123.dll" "$(OutDir)" /D /Y /I
+      <Command>xcopy "$(OpenmptBinDir)\openmpt-mpg123.dll" "$(OutDir)" /D /Y /I
 type nul &gt; "$(OutDir)$(TargetFileName).is_google_test"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>

@@ -8,40 +8,11 @@
 #include <string>
 #include <vector>
 
-#include <libopenmpt/libopenmpt.hpp>
+#include "ModReader.h"
 
 namespace fs = std::filesystem;
 
 namespace {
-
-// Mirror ModReader.h OpenMPT command / note constants (stable EffectCommand / VolumeCommand values).
-constexpr int OMPT_NOTE_MIN = 1;
-constexpr int OMPT_NOTE_MAX = 128;
-constexpr int OMPT_NOTE_FADE = 0xFD;
-constexpr int OMPT_NOTE_NOTECUT = 0xFE;
-constexpr int OMPT_NOTE_KEYOFF = 0xFF;
-
-enum OmptEffect : std::uint8_t
-{
-	CMD_NONE_ = 0,
-	CMD_ARPEGGIO_ = 1,
-	CMD_TONEPORTA_ = 4,
-	CMD_TONEPORTAVOL_ = 6,
-	CMD_VIBRATOVOL_ = 7,
-	CMD_VOLUMESLIDE_ = 11,
-	CMD_VOLUME_ = 13,
-	CMD_RETRIG_ = 15,
-	CMD_MODCMDEX_ = 19,
-	CMD_S3MCMDEX_ = 20,
-};
-
-enum OmptVolCmd : std::uint8_t
-{
-	VOLCMD_NONE_ = 0,
-	VOLCMD_VOLUME_ = 1,
-	VOLCMD_VOLSLIDEUP_ = 3,
-	VOLCMD_VOLSLIDEDOWN_ = 4,
-};
 
 fs::path TestFile(const char *name)
 {
@@ -159,10 +130,24 @@ TEST_P(FxFixtureTest, MatchesDescribedPatternAndSpeed)
 	openmpt::module &m = *mod;
 
 	EXPECT_EQ(6, m.get_current_speed());
-	EXPECT_EQ(125.0, m.get_current_tempo2());
+	EXPECT_DOUBLE_EQ(125.0, m.get_current_tempo2());
 	EXPECT_EQ(18, m.get_num_channels());
-	EXPECT_GE(m.get_num_patterns(), 1);
+	// Single-pattern / single play: FxMidiTests tick counts assume pattern 0 plays once.
+	EXPECT_EQ(1, m.get_num_patterns());
 	EXPECT_EQ(64, m.get_pattern_num_rows(0));
+	{
+		int playable = 0;
+		for (std::int32_t o = 0; o < m.get_num_orders(); ++o)
+		{
+			if (m.is_order_stop_entry(o))
+				break;
+			if (m.is_order_skip_entry(o))
+				continue;
+			EXPECT_EQ(0, m.get_order_pattern(o)) << "order " << o;
+			++playable;
+		}
+		EXPECT_EQ(1, playable) << "order list must play pattern 0 exactly once";
+	}
 
 	ASSERT_GE(m.get_num_samples(), 2);
 	EXPECT_TRUE(m.vm_get_sample_loops(1)) << "sample 1 should loop";
