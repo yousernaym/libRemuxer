@@ -3,8 +3,22 @@
 
 from __future__ import annotations
 
-import struct
 from pathlib import Path
+
+from mod_fixture_writer import (
+    FX_D,
+    FX_G,
+    FX_J,
+    FX_K,
+    FX_L,
+    FX_Q,
+    FX_S,
+    Module,
+    Sample,
+    empty_pattern,
+    write_it,
+    write_s3m,
+)
 
 OUT_DIR = Path(__file__).resolve().parent.parent / "test-files"
 
@@ -15,35 +29,9 @@ CH15_N1 = 78
 ROWS = 64
 CHANNELS = 18
 
-# S3M / IT effect letters (A=1)
-FX_D, FX_G, FX_J, FX_K, FX_L, FX_Q, FX_S = 4, 7, 10, 11, 12, 17, 19
-
-
-# S3M note byte: (octave << 4) | semitone with semitone in 0..11 (ST3 / OpenMPT writer).
-# OpenMPT Load_s3m: ompt = (s3m&0x0F) + 12*(s3m>>4) + 12 + NOTE_MIN  (NOTE_MIN=1)
-# → ompt = low + 12*oct + 13, so x = ompt - 13 encodes as (x//12)<<4 | (x%12). C-0 is 0x00.
-def ompt_to_s3m_note(n: int) -> int:
-    if n == 0xFF or n in (0xFE, 0xFD):
-        return 254  # s3mNoteOff
-    x = n - 13
-    if x < 0:
-        raise ValueError(f"OpenMPT note {n} too low for S3M")
-    octv = x // 12
-    low = x % 12
-    return (octv << 4) | low
-
-
-# OpenMPT Load_it: file note < 0x80 → note += NOTE_MIN (1).
-def ompt_to_it_note(n: int) -> int:
-    if n == 0xFF:
-        return 255  # NOTE_KEYOFF
-    if n in (0xFE, 0xFD):
-        return 254  # NOTE_NOTECUT
-    return n - 1
-
 
 def build_cells(s3m: bool) -> list[list[dict]]:
-    cells: list[list[dict]] = [[{} for _ in range(CHANNELS)] for _ in range(ROWS)]
+    cells = empty_pattern(ROWS, CHANNELS)
 
     def setc(row: int, ch: int, **kw):
         cells[row][ch].update(kw)
@@ -109,242 +97,23 @@ def build_cells(s3m: bool) -> list[list[dict]]:
     return cells
 
 
-def pack_s3m_pattern(cells: list[list[dict]]) -> bytes:
-    out = bytearray()
-    for row in range(ROWS):
-        for ch in range(CHANNELS):
-            c = cells[row][ch]
-            if not c:
-                continue
-            what = ch & 0x1F
-            body = bytearray()
-            note = c.get("note")
-            ins = c.get("ins", 0)
-            if note is not None or ins:
-                what |= 0x20
-                body.append(255 if note is None else ompt_to_s3m_note(note))
-                body.append(ins & 0xFF)
-            if "vol" in c and "volcmd" not in c:
-                what |= 0x40
-                body.append(max(0, min(64, c["vol"])))
-            if "fx" in c:
-                what |= 0x80
-                body.append(c["fx"] & 0xFF)
-                body.append(c.get("param", 0) & 0xFF)
-            out.append(what)
-            out.extend(body)
-        out.append(0)
-    packed = bytes(out)
-    return struct.pack("<H", len(packed) + 2) + packed
-
-
-def write_s3m(path: Path) -> None:
-    cells = build_cells(s3m=True)
-    pattern = pack_s3m_pattern(cells)
-    sample = bytes([0x40] * 10)
-
-    ord_num, ins_num, pat_num = 2, 2, 1
-    after_header = 96 + ord_num + ins_num * 2 + pat_num * 2 + 32
-    buf = bytearray(after_header)
-
-    def pad16():
-        while len(buf) % 16:
-            buf.append(0)
-
-    def pp(off: int) -> int:
-        return off // 16
-
-    pad16()
-    ins1_off = len(buf)
-    buf.extend(b"\x00" * 80)
-    pad16()
-    ins2_off = len(buf)
-    buf.extend(b"\x00" * 80)
-    pad16()
-    pat_off = len(buf)
-    buf.extend(pattern)
-    pad16()
-    smp1_off = len(buf)
-    buf.extend(sample)
-    pad16()
-    smp2_off = len(buf)
-    buf.extend(sample)
-    pad16()
-
-    def make_ins(smp_off: int, loop: bool, title: str) -> bytes:
-        ptr = pp(smp_off)
-        hdr = bytearray(80)
-        hdr[0] = 1
-        hdr[1:13] = b"SAMPLE.RAW\x00\x00"
-        hdr[13] = (ptr >> 16) & 0xFF
-        struct.pack_into("<H", hdr, 14, ptr & 0xFFFF)
-        struct.pack_into("<III", hdr, 0x10, 10, 0, 10 if loop else 0)
-        hdr[0x1C] = 64
-        hdr[0x1F] = 1 if loop else 0
-        struct.pack_into("<I", hdr, 0x20, 8363)
-        t = title.encode("ascii")[:28]
-        hdr[0x30 : 0x30 + len(t)] = t
-        hdr[0x4C:0x50] = b"SCRS"
-        return bytes(hdr)
-
-    buf[ins1_off : ins1_off + 80] = make_ins(smp1_off, True, "loop")
-    buf[ins2_off : ins2_off + 80] = make_ins(smp2_off, False, "oneshot")
-
-    hdr = bytearray(96)
-    name = b"FX fixture"
-    hdr[0 : len(name)] = name
-    hdr[28] = 0x1A
-    hdr[29] = 16
-    struct.pack_into("<HHHHHH", hdr, 32, ord_num, ins_num, pat_num, 0, 0x1301, 2)
-    hdr[44:48] = b"SCRM"
-    hdr[48] = 64
-    hdr[49] = 6
-    hdr[50] = 125
-    hdr[51] = 48
-    hdr[53] = 252
-    for i in range(32):
-        hdr[64 + i] = i if i < 18 else 255
-    assert len(hdr) == 96
-    buf[0:96] = hdr
-    buf[96] = 0
-    buf[97] = 255
-    struct.pack_into("<HH", buf, 98, pp(ins1_off), pp(ins2_off))
-    struct.pack_into("<H", buf, 102, pp(pat_off))
-    for i in range(32):
-        buf[104 + i] = 0x08 if i < 18 else 0
-
-    path.write_bytes(bytes(buf))
-    print(f"Wrote {path} ({len(buf)} bytes)")
-
-
-def it_volume_column(volcmd: str | None, vol: int | None) -> int | None:
-    if volcmd is None and vol is None:
-        return None
-    if volcmd == "volume" or (volcmd is None and vol is not None):
-        return max(0, min(64, int(vol or 0)))
-    base = {"fineup": 65, "finedown": 75, "volup": 85, "voldown": 95}[volcmd]
-    return base + min(int(vol or 0), 9)
-
-
-def pack_it_pattern(cells: list[list[dict]]) -> bytes:
-    out = bytearray()
-    for row in range(ROWS):
-        for ch in range(CHANNELS):
-            c = cells[row][ch]
-            if not c:
-                continue
-            note = c.get("note")
-            ins = c.get("ins")
-            fx = c.get("fx")
-            param = c.get("param")
-            volb = it_volume_column(c.get("volcmd"), c.get("vol"))
-
-            it_note = None
-            if note is not None:
-                it_note = ompt_to_it_note(note)
-
-            mask = 0
-            body = bytearray()
-            if it_note is not None:
-                mask |= 1
-                body.append(it_note & 0xFF)
-            if ins is not None:
-                mask |= 2
-                body.append(ins & 0xFF)
-            if volb is not None:
-                mask |= 4
-                body.append(volb & 0xFF)
-            if fx is not None:
-                mask |= 8
-                body.append(fx & 0xFF)
-                body.append((param or 0) & 0xFF)
-            if mask == 0:
-                continue
-            out.append(0x80 | ((ch + 1) & 0x7F))
-            out.append(mask)
-            out.extend(body)
-        out.append(0)
-
-    packed = bytes(out)
-    return struct.pack("<HH4x", len(packed), ROWS) + packed
-
-
-def write_it(path: Path) -> None:
-    cells = build_cells(s3m=False)
-    pattern = pack_it_pattern(cells)
-    sample = bytes([0x40] * 10)
-
-    numord, numins, numsmp, numpat = 2, 2, 2, 1
-    INS_SIZE, SMP_HDR = 554, 80
-    base = 0xC0 + numord + 4 * numins + 4 * numsmp + 4 * numpat
-    ins_off = base
-    smp_hdr_off = ins_off + INS_SIZE * numins
-    smp_data1 = smp_hdr_off + SMP_HDR * numsmp
-    smp_data2 = smp_data1 + 10
-    pat_off = smp_data2 + 10
-
-    instr_blob = bytearray()
-    for i in range(numins):
-        ins = bytearray(INS_SIZE)
-        ins[0:4] = b"IMPI"
-        for n in range(120):
-            ins[0x40 + n * 2] = n
-            ins[0x40 + n * 2 + 1] = i + 1
-        instr_blob.extend(ins)
-
-    def make_smp_hdr(data_offset: int, loop: bool, name: bytes) -> bytes:
-        h = bytearray(SMP_HDR)
-        h[0:4] = b"IMPS"
-        h[4:16] = b"SAMPLE.RAW\x00\x00"
-        h[0x11] = 64
-        h[0x12] = 0x01 | (0x10 if loop else 0)
-        h[0x13] = 64
-        h[0x14 : 0x14 + len(name)] = name[:26]
-        h[0x2E] = 1
-        struct.pack_into("<III", h, 0x30, 10, 0, 10 if loop else 0)
-        struct.pack_into("<I", h, 0x3C, 8363)
-        struct.pack_into("<I", h, 0x48, data_offset)
-        return bytes(h)
-
-    hdr = bytearray(192)  # 0xC0 IT header
-    hdr[0:4] = b"IMPM"
-    name = b"FX fixture"
-    for i, b in enumerate(name):
-        hdr[4 + i] = b
-    struct.pack_into("<HHHH", hdr, 0x20, numord, numins, numsmp, numpat)
-    struct.pack_into("<HH", hdr, 0x28, 0x0217, 0x0200)
-    struct.pack_into("<HH", hdr, 0x2C, 0x0008, 0)
-    hdr[0x30] = 128
-    hdr[0x31] = 48
-    hdr[0x32] = 6
-    hdr[0x33] = 125
-    hdr[0x34] = 128
-    for i in range(64):
-        hdr[0x40 + i] = 32 if i < CHANNELS else 160
-        hdr[0x80 + i] = 64 if i < CHANNELS else 0
-    assert len(hdr) == 192
-
-    buf = bytearray()
-    buf.extend(hdr)
-    buf.extend(bytes([0, 0xFF]))
-    buf.extend(struct.pack(f"<{numins}I", *[ins_off + i * INS_SIZE for i in range(numins)]))
-    buf.extend(struct.pack(f"<{numsmp}I", *[smp_hdr_off + i * SMP_HDR for i in range(numsmp)]))
-    buf.extend(struct.pack("<I", pat_off))
-    assert len(buf) == base
-    buf.extend(instr_blob)
-    buf.extend(make_smp_hdr(smp_data1, True, b"loop") + make_smp_hdr(smp_data2, False, b"oneshot"))
-    buf.extend(sample + sample)
-    assert len(buf) == pat_off
-    buf.extend(pattern)
-
-    path.write_bytes(bytes(buf))
-    print(f"Wrote {path} ({len(buf)} bytes)")
+def module(s3m: bool) -> Module:
+    return Module(
+        patterns=[build_cells(s3m)],
+        orders=[0],
+        channels=CHANNELS,
+        rows=ROWS,
+        speed=6,
+        tempo=125,
+        samples=[Sample(10, True, "loop"), Sample(10, False, "oneshot")],
+        title="FX fixture",
+    )
 
 
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    write_s3m(OUT_DIR / "FX.S3M")
-    write_it(OUT_DIR / "FX.IT")
+    write_s3m(OUT_DIR / "FX.S3M", module(s3m=True))
+    write_it(OUT_DIR / "FX.IT", module(s3m=False))
 
 
 if __name__ == "__main__":

@@ -94,10 +94,24 @@ projects are built first; see [../../../AGENTS.md](../../../AGENTS.md) for the w
 
 GoogleTest project [tests/libRemuxer.Tests.vcxproj](tests/libRemuxer.Tests.vcxproj) compiles first-party
 `Song.cpp` / `FileFormat.cpp` and links libopenmpt (static CRT; gtest via `tests/vcpkg.json` with
-`x64-windows-static` — first build restores that triplet). [tests/FxFixtureTests.cpp](tests/FxFixtureTests.cpp)
-asserts FX.XM / FX.S3M / FX.IT pattern layout through libopenmpt’s format-agnostic pattern API (no
-per-format parsers). Regenerate S3M/IT twins with `python tests/gen_fx_fixtures.py` if the XM layout
-changes.
+`x64-windows-static` — first build restores that triplet). Two fixture suites assert module layout
+through libopenmpt’s format-agnostic pattern API (no per-format parsers), each over a hand-authored XM
+plus generated S3M / IT semantic twins:
+
+| Suite | Fixtures | Covers |
+|---|---|---|
+| [tests/FxFixtureTests.cpp](tests/FxFixtureTests.cpp) | `test-files/FX.{XM,S3M,IT}` | per-note effects, one channel per case |
+| [tests/ModTransportFixtureTests.cpp](tests/ModTransportFixtureTests.cpp) | `test-files/mod-transport/` | transport effects: position jump (`Bxx`), pattern break (`Dxx`/`Cxx`), pattern delay (`EEx`/`SEx`), pattern loop (`E6x`/`SBx`), speed+tempo (`Fxx`/`Axx`+`Txx`) |
+
+Shared helpers live in [tests/OmptFixtureUtil.h](tests/OmptFixtureUtil.h) (`ReadCell`, `IsExOrSx`,
+`ModFormat`, and the `ModFixtureTest` loader base). Regenerate the S3M/IT twins with
+`python tests/gen_fx_fixtures.py` / `python tests/gen_mod_transport_fixtures.py` when the XM layout
+changes; both drive the minimal binary writers in [tests/mod_fixture_writer.py](tests/mod_fixture_writer.py).
+The XM originals are authored in a tracker and are not generated.
+
+Note the mod-transport fixtures only use ch0 (effects) and ch1 (note). XM and S3M store their channel
+count in the header, but IT derives it from the highest channel present in pattern data, so the IT twins
+report 2 channels rather than 18 — the MIDI track for ch1 is track 2 either way.
 
 Prefer building via [../Remuxer.sln](../Remuxer.sln) or the repo-root `VisualMusic.sln` so libopenmpt
 (+ mpg123/ogg/vorbis) is built first (`ProjectDependencies` on the test project). Standalone:

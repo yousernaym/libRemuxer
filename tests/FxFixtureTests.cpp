@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
-#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <sstream>
@@ -9,127 +8,24 @@
 #include <vector>
 
 #include "OmptCommands.h"
+#include "OmptFixtureUtil.h"
 
 #include <libopenmpt/libopenmpt.hpp>
 #include <libopenmpt/libopenmpt_ext.hpp>
 
-namespace fs = std::filesystem;
+using namespace ompttest;
 
 namespace {
 
-fs::path TestFile(const char *name)
+class FxFixtureTest : public ModFixtureTest
 {
-	fs::path p = fs::path(__FILE__).parent_path() / ".." / "test-files" / name;
-	return fs::weakly_canonical(p);
-}
-
-struct Cell
-{
-	std::uint8_t note = 0;
-	std::uint8_t ins = 0;
-	std::uint8_t volcmd = 0;
-	std::uint8_t vol = 0;
-	std::uint8_t fx = 0;
-	std::uint8_t param = 0;
-};
-
-Cell ReadCell(const openmpt::module &mod, int pattern, int row, int ch)
-{
-	using C = openmpt::module::command_index;
-	Cell c;
-	c.note = mod.get_pattern_row_channel_command(pattern, row, ch, C::command_note);
-	c.ins = mod.get_pattern_row_channel_command(pattern, row, ch, C::command_instrument);
-	c.volcmd = mod.get_pattern_row_channel_command(pattern, row, ch, C::command_volumeffect);
-	c.vol = mod.get_pattern_row_channel_command(pattern, row, ch, C::command_volume);
-	c.fx = mod.get_pattern_row_channel_command(pattern, row, ch, C::command_effect);
-	c.param = mod.get_pattern_row_channel_command(pattern, row, ch, C::command_parameter);
-	return c;
-}
-
-bool IsNote(std::uint8_t note)
-{
-	return note >= OMPT_NOTE_MIN && note <= OMPT_NOTE_MAX;
-}
-
-bool IsKeyOff(std::uint8_t note)
-{
-	return note == OMPT_NOTE_KEYOFF || note == OMPT_NOTE_NOTECUT || note == OMPT_NOTE_FADE;
-}
-
-bool IsExOrSx(std::uint8_t fx, std::uint8_t param, int subNibble)
-{
-	if (fx != CMD_MODCMDEX_ && fx != CMD_S3MCMDEX_)
-		return false;
-	return ((param >> 4) & 0xf) == subNibble;
-}
-
-void ExpectNoteIns(const Cell &c, int ins, const char *label)
-{
-	EXPECT_TRUE(IsNote(c.note)) << label;
-	EXPECT_EQ(ins, c.ins) << label;
-}
-
-void ExpectNoEffect(const Cell &c, const char *label)
-{
-	EXPECT_EQ(0, c.fx) << label;
-	EXPECT_EQ(0, c.param) << label;
-	EXPECT_EQ(0, c.volcmd) << label;
-	EXPECT_EQ(0, c.vol) << label;
-}
-
-bool IsSetVol0(const Cell &c)
-{
-	return (c.fx == CMD_VOLUME_ && c.param == 0) || (c.volcmd == VOLCMD_VOLUME_ && c.vol == 0);
-}
-
-enum class FxFormat
-{
-	Xm,
-	S3m,
-	It,
-};
-
-struct FxFixtureParam
-{
-	const char *filename;
-	FxFormat format;
-};
-
-std::string FormatName(const testing::TestParamInfo<FxFixtureParam> &info)
-{
-	std::string name = info.param.filename;
-	for (char &ch : name)
-	{
-		if (ch == '.')
-			ch = '_';
-	}
-	return name;
-}
-
-class FxFixtureTest : public testing::TestWithParam<FxFixtureParam>
-{
-protected:
-	std::vector<std::uint8_t> data;
-	std::unique_ptr<openmpt::module> mod;
-
-	void SetUp() override
-	{
-		fs::path path = TestFile(GetParam().filename);
-		ASSERT_TRUE(fs::exists(path)) << path.string();
-		std::ifstream in(path, std::ios::binary);
-		ASSERT_TRUE(in) << path.string();
-		data.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
-		ASSERT_FALSE(data.empty());
-		std::ostringstream log;
-		mod = std::make_unique<openmpt::module>(data, log);
-	}
 };
 
 } // namespace
 
 TEST_P(FxFixtureTest, MatchesDescribedPatternAndSpeed)
 {
-	const FxFormat fmt = GetParam().format;
+	const ModFormat fmt = GetParam().format;
 	openmpt::module &m = *mod;
 
 	EXPECT_EQ(6, m.get_current_speed());
@@ -215,7 +111,7 @@ TEST_P(FxFixtureTest, MatchesDescribedPatternAndSpeed)
 	// Ch7: vol-column slide down 2 (XM/IT) or effect-column volume slide (S3M)
 	{
 		ExpectNoteIns(C(0, 7), 1, "ch7");
-		if (fmt == FxFormat::S3m)
+		if (fmt == ModFormat::S3m)
 		{
 			EXPECT_EQ(CMD_VOLUMESLIDE_, C(0, 7).fx);
 			EXPECT_EQ(0x02, C(0, 7).param);
@@ -264,7 +160,7 @@ TEST_P(FxFixtureTest, MatchesDescribedPatternAndSpeed)
 	// Ch10: fine volume down — EB2 (XM) or DF2 (S3M/IT) for 32 rows
 	{
 		ExpectNoteIns(C(0, 10), 1, "ch10");
-		if (fmt == FxFormat::Xm)
+		if (fmt == ModFormat::Xm)
 		{
 			EXPECT_TRUE(IsExOrSx(C(0, 10).fx, C(0, 10).param, 0xB));
 			EXPECT_EQ(0xB2, C(0, 10).param);
@@ -304,7 +200,7 @@ TEST_P(FxFixtureTest, MatchesDescribedPatternAndSpeed)
 	{
 		Cell c = C(0, 13);
 		ExpectNoteIns(c, 1, "ch13");
-		if (fmt == FxFormat::Xm)
+		if (fmt == ModFormat::Xm)
 		{
 			EXPECT_TRUE(IsExOrSx(c.fx, c.param, 0x9));
 			EXPECT_EQ(0x92, c.param);
@@ -339,7 +235,7 @@ TEST_P(FxFixtureTest, MatchesDescribedPatternAndSpeed)
 	// Ch16: vol slide up F, down F, up 1 (XM vol column; S3M/IT effect Dxy)
 	{
 		ExpectNoteIns(C(0, 16), 1, "ch16");
-		if (fmt == FxFormat::Xm)
+		if (fmt == ModFormat::Xm)
 		{
 			EXPECT_EQ(VOLCMD_VOLSLIDEUP_, C(0, 16).volcmd);
 			EXPECT_EQ(0xF, C(0, 16).vol);
@@ -364,7 +260,7 @@ TEST_P(FxFixtureTest, MatchesDescribedPatternAndSpeed)
 		Cell c0 = C(0, 17);
 		ExpectNoteIns(c0, 1, "ch17");
 		EXPECT_TRUE(IsSetVol0(c0)) << "ch17 row0 set vol 0";
-		if (fmt == FxFormat::S3m)
+		if (fmt == ModFormat::S3m)
 		{
 			EXPECT_EQ(CMD_VOLUMESLIDE_, C(1, 17).fx);
 			EXPECT_EQ(0x10, C(1, 17).param);
@@ -381,7 +277,7 @@ INSTANTIATE_TEST_SUITE_P(
 	FxModules,
 	FxFixtureTest,
 	testing::Values(
-		FxFixtureParam{ "FX.XM", FxFormat::Xm },
-		FxFixtureParam{ "FX.S3M", FxFormat::S3m },
-		FxFixtureParam{ "FX.IT", FxFormat::It }),
+		ModFixtureParam{ "FX.XM", ModFormat::Xm },
+		ModFixtureParam{ "FX.S3M", ModFormat::S3m },
+		ModFixtureParam{ "FX.IT", ModFormat::It }),
 	FormatName);
