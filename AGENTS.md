@@ -91,10 +91,18 @@ projects are built first; see [../../../AGENTS.md](../../../AGENTS.md) for the w
 
 ## Testing
 
-GoogleTest project [tests/libRemuxer.Tests.vcxproj](tests/libRemuxer.Tests.vcxproj) links first-party
-`Song.cpp` / `FileFormat.cpp` only (gtest via local `tests/vcpkg.json` manifest). Build and run:
+GoogleTest project [tests/libRemuxer.Tests.vcxproj](tests/libRemuxer.Tests.vcxproj) compiles first-party
+`Song.cpp` / `FileFormat.cpp` and links libopenmpt (static CRT; gtest via `tests/vcpkg.json` with
+`x64-windows-static` — first build restores that triplet). [tests/FxFixtureTests.cpp](tests/FxFixtureTests.cpp)
+asserts FX.XM / FX.S3M / FX.IT pattern layout through libopenmpt’s format-agnostic pattern API (no
+per-format parsers). Regenerate S3M/IT twins with `python tests/gen_fx_fixtures.py` if the XM layout
+changes.
+
+Prefer building via [../Remuxer.sln](../Remuxer.sln) or the repo-root `VisualMusic.sln` so libopenmpt
+(+ mpg123/ogg/vorbis) is built first (`ProjectDependencies` on the test project). Standalone:
 
 ```powershell
+msbuild openmpt\build\vs2022win10\libopenmpt.vcxproj /p:Configuration=Debug /p:Platform=x64
 msbuild tests\libRemuxer.Tests.vcxproj /p:Configuration=Debug /p:Platform=x64
 tests\x64\Debug\libRemuxer.Tests.exe
 ```
