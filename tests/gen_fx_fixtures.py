@@ -19,14 +19,26 @@ CHANNELS = 18
 FX_D, FX_G, FX_J, FX_K, FX_L, FX_Q, FX_S = 4, 7, 10, 11, 12, 17, 19
 
 
+# OpenMPT Load_s3m: note = (s3m&0x0F) + 12*(s3m>>4) + 12 + NOTE_MIN  (NOTE_MIN=1)
+# → ompt = low + 12*oct + 13, with low nibble 1..12 = C..B.
 def ompt_to_s3m_note(n: int) -> int:
+    if n == 0xFF or n in (0xFE, 0xFD):
+        return 254  # s3mNoteOff
+    x = n - 13
+    if x < 1:
+        raise ValueError(f"OpenMPT note {n} too low for S3M")
+    octv = (x - 1) // 12
+    low = ((x - 1) % 12) + 1
+    return (octv << 4) | low
+
+
+# OpenMPT Load_it: file note < 0x80 → note += NOTE_MIN (1).
+def ompt_to_it_note(n: int) -> int:
     if n == 0xFF:
-        return 254
+        return 255  # NOTE_KEYOFF
     if n in (0xFE, 0xFD):
-        return 254
-    pc = (n - 1) % 12
-    octv = (n - 1) // 12
-    return (octv << 4) | (pc + 1)
+        return 254  # NOTE_NOTECUT
+    return n - 1
 
 
 def build_cells(s3m: bool) -> list[list[dict]]:
@@ -232,7 +244,7 @@ def pack_it_pattern(cells: list[list[dict]]) -> bytes:
 
             it_note = None
             if note is not None:
-                it_note = 255 if note == 0xFF else (254 if note in (0xFE, 0xFD) else note)
+                it_note = ompt_to_it_note(note)
 
             mask = 0
             body = bytearray()

@@ -178,14 +178,13 @@ TEST_P(FxFixtureTest, MatchesDescribedPatternAndSpeed)
 		EXPECT_TRUE(IsExOrSx(c.fx, c.param, 0xC));
 		EXPECT_EQ(0xC1, c.param);
 	}
-	// Ch1: note with instrument 2; XM file note 50 → OpenMPT 62
+	// Ch1: note with instrument 2; OpenMPT note 62 (XM file note 50 + 12; S3M/IT twins match)
 	{
 		Cell c = C(0, 1);
 		ExpectNoteIns(c, 2, "ch1");
 		EXPECT_EQ(0, c.fx);
 		EXPECT_EQ(0, c.param);
-		if (fmt == FxFormat::Xm)
-			EXPECT_EQ(62, c.note);
+		EXPECT_EQ(62, c.note);
 	}
 	// Ch2: note; set vol 0 next row
 	{
