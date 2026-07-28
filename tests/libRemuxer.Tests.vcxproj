@@ -100,6 +100,7 @@ type nul &gt; "$(OutDir)$(TargetFileName).is_google_test"</Command>
     <ClCompile Include="..\FileFormat.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\OmptCommands.h" />
     <ClInclude Include="..\Song.h" />
     <ClInclude Include="..\FileFormat.h" />
     <ClInclude Include="..\Wav.h" />

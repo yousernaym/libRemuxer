@@ -8,7 +8,10 @@
 #include <string>
 #include <vector>
 
-#include "ModReader.h"
+#include "OmptCommands.h"
+
+#include <libopenmpt/libopenmpt.hpp>
+#include <libopenmpt/libopenmpt_ext.hpp>
 
 namespace fs = std::filesystem;
 

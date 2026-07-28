@@ -43,6 +43,7 @@ is vendored. All paths are relative to this directory.
 | [libRemuxer.cpp](libRemuxer.cpp) | Exported entry points plus global state (`songData`, readers, `songReader`). The mod-first/HVL/SID fallback dispatch lives here. |
 | [libRemuxer.h](libRemuxer.h) | C ABI exports, `UserArgs`, internal MIDI-output structs, and `MAX_*` size limits. |
 | [SongReader.h](SongReader.h) | Abstract base for the readers; owns `UserArgs`, `audioBuffer`, and `Wav`. 48 kHz. |
+| [OmptCommands.h](OmptCommands.h) | Shared OpenMPT note / `CMD_*` / `VOLCMD_*` constants (used by ModReader and FxFixtureTests). |
 | [ModReader.h](ModReader.h) / [ModReader.cpp](ModReader.cpp) | Tracker-module conversion (MOD/XM/S3M/IT...). The bulk of the effect-handling logic. |
 | [HvlReader.h](HvlReader.h) / [HvlReader.cpp](HvlReader.cpp) | HVL/AHX conversion. |
 | [SidReader.h](SidReader.h) / [SidReader.cpp](SidReader.cpp) | SID conversion via C64 emulation. |
