@@ -37,3 +37,5 @@ packages/
 # Allow checked-in test fixtures (minimal.mod/ahx/hvl/sid)
 !test-files/
 !test-files/**
+
+**/__pycache__/
